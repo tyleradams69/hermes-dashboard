@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import ActivityFeed from "../components/ActivityFeed";
 
 type LeadState = {
   status?: string;
@@ -70,6 +71,7 @@ export default function Home() {
   const [followups, setFollowups] = useState<{ totalDue: number; due: unknown[] } | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedLead, setSelectedLead] = useState<string | null>(null);
+const [leadActivity, setLeadActivity] = useState<any[]>([]);
 
   async function loadData() {
     try {
@@ -83,6 +85,21 @@ export default function Home() {
 
       setState(stateJson);
       setFollowups(followupJson);
+
+if (selectedLead) {
+
+  const activityRes =
+    await fetch(
+      `${API_URL}/api/activity/${selectedLead}`
+    );
+
+  const activityJson =
+    await activityRes.json();
+
+  setLeadActivity(
+    activityJson.activity || []
+  );
+}
 
       if (!selectedLead && Object.keys(stateJson).length > 0) {
         setSelectedLead(Object.keys(stateJson)[0]);
@@ -169,15 +186,9 @@ export default function Home() {
             </p>
 
             <div className="space-y-3 text-xs text-white/55">
-              <p>
-                <span className="text-cyan-200">●</span> API linked on port 3001
-              </p>
-              <p>
-                <span className="text-cyan-200">●</span> State sync every 5s
-              </p>
-              <p>
-                <span className="text-cyan-200">●</span> Pipeline memory online
-              </p>
+              <p><span className="text-cyan-200">●</span> API linked on port 3002</p>
+              <p><span className="text-cyan-200">●</span> State sync every 5s</p>
+              <p><span className="text-cyan-200">●</span> Pipeline memory online</p>
             </div>
           </div>
         </aside>
@@ -235,7 +246,7 @@ export default function Home() {
                 <button
                   key={lead.company}
                   onClick={() => setSelectedLead(lead.company)}
-                  className={`min-h-[210px] border p-4 text-left transition hover:-translate-y-1 hover:shadow-[8px_8px_0_rgba(0,0,0,0.16)] ${
+                  className={`min-h-[260px] border p-4 text-left transition hover:-translate-y-1 hover:shadow-[8px_8px_0_rgba(0,0,0,0.16)] ${
                     selectedLead === lead.company
                       ? "border-cyan-400 bg-cyan-100/60"
                       : "border-black/15 bg-white/55"
@@ -253,18 +264,23 @@ export default function Home() {
                   </h3>
 
                   <div className="mt-5 space-y-2 text-xs uppercase tracking-[0.12em]">
-                    <p>
-                      <span className="text-black/35">Status:</span>{" "}
-                      <span>{lead.status || "unknown"}</span>
-                    </p>
-                    <p>
-                      <span className="text-black/35">Stage:</span>{" "}
-                      <span>{stageLabel(lead.pipelineStage)}</span>
-                    </p>
-                    <p>
-                      <span className="text-black/35">Reply:</span>{" "}
-                      <span>{lead.replyStatus || "none"}</span>
-                    </p>
+                    <p><span className="text-black/35">Status:</span> {lead.status || "unknown"}</p>
+                    <p><span className="text-black/35">Stage:</span> {stageLabel(lead.pipelineStage)}</p>
+                    <p><span className="text-black/35">Reply:</span> {lead.replyStatus || "none"}</p>
+                  </div>
+
+                  <div className="mt-6 flex flex-wrap gap-2">
+                    <span className="border border-cyan-500/40 bg-cyan-500/10 px-3 py-2 text-[10px] font-bold uppercase tracking-[0.2em] text-cyan-700">
+                      Approve
+                    </span>
+
+                    <span className="border border-red-500/30 bg-red-500/10 px-3 py-2 text-[10px] font-bold uppercase tracking-[0.2em] text-red-700">
+                      Reject
+                    </span>
+
+                    <span className="border border-black/20 bg-black/5 px-3 py-2 text-[10px] font-bold uppercase tracking-[0.2em] text-black/60">
+                      Follow-Up
+                    </span>
                   </div>
                 </button>
               ))
@@ -281,7 +297,6 @@ export default function Home() {
 
             <div className="relative h-44 overflow-hidden border border-white/10 bg-black">
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_55%_45%,rgba(34,211,238,0.65),transparent_6%),radial-gradient(circle_at_40%_58%,rgba(168,85,247,0.55),transparent_7%),radial-gradient(circle_at_62%_62%,rgba(34,211,238,0.45),transparent_5%)]" />
-              <div className="absolute inset-0 bg-[linear-gradient(120deg,transparent,rgba(255,255,255,0.08),transparent)]" />
               <div className="absolute bottom-3 left-3 right-3 flex gap-1">
                 {Array.from({ length: 24 }).map((_, i) => (
                   <span
@@ -322,6 +337,68 @@ export default function Home() {
               Latest Reply
             </p>
 
+<div className="mt-4 border border-white/10 bg-white/[0.035] p-4">
+
+  <p className="mb-4 text-xs uppercase tracking-[0.28em] text-white/45">
+    Lead Intelligence
+  </p>
+
+  <div className="space-y-3 text-sm">
+
+    <div>
+      <div className="text-white/35 text-[10px] uppercase tracking-[0.18em] mb-1">
+        Company
+      </div>
+
+      <div className="text-white font-bold">
+        {selectedLead || "No lead selected"}
+      </div>
+    </div>
+
+    <div>
+      <div className="text-white/35 text-[10px] uppercase tracking-[0.18em] mb-1">
+        Pipeline Stage
+      </div>
+
+      <div className="text-cyan-300 font-bold">
+        {stageLabel(selected?.pipelineStage)}
+      </div>
+    </div>
+
+    <div>
+      <div className="text-white/35 text-[10px] uppercase tracking-[0.18em] mb-1">
+        Reply Status
+      </div>
+
+      <div className="text-white/80">
+        {selected?.replyStatus || "none"}
+      </div>
+    </div>
+
+    <div>
+      <div className="text-white/35 text-[10px] uppercase tracking-[0.18em] mb-1">
+        Last Updated
+      </div>
+
+      <div className="text-white/60">
+        {formatDate(selected?.updatedAt)}
+      </div>
+    </div>
+
+    <div>
+      <div className="text-white/35 text-[10px] uppercase tracking-[0.18em] mb-1">
+        Followups
+      </div>
+
+      <div className="text-white/80">
+        {selected?.followupCount || 0}
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
             <p className="min-h-[120px] text-sm leading-relaxed text-white/70">
               {selected?.latestReply || "No reply intelligence captured yet."}
             </p>
@@ -335,7 +412,40 @@ export default function Home() {
               </div>
             </div>
           </div>
-        </aside>
+
+<div className="mt-4">
+
+          <div className="mt-4 border border-white/10 bg-white/[0.035] p-4">
+            <p className="mb-4 text-xs uppercase tracking-[0.28em] text-white/45">
+              Lead Timeline
+            </p>
+
+            <div className="space-y-3 max-h-[260px] overflow-y-auto">
+              {leadActivity.length === 0 ? (
+                <p className="text-sm text-white/35">
+                  No lead-specific activity yet.
+                </p>
+              ) : (
+                leadActivity.map((event) => (
+                  <div key={event.id} className="border border-white/10 bg-black/30 p-3">
+                    <div className="text-[10px] uppercase tracking-[0.18em] text-cyan-300">
+                      {event.type.replaceAll("_", " ")}
+                    </div>
+                    <div className="mt-1 text-sm text-white/75">
+                      {event.message}
+                    </div>
+                    <div className="mt-2 text-[10px] text-white/30">
+                      {formatDate(event.timestamp)}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+  <ActivityFeed />
+</div>        
+
+</aside>
       </section>
     </main>
   );
