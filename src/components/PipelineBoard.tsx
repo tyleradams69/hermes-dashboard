@@ -87,7 +87,7 @@ export default function PipelineBoard({
                 moveLead(company, stage);
               }
             }}
-            className="min-w-[250px] max-w-[250px] flex-shrink-0 border border-white/10 bg-[#06080b]/95 backdrop-blur-xl transition hover:shadow-[0_0_45px_rgba(34,211,238,0.12)]"
+            className="min-w-[220px] max-w-[220px] flex-shrink-0 border border-white/10 bg-[#06080b]/95 backdrop-blur-2xl transition-all duration-300 ease-out hover:shadow-[0_0_45px_rgba(34,211,238,0.12)]"
           >
             <div className="border-b border-white/10 px-4 py-3">
               <div className="flex items-center justify-between">
@@ -116,7 +116,7 @@ export default function PipelineBoard({
                       e.dataTransfer.effectAllowed = "move";
                     }}
                     onClick={() => onSelect(lead)}
-                    className={`w-full cursor-grab border p-4 text-left transition hover:-translate-y-1 hover:border-cyan-300/40 hover:shadow-[0_0_40px_rgba(34,211,238,0.14)] active:cursor-grabbing ${tone(stage)}`}
+                    className={`w-full cursor-grab border p-4 text-left transition-all duration-300 ease-out hover:-translate-y-[4px] hover:border-cyan-300/40 hover:shadow-[0_12px_40px_rgba(34,211,238,0.14)] active:cursor-grabbing ${tone(stage)}`}
                   >
                     <div className="mb-4 flex items-center justify-between">
                       <div className="h-2 w-2 rounded-full bg-cyan-300 shadow-[0_0_18px_rgba(103,232,249,0.9)]" />
@@ -126,7 +126,7 @@ export default function PipelineBoard({
                       </p>
                     </div>
 
-                    <h3 className="text-xl font-black uppercase leading-none tracking-[-0.06em] text-white">
+                    <h3 className="text-lg font-black uppercase leading-none tracking-[-0.06em] text-white">
                       {lead.company}
                     </h3>
 

@@ -84,6 +84,15 @@ export default function OperatorAtmosphere() {
       `}</style>
 
       <div className="pointer-events-none fixed inset-0 z-40 overflow-hidden">
+
+        <div className="pointer-events-none absolute inset-0">
+          <div className="absolute left-[32%] top-[22%] h-[420px] w-[420px] rounded-full bg-cyan-300/6 blur-[120px]" />
+
+          <div className="absolute right-[18%] top-[10%] h-[260px] w-[260px] rounded-full bg-blue-400/5 blur-[100px]" />
+
+          <div className="absolute left-[40%] bottom-[12%] h-[320px] w-[320px] rounded-full bg-cyan-200/5 blur-[120px]" />
+        </div>
+
         <div
           className="absolute h-[360px] w-[360px] rounded-full bg-cyan-300/10 blur-3xl"
           style={{

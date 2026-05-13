@@ -246,8 +246,8 @@ const latestLeadName = leads[0]?.company || null;
         <div className="absolute inset-0 bg-[radial-gradient(circle,transparent_45%,rgba(0,0,0,0.75)_100%)]" />
       </div>
 
-      <section className="relative grid min-h-screen grid-cols-[260px_1fr_360px] gap-px bg-black/35 backdrop-blur-2xl/10">
-        <aside className="bg-black/55 backdrop-blur-2xl/95 p-5 backdrop-blur-xl">
+      <section className="relative grid min-h-screen pt-10 grid-cols-1 lg:grid-cols-[240px_minmax(0,1fr)_300px] gap-px bg-black/35 backdrop-blur-2xl/10">
+        <aside className="bg-black/55 p-4 backdrop-blur-2xl lg:p-5">
           <div className="mb-10">
             <div className="mb-2 flex items-center gap-2">
               <div className="h-2.5 w-2.5 animate-pulse rounded-full bg-cyan-300 shadow-[0_0_18px_rgba(103,232,249,0.9)]" />
@@ -291,7 +291,7 @@ const latestLeadName = leads[0]?.company || null;
 
     window.location.href = "/login";
   }}
-  className="mb-4 w-full border border-red-300/30 bg-red-300/10 px-4 py-3 text-xs font-bold uppercase tracking-[0.22em] text-red-100 transition hover:bg-red-300 hover:text-black"
+  className="mb-4 w-full border border-red-300/30 bg-red-300/10 px-4 py-3 text-xs font-bold uppercase tracking-[0.22em] text-red-100 transition hover:bg-red-300 hover:text-white"
 >
   Logout
 </button>             
@@ -307,10 +307,10 @@ const latestLeadName = leads[0]?.company || null;
           </div>
         </aside>
 
-        <section className="bg-[#f4f2ed] p-6 text-[#141414]">
-          <div className="mb-6 flex items-start justify-between border-b border-black/15 pb-4">
+        <section className="min-w-0 bg-black/40 p-6 text-white backdrop-blur-2xl">
+          <div className="mb-6 flex items-start justify-between border-b border-cyan-300/12 pb-4">
             <div>
-              <p className="mb-2 text-xs uppercase tracking-[0.35em] text-black/45">
+              <p className="mb-2 text-xs uppercase tracking-[0.35em] text-white/45">
                 Local AI Systems / Outbound Ops
               </p>
               <h2 className="max-w-4xl text-7xl font-black uppercase leading-[0.82] tracking-[-0.1em]">
@@ -324,7 +324,7 @@ const latestLeadName = leads[0]?.company || null;
 
             <button
               onClick={loadData}
-              className="border border-black/25 bg-black px-4 py-3 text-xs font-bold uppercase tracking-[0.22em] text-white transition hover:bg-cyan-300 hover:text-black"
+              className="border border-cyan-300/20 bg-black px-4 py-3 text-xs font-bold uppercase tracking-[0.22em] text-white transition hover:bg-cyan-300 hover:text-white"
             >
               Sync State
             </button>
@@ -334,7 +334,7 @@ const latestLeadName = leads[0]?.company || null;
             <ArtifactRuntime />
           </div>
 
-          <div className="mb-6 grid grid-cols-6 gap-3">
+          <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
             {[
               ["Leads", metrics.total],
               ["Sent", metrics.sent],
@@ -343,49 +343,49 @@ const latestLeadName = leads[0]?.company || null;
               ["Lost", metrics.lost],
               ["Due", metrics.due],
             ].map(([label, value]) => (
-              <div key={label} className="border border-black/15 bg-black/35 backdrop-blur-2xl/45 p-4">
-                <p className="text-[10px] uppercase tracking-[0.25em] text-black/45">{label}</p>
+              <div key={label} className="border border-cyan-300/12 bg-black/35 backdrop-blur-2xl/45 p-4">
+                <p className="text-[10px] uppercase tracking-[0.25em] text-white/45">{label}</p>
                 <p className="mt-3 text-4xl font-black tracking-[-0.08em]">{value}</p>
               </div>
             ))}
           </div>
 
-<div className="mb-6 border border-black/15 bg-black/35 backdrop-blur-2xl/60 p-4">
+<div className="mb-6 border border-cyan-300/12 bg-black/35 backdrop-blur-2xl/60 p-4">
 
   <div className="mb-4">
-    <p className="text-xs uppercase tracking-[0.25em] text-black/45">
+    <p className="text-xs uppercase tracking-[0.25em] text-white/45">
       Manual Lead Import
     </p>
   </div>
 
-  <div className="grid grid-cols-2 gap-3">
+  <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
 
     <input
       value={newCompany}
       onChange={(e) => setNewCompany(e.target.value)}
       placeholder="Company"
-      className="border border-black/15 bg-black/35 backdrop-blur-2xl px-3 py-3 text-sm outline-none"
+      className="border border-cyan-300/12 bg-black/35 backdrop-blur-2xl px-3 py-3 text-sm outline-none"
     />
 
     <input
       value={newEmail}
       onChange={(e) => setNewEmail(e.target.value)}
       placeholder="Email"
-      className="border border-black/15 bg-black/35 backdrop-blur-2xl px-3 py-3 text-sm outline-none"
+      className="border border-cyan-300/12 bg-black/35 backdrop-blur-2xl px-3 py-3 text-sm outline-none"
     />
 
     <input
       value={newPhone}
       onChange={(e) => setNewPhone(e.target.value)}
       placeholder="Phone"
-      className="border border-black/15 bg-black/35 backdrop-blur-2xl px-3 py-3 text-sm outline-none"
+      className="border border-cyan-300/12 bg-black/35 backdrop-blur-2xl px-3 py-3 text-sm outline-none"
     />
 
     <input
       value={newWebsite}
       onChange={(e) => setNewWebsite(e.target.value)}
       placeholder="Website"
-      className="border border-black/15 bg-black/35 backdrop-blur-2xl px-3 py-3 text-sm outline-none"
+      className="border border-cyan-300/12 bg-black/35 backdrop-blur-2xl px-3 py-3 text-sm outline-none"
     />
 
   </div>
@@ -393,7 +393,7 @@ const latestLeadName = leads[0]?.company || null;
   <button
     onClick={importLead}
     disabled={importing}
-    className="mt-4 border border-black bg-black px-5 py-3 text-xs font-bold uppercase tracking-[0.2em] text-white transition hover:bg-cyan-300 hover:text-black disabled:opacity-40"
+    className="mt-4 border border-black bg-black px-5 py-3 text-xs font-bold uppercase tracking-[0.2em] text-white transition hover:bg-cyan-300 hover:text-white disabled:opacity-40"
   >
     {importing ? "Importing..." : "Import Lead"}
   </button>
@@ -410,7 +410,7 @@ const latestLeadName = leads[0]?.company || null;
           />
         </section>
 
-        <aside className="bg-[#090b10]/95 p-5 backdrop-blur-xl">
+        <aside className="w-full bg-black/55 p-4 backdrop-blur-2xl lg:w-[300px]">
           <div className="mb-4 border border-cyan-300/25 bg-cyan-300/10 p-4">
             <div className="mb-3 flex items-center justify-between">
               <p className="text-xs uppercase tracking-[0.28em] text-cyan-100">Leak Map</p>

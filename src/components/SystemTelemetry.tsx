@@ -50,7 +50,7 @@ export default function SystemTelemetry() {
         }
       `}</style>
 
-      <div className="fixed right-6 top-24 z-40 w-[340px] border border-cyan-300/20 bg-black/70 shadow-[0_0_60px_rgba(34,211,238,0.12)] backdrop-blur-2xl">
+      <div className="fixed right-6 top-20 z-40 w-[300px] border border-cyan-300/20 bg-black/70 shadow-[0_0_60px_rgba(34,211,238,0.12)] backdrop-blur-2xl">
         <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
           <div className="flex items-center gap-2">
             <div className="telemetry-pulse h-2 w-2 rounded-full bg-cyan-300 shadow-[0_0_14px_rgba(103,232,249,1)]" />
@@ -65,7 +65,7 @@ export default function SystemTelemetry() {
           </p>
         </div>
 
-        <div className="max-h-[420px] overflow-y-auto">
+        <div className="max-h-[320px] overflow-y-auto">
           {events.length === 0 ? (
             <div className="p-5 text-sm text-white/35">
               No telemetry yet.
@@ -74,7 +74,7 @@ export default function SystemTelemetry() {
             events.slice(0, 20).map((event, index) => (
               <div
                 key={index}
-                className="border-b border-white/5 px-4 py-4 transition hover:bg-cyan-300/5"
+                className="border-b border-white/5 px-4 py-3 transition-all duration-300 ease-out hover:bg-cyan-300/5"
               >
                 <div className="mb-2 flex items-center justify-between">
                   <p className="text-[10px] uppercase tracking-[0.22em] text-cyan-200">

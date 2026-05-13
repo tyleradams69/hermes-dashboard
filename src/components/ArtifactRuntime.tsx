@@ -70,7 +70,7 @@ function SpireCore() {
 
 export default function ArtifactRuntime() {
   return (
-    <div className="relative h-[360px] overflow-hidden border border-cyan-300/20 bg-black shadow-[0_0_80px_rgba(34,211,238,0.18)]">
+    <div className="relative h-[280px] overflow-hidden border border-cyan-300/20 bg-black shadow-[0_0_120px_rgba(34,211,238,0.22)]">
       <div className="absolute left-4 top-4 z-10 border border-white/10 bg-black/60 px-3 py-2 text-[10px] uppercase tracking-[0.24em] text-cyan-100 backdrop-blur-xl">
         3D ARTIFACT RUNTIME
       </div>

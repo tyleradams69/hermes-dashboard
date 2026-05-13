@@ -51,7 +51,7 @@ export default function LeadDrawer({
 
           <button
             onClick={onClose}
-            className="border border-white/10 bg-white/5 px-4 py-3 text-xs uppercase tracking-[0.22em] text-white/60 transition hover:border-red-300/30 hover:bg-red-300 hover:text-black"
+            className="border border-white/10 bg-white/5 px-4 py-3 text-xs uppercase tracking-[0.22em] text-white/60 transition-all duration-300 ease-out hover:border-red-300/30 hover:bg-red-300 hover:text-black"
           >
             Close
           </button>

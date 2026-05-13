@@ -74,7 +74,7 @@ export default function ApprovalQueue() {
 
 
   return (
-    <div className="fixed left-6 bottom-6 z-40 w-[360px] border border-cyan-300/20 bg-black/70 shadow-[0_0_60px_rgba(34,211,238,0.12)] backdrop-blur-2xl">
+    <div className="fixed left-6 bottom-6 z-40 w-[320px] border border-cyan-300/20 bg-black/70 shadow-[0_0_60px_rgba(34,211,238,0.12)] backdrop-blur-2xl">
       <div className="border-b border-white/10 px-4 py-3">
         <div className="flex items-center justify-between">
           <p className="text-[10px] uppercase tracking-[0.28em] text-cyan-200">
@@ -87,7 +87,7 @@ export default function ApprovalQueue() {
         </div>
       </div>
 
-      <div className="max-h-[420px] overflow-y-auto">
+      <div className="max-h-[280px] overflow-y-auto">
         {items.length === 0 ? (
           <div className="p-5 text-sm text-white/35">
             No pending approvals.
@@ -124,7 +124,7 @@ export default function ApprovalQueue() {
                       "approved"
                     )
                   }
-                  className="flex-1 border border-cyan-300/20 bg-cyan-300/10 px-3 py-2 text-[10px] uppercase tracking-[0.22em] text-cyan-100 transition hover:bg-cyan-300 hover:text-black">
+                  className="flex-1 border border-cyan-300/20 bg-cyan-300/10 px-3 py-2 text-[10px] uppercase tracking-[0.22em] text-cyan-100 transition-all duration-300 ease-out hover:bg-cyan-300 hover:text-black">
                   Approve
                 </button>
 
@@ -135,7 +135,7 @@ export default function ApprovalQueue() {
                       "rejected"
                     )
                   }
-                  className="flex-1 border border-red-300/20 bg-red-300/10 px-3 py-2 text-[10px] uppercase tracking-[0.22em] text-red-100 transition hover:bg-red-300 hover:text-black">
+                  className="flex-1 border border-red-300/20 bg-red-300/10 px-3 py-2 text-[10px] uppercase tracking-[0.22em] text-red-100 transition-all duration-300 ease-out hover:bg-red-300 hover:text-black">
                   Reject
                 </button>
               </div>
