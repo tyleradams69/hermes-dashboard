@@ -1,65 +1,342 @@
-import Image from "next/image";
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+
+type LeadState = {
+  status?: string;
+  pipelineStage?: string;
+  website?: string;
+  toEmail?: string;
+  sentAt?: string;
+  updatedAt?: string;
+  replyStatus?: string;
+  latestReply?: string;
+  followupCount?: number;
+  nextFollowupAt?: string;
+  outreachFile?: string;
+  auditFile?: string;
+};
+
+type StateResponse = Record<string, LeadState>;
+
+const API_URL = "http://localhost:3002";
+
+function formatDate(value?: string) {
+  if (!value) return "—";
+
+  return new Date(value).toLocaleString(undefined, {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+function stageLabel(stage?: string) {
+  return stage?.replaceAll("_", " ").toUpperCase() || "UNCLASSIFIED";
+}
+
+function statusTone(status?: string) {
+  switch (status) {
+    case "sent":
+      return "border-cyan-300/50 bg-cyan-300/10 text-cyan-100";
+    case "approved":
+      return "border-lime-300/50 bg-lime-300/10 text-lime-100";
+    case "rejected":
+    case "failed":
+      return "border-red-300/50 bg-red-300/10 text-red-100";
+    default:
+      return "border-white/15 bg-white/5 text-white/70";
+  }
+}
+
+function stageTone(stage?: string) {
+  switch (stage) {
+    case "meeting_requested":
+      return "text-cyan-200";
+    case "pricing_requested":
+      return "text-blue-200";
+    case "closed_lost":
+      return "text-red-200";
+    case "contacted":
+      return "text-emerald-200";
+    default:
+      return "text-white/70";
+  }
+}
 
 export default function Home() {
+  const [state, setState] = useState<StateResponse>({});
+  const [followups, setFollowups] = useState<{ totalDue: number; due: unknown[] } | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [selectedLead, setSelectedLead] = useState<string | null>(null);
+
+  async function loadData() {
+    try {
+      const [stateRes, followupRes] = await Promise.all([
+        fetch(`${API_URL}/api/state`, { cache: "no-store" }),
+        fetch(`${API_URL}/api/followups`, { cache: "no-store" }),
+      ]);
+
+      const stateJson = await stateRes.json();
+      const followupJson = await followupRes.json();
+
+      setState(stateJson);
+      setFollowups(followupJson);
+
+      if (!selectedLead && Object.keys(stateJson).length > 0) {
+        setSelectedLead(Object.keys(stateJson)[0]);
+      }
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    loadData();
+
+    const timer = setInterval(loadData, 5000);
+
+    return () => clearInterval(timer);
+  }, []);
+
+  const leads = useMemo(() => {
+    return Object.entries(state).map(([company, data]) => ({
+      company,
+      ...data,
+    }));
+  }, [state]);
+
+  const selected = selectedLead ? state[selectedLead] : null;
+
+  const metrics = useMemo(() => {
+    return {
+      total: leads.length,
+      sent: leads.filter((lead) => lead.status === "sent").length,
+      meetings: leads.filter((lead) => lead.pipelineStage === "meeting_requested").length,
+      pricing: leads.filter((lead) => lead.pipelineStage === "pricing_requested").length,
+      lost: leads.filter((lead) => lead.pipelineStage === "closed_lost").length,
+      due: followups?.totalDue || 0,
+    };
+  }, [leads, followups]);
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
+    <main className="min-h-screen overflow-hidden bg-[#08090a] text-white">
+      <div className="pointer-events-none fixed inset-0">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_10%,rgba(0,210,255,0.22),transparent_28%),radial-gradient(circle_at_20%_80%,rgba(120,80,255,0.16),transparent_30%)]" />
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.035)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.035)_1px,transparent_1px)] bg-[size:44px_44px]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle,transparent_45%,rgba(0,0,0,0.75)_100%)]" />
+      </div>
+
+      <section className="relative grid min-h-screen grid-cols-[260px_1fr_360px] gap-px bg-white/10">
+        <aside className="bg-[#0b0d10]/95 p-5 backdrop-blur-xl">
+          <div className="mb-10">
+            <div className="mb-2 flex items-center gap-2">
+              <div className="h-2.5 w-2.5 animate-pulse rounded-full bg-cyan-300 shadow-[0_0_18px_rgba(103,232,249,0.9)]" />
+              <p className="text-xs uppercase tracking-[0.38em] text-cyan-200">Live System</p>
+            </div>
+
+            <h1 className="text-3xl font-black uppercase leading-none tracking-[-0.08em]">
+              Hermes
+              <br />
+              Control
+            </h1>
+
+            <p className="mt-4 max-w-[190px] text-xs leading-relaxed text-white/45">
+              AI outbound operations layer for Liminull pipeline intelligence.
+            </p>
+          </div>
+
+          <nav className="space-y-2 text-xs uppercase tracking-[0.18em] text-white/50">
+            {["Pipeline", "Approvals", "Signals", "Followups", "Replies"].map((item, index) => (
+              <button
+                key={item}
+                className={`group flex w-full items-center justify-between border px-3 py-3 text-left transition ${
+                  index === 0
+                    ? "border-cyan-300/40 bg-cyan-300/10 text-cyan-100"
+                    : "border-white/10 hover:border-cyan-300/30 hover:bg-white/5 hover:text-white"
+                }`}
+              >
+                <span>{item}</span>
+                <span className="text-white/25">0{index + 1}</span>
+              </button>
+            ))}
+          </nav>
+
+          <div className="mt-10 border border-white/10 bg-white/[0.03] p-4">
+            <p className="mb-3 text-[10px] uppercase tracking-[0.28em] text-white/35">
+              Operator Feed
+            </p>
+
+            <div className="space-y-3 text-xs text-white/55">
+              <p>
+                <span className="text-cyan-200">●</span> API linked on port 3001
+              </p>
+              <p>
+                <span className="text-cyan-200">●</span> State sync every 5s
+              </p>
+              <p>
+                <span className="text-cyan-200">●</span> Pipeline memory online
+              </p>
+            </div>
+          </div>
+        </aside>
+
+        <section className="bg-[#f4f2ed] p-6 text-[#141414]">
+          <div className="mb-6 flex items-start justify-between border-b border-black/15 pb-4">
+            <div>
+              <p className="mb-2 text-xs uppercase tracking-[0.35em] text-black/45">
+                Local AI Systems / Outbound Ops
+              </p>
+              <h2 className="max-w-4xl text-7xl font-black uppercase leading-[0.82] tracking-[-0.1em]">
+                Pipeline
+                <br />
+                Without The
+                <br />
+                Circus.
+              </h2>
+            </div>
+
+            <button
+              onClick={loadData}
+              className="border border-black/25 bg-black px-4 py-3 text-xs font-bold uppercase tracking-[0.22em] text-white transition hover:bg-cyan-300 hover:text-black"
             >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+              Sync State
+            </button>
+          </div>
+
+          <div className="mb-6 grid grid-cols-6 gap-3">
+            {[
+              ["Leads", metrics.total],
+              ["Sent", metrics.sent],
+              ["Meetings", metrics.meetings],
+              ["Pricing", metrics.pricing],
+              ["Lost", metrics.lost],
+              ["Due", metrics.due],
+            ].map(([label, value]) => (
+              <div key={label} className="border border-black/15 bg-white/45 p-4">
+                <p className="text-[10px] uppercase tracking-[0.25em] text-black/45">{label}</p>
+                <p className="mt-3 text-4xl font-black tracking-[-0.08em]">{value}</p>
+              </div>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-3 gap-3">
+            {loading ? (
+              <div className="col-span-3 border border-black/15 bg-white/40 p-10 text-sm uppercase tracking-[0.25em] text-black/45">
+                Loading Hermes state...
+              </div>
+            ) : leads.length === 0 ? (
+              <div className="col-span-3 border border-black/15 bg-white/40 p-10 text-sm uppercase tracking-[0.25em] text-black/45">
+                No pipeline records found.
+              </div>
+            ) : (
+              leads.map((lead) => (
+                <button
+                  key={lead.company}
+                  onClick={() => setSelectedLead(lead.company)}
+                  className={`min-h-[210px] border p-4 text-left transition hover:-translate-y-1 hover:shadow-[8px_8px_0_rgba(0,0,0,0.16)] ${
+                    selectedLead === lead.company
+                      ? "border-cyan-400 bg-cyan-100/60"
+                      : "border-black/15 bg-white/55"
+                  }`}
+                >
+                  <div className="mb-6 flex items-center justify-between">
+                    <span className="text-[10px] uppercase tracking-[0.25em] text-black/45">
+                      Lead Signal
+                    </span>
+                    <span className="h-2 w-2 rounded-full bg-cyan-500 shadow-[0_0_16px_rgba(6,182,212,0.9)]" />
+                  </div>
+
+                  <h3 className="text-3xl font-black uppercase leading-none tracking-[-0.08em]">
+                    {lead.company}
+                  </h3>
+
+                  <div className="mt-5 space-y-2 text-xs uppercase tracking-[0.12em]">
+                    <p>
+                      <span className="text-black/35">Status:</span>{" "}
+                      <span>{lead.status || "unknown"}</span>
+                    </p>
+                    <p>
+                      <span className="text-black/35">Stage:</span>{" "}
+                      <span>{stageLabel(lead.pipelineStage)}</span>
+                    </p>
+                    <p>
+                      <span className="text-black/35">Reply:</span>{" "}
+                      <span>{lead.replyStatus || "none"}</span>
+                    </p>
+                  </div>
+                </button>
+              ))
+            )}
+          </div>
+        </section>
+
+        <aside className="bg-[#090b10]/95 p-5 backdrop-blur-xl">
+          <div className="mb-4 border border-cyan-300/25 bg-cyan-300/10 p-4">
+            <div className="mb-3 flex items-center justify-between">
+              <p className="text-xs uppercase tracking-[0.28em] text-cyan-100">Leak Map</p>
+              <p className="text-[10px] uppercase tracking-[0.2em] text-cyan-200/60">Live</p>
+            </div>
+
+            <div className="relative h-44 overflow-hidden border border-white/10 bg-black">
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_55%_45%,rgba(34,211,238,0.65),transparent_6%),radial-gradient(circle_at_40%_58%,rgba(168,85,247,0.55),transparent_7%),radial-gradient(circle_at_62%_62%,rgba(34,211,238,0.45),transparent_5%)]" />
+              <div className="absolute inset-0 bg-[linear-gradient(120deg,transparent,rgba(255,255,255,0.08),transparent)]" />
+              <div className="absolute bottom-3 left-3 right-3 flex gap-1">
+                {Array.from({ length: 24 }).map((_, i) => (
+                  <span
+                    key={i}
+                    className="h-2 flex-1 bg-cyan-300/70"
+                    style={{ opacity: 0.2 + ((i % 6) + 1) / 8 }}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="mb-4 border border-white/10 bg-white/[0.035]">
+            <div className="border-b border-white/10 px-4 py-3">
+              <p className="text-xs uppercase tracking-[0.28em] text-white/45">
+                Operator View
+              </p>
+            </div>
+
+            <div className="divide-y divide-white/10">
+              {[
+                ["Signal", selectedLead || "No target"],
+                ["Status", selected?.status || "unknown"],
+                ["Stage", stageLabel(selected?.pipelineStage)],
+                ["Reply", selected?.replyStatus || "none"],
+                ["Followups", selected?.followupCount || 0],
+              ].map(([label, value]) => (
+                <div key={label} className="grid grid-cols-[110px_1fr] px-4 py-3 text-xs">
+                  <span className="uppercase tracking-[0.2em] text-white/35">{label}</span>
+                  <span className={stageTone(selected?.pipelineStage)}>{String(value)}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="border border-white/10 bg-white/[0.035] p-4">
+            <p className="mb-4 text-xs uppercase tracking-[0.28em] text-white/45">
+              Latest Reply
+            </p>
+
+            <p className="min-h-[120px] text-sm leading-relaxed text-white/70">
+              {selected?.latestReply || "No reply intelligence captured yet."}
+            </p>
+
+            <div className="mt-5 grid grid-cols-2 gap-2">
+              <div className={`border px-3 py-2 text-center text-[10px] uppercase tracking-[0.18em] ${statusTone(selected?.status)}`}>
+                {selected?.status || "idle"}
+              </div>
+              <div className="border border-white/10 bg-white/5 px-3 py-2 text-center text-[10px] uppercase tracking-[0.18em] text-white/55">
+                {formatDate(selected?.updatedAt)}
+              </div>
+            </div>
+          </div>
+        </aside>
+      </section>
+    </main>
   );
 }
