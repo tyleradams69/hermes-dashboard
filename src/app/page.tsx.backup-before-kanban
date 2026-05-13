@@ -1,15 +1,7 @@
 "use client";
 
 import LeadDrawer from "../components/LeadDrawer";
-import PipelineBoard from "../components/PipelineBoard";
 import SignalAlert from "../components/SignalAlert";
-import SystemTelemetry from "../components/SystemTelemetry";
-import CommandPalette from "../components/CommandPalette";
-import SystemToasts from "../components/SystemToasts";
-import SystemStatusBar from "../components/SystemStatusBar";
-import OperatorPresence from "../components/OperatorPresence";
-import ApprovalQueue from "../components/ApprovalQueue";
-import ArtifactRuntime from "../components/ArtifactRuntime";
 import SystemBoot from "../components/SystemBoot";
 import OperatorAtmosphere from "../components/OperatorAtmosphere";
 import { useEffect, useMemo, useState } from "react";
@@ -32,7 +24,7 @@ type LeadState = {
 
 type StateResponse = Record<string, LeadState>;
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3002";
+const API_URL = "https://api.liminullai.com";
 
 function formatDate(value?: string) {
   if (!value) return "—";
@@ -59,7 +51,7 @@ function statusTone(status?: string) {
     case "failed":
       return "border-red-300/50 bg-red-300/10 text-red-100";
     default:
-      return "border-white/15 bg-black/35 backdrop-blur-2xl/5 text-white/70";
+      return "border-white/15 bg-white/5 text-white/70";
   }
 }
 
@@ -216,23 +208,6 @@ const latestLeadName = leads[0]?.company || null;
 <OperatorAtmosphere />
 <SystemBoot />
 <SignalAlert signal={latestLeadName} />
-<SystemStatusBar />
-<SystemToasts signal={latestLeadName} />
-<OperatorPresence />
-<ApprovalQueue />
-
-<CommandPalette
-  leads={leads}
-  onSelectLead={(lead) => {
-    setSelectedLead(lead.company);
-    setDrawerOpen(true);
-  }}
-  onImportLead={() => {
-    const el = document.querySelector("input[placeholder='Company']") as HTMLInputElement | null;
-    el?.focus();
-  }}
-/>
-
 <LeadDrawer
   open={drawerOpen}
   company={selectedLead}
@@ -246,8 +221,8 @@ const latestLeadName = leads[0]?.company || null;
         <div className="absolute inset-0 bg-[radial-gradient(circle,transparent_45%,rgba(0,0,0,0.75)_100%)]" />
       </div>
 
-      <section className="relative grid min-h-screen grid-cols-[260px_1fr_360px] gap-px bg-black/35 backdrop-blur-2xl/10">
-        <aside className="bg-black/55 backdrop-blur-2xl/95 p-5 backdrop-blur-xl">
+      <section className="relative grid min-h-screen grid-cols-[260px_1fr_360px] gap-px bg-white/10">
+        <aside className="bg-[#0b0d10]/95 p-5 backdrop-blur-xl">
           <div className="mb-10">
             <div className="mb-2 flex items-center gap-2">
               <div className="h-2.5 w-2.5 animate-pulse rounded-full bg-cyan-300 shadow-[0_0_18px_rgba(103,232,249,0.9)]" />
@@ -272,7 +247,7 @@ const latestLeadName = leads[0]?.company || null;
                 className={`group flex w-full items-center justify-between border px-3 py-3 text-left transition ${
                   index === 0
                     ? "border-cyan-300/40 bg-cyan-300/10 text-cyan-100"
-                    : "border-cyan-300/15 hover:border-cyan-300/30 hover:bg-black/35 backdrop-blur-2xl/5 hover:text-white"
+                    : "border-white/10 hover:border-cyan-300/30 hover:bg-white/5 hover:text-white"
                 }`}
               >
                 <span>{item}</span>
@@ -281,7 +256,7 @@ const latestLeadName = leads[0]?.company || null;
             ))}
           </nav>
 
-          <div className="mt-10 border border-cyan-300/15 bg-black/35 backdrop-blur-2xl/[0.03] p-4">
+          <div className="mt-10 border border-white/10 bg-white/[0.03] p-4">
             <p className="mb-3 text-[10px] uppercase tracking-[0.28em] text-white/35">
 <button
   onClick={async () => {
@@ -330,10 +305,6 @@ const latestLeadName = leads[0]?.company || null;
             </button>
           </div>
 
-           <div className="mb-6">
-            <ArtifactRuntime />
-          </div>
-
           <div className="mb-6 grid grid-cols-6 gap-3">
             {[
               ["Leads", metrics.total],
@@ -343,14 +314,14 @@ const latestLeadName = leads[0]?.company || null;
               ["Lost", metrics.lost],
               ["Due", metrics.due],
             ].map(([label, value]) => (
-              <div key={label} className="border border-black/15 bg-black/35 backdrop-blur-2xl/45 p-4">
+              <div key={label} className="border border-black/15 bg-white/45 p-4">
                 <p className="text-[10px] uppercase tracking-[0.25em] text-black/45">{label}</p>
                 <p className="mt-3 text-4xl font-black tracking-[-0.08em]">{value}</p>
               </div>
             ))}
           </div>
 
-<div className="mb-6 border border-black/15 bg-black/35 backdrop-blur-2xl/60 p-4">
+<div className="mb-6 border border-black/15 bg-white/60 p-4">
 
   <div className="mb-4">
     <p className="text-xs uppercase tracking-[0.25em] text-black/45">
@@ -364,28 +335,28 @@ const latestLeadName = leads[0]?.company || null;
       value={newCompany}
       onChange={(e) => setNewCompany(e.target.value)}
       placeholder="Company"
-      className="border border-black/15 bg-black/35 backdrop-blur-2xl px-3 py-3 text-sm outline-none"
+      className="border border-black/15 bg-white px-3 py-3 text-sm outline-none"
     />
 
     <input
       value={newEmail}
       onChange={(e) => setNewEmail(e.target.value)}
       placeholder="Email"
-      className="border border-black/15 bg-black/35 backdrop-blur-2xl px-3 py-3 text-sm outline-none"
+      className="border border-black/15 bg-white px-3 py-3 text-sm outline-none"
     />
 
     <input
       value={newPhone}
       onChange={(e) => setNewPhone(e.target.value)}
       placeholder="Phone"
-      className="border border-black/15 bg-black/35 backdrop-blur-2xl px-3 py-3 text-sm outline-none"
+      className="border border-black/15 bg-white px-3 py-3 text-sm outline-none"
     />
 
     <input
       value={newWebsite}
       onChange={(e) => setNewWebsite(e.target.value)}
       placeholder="Website"
-      className="border border-black/15 bg-black/35 backdrop-blur-2xl px-3 py-3 text-sm outline-none"
+      className="border border-black/15 bg-white px-3 py-3 text-sm outline-none"
     />
 
   </div>
@@ -400,14 +371,63 @@ const latestLeadName = leads[0]?.company || null;
 
 </div>
 
-          <PipelineBoard
-            leads={leads}
-            onSelect={(lead) => {
-              setSelectedLead(lead.company);
-              setDrawerOpen(true);
-            }}
-            onStageChange={loadData}
-          />
+          <div className="grid grid-cols-3 gap-3">
+            {loading ? (
+              <div className="col-span-3 border border-black/15 bg-white/40 p-10 text-sm uppercase tracking-[0.25em] text-black/45">
+                Loading Hermes state...
+              </div>
+            ) : leads.length === 0 ? (
+              <div className="col-span-3 border border-black/15 bg-white/40 p-10 text-sm uppercase tracking-[0.25em] text-black/45">
+                No pipeline records found.
+              </div>
+            ) : (
+              leads.map((lead) => (
+                <button
+                  key={lead.company}
+                  onClick={() => {
+  setSelectedLead(lead.company);
+  setDrawerOpen(true);
+}}
+                  className={`min-h-[260px] border p-4 text-left transition hover:-translate-y-1 hover:shadow-[8px_8px_0_rgba(0,0,0,0.16)] ${
+                    selectedLead === lead.company
+                      ? "border-cyan-400 bg-cyan-100/60"
+                      : "border-black/15 bg-white/55"
+                  }`}
+                >
+                  <div className="mb-6 flex items-center justify-between">
+                    <span className="text-[10px] uppercase tracking-[0.25em] text-black/45">
+                      Lead Signal
+                    </span>
+                    <span className="h-2 w-2 rounded-full bg-cyan-500 shadow-[0_0_16px_rgba(6,182,212,0.9)]" />
+                  </div>
+
+                  <h3 className="text-3xl font-black uppercase leading-none tracking-[-0.08em]">
+                    {lead.company}
+                  </h3>
+
+                  <div className="mt-5 space-y-2 text-xs uppercase tracking-[0.12em]">
+                    <p><span className="text-black/35">Status:</span> {lead.status || "unknown"}</p>
+                    <p><span className="text-black/35">Stage:</span> {stageLabel(lead.pipelineStage)}</p>
+                    <p><span className="text-black/35">Reply:</span> {lead.replyStatus || "none"}</p>
+                  </div>
+
+                  <div className="mt-6 flex flex-wrap gap-2">
+                    <span className="border border-cyan-500/40 bg-cyan-500/10 px-3 py-2 text-[10px] font-bold uppercase tracking-[0.2em] text-cyan-700">
+                      Approve
+                    </span>
+
+                    <span className="border border-red-500/30 bg-red-500/10 px-3 py-2 text-[10px] font-bold uppercase tracking-[0.2em] text-red-700">
+                      Reject
+                    </span>
+
+                    <span className="border border-black/20 bg-black/5 px-3 py-2 text-[10px] font-bold uppercase tracking-[0.2em] text-black/60">
+                      Follow-Up
+                    </span>
+                  </div>
+                </button>
+              ))
+            )}
+          </div>
         </section>
 
         <aside className="bg-[#090b10]/95 p-5 backdrop-blur-xl">
@@ -417,7 +437,7 @@ const latestLeadName = leads[0]?.company || null;
               <p className="text-[10px] uppercase tracking-[0.2em] text-cyan-200/60">Live</p>
             </div>
 
-            <div className="relative h-44 overflow-hidden border border-cyan-300/15 bg-black">
+            <div className="relative h-44 overflow-hidden border border-white/10 bg-black">
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_55%_45%,rgba(34,211,238,0.65),transparent_6%),radial-gradient(circle_at_40%_58%,rgba(168,85,247,0.55),transparent_7%),radial-gradient(circle_at_62%_62%,rgba(34,211,238,0.45),transparent_5%)]" />
               <div className="absolute bottom-3 left-3 right-3 flex gap-1">
                 {Array.from({ length: 24 }).map((_, i) => (
@@ -431,8 +451,8 @@ const latestLeadName = leads[0]?.company || null;
             </div>
           </div>
 
-          <div className="mb-4 border border-cyan-300/15 bg-black/35 backdrop-blur-2xl/[0.035]">
-            <div className="border-b border-cyan-300/15 px-4 py-3">
+          <div className="mb-4 border border-white/10 bg-white/[0.035]">
+            <div className="border-b border-white/10 px-4 py-3">
               <p className="text-xs uppercase tracking-[0.28em] text-white/45">
                 Operator View
               </p>
@@ -454,12 +474,12 @@ const latestLeadName = leads[0]?.company || null;
             </div>
           </div>
 
-          <div className="border border-cyan-300/15 bg-black/35 backdrop-blur-2xl/[0.035] p-4">
+          <div className="border border-white/10 bg-white/[0.035] p-4">
             <p className="mb-4 text-xs uppercase tracking-[0.28em] text-white/45">
               Latest Reply
             </p>
 
-<div className="mt-4 border border-cyan-300/15 bg-black/35 backdrop-blur-2xl/[0.035] p-4">
+<div className="mt-4 border border-white/10 bg-white/[0.035] p-4">
 
   <p className="mb-4 text-xs uppercase tracking-[0.28em] text-white/45">
     Lead Intelligence
@@ -529,7 +549,7 @@ const latestLeadName = leads[0]?.company || null;
               <div className={`border px-3 py-2 text-center text-[10px] uppercase tracking-[0.18em] ${statusTone(selected?.status)}`}>
                 {selected?.status || "idle"}
               </div>
-              <div className="border border-cyan-300/15 bg-black/35 backdrop-blur-2xl/5 px-3 py-2 text-center text-[10px] uppercase tracking-[0.18em] text-white/55">
+              <div className="border border-white/10 bg-white/5 px-3 py-2 text-center text-[10px] uppercase tracking-[0.18em] text-white/55">
                 {formatDate(selected?.updatedAt)}
               </div>
             </div>
@@ -537,7 +557,7 @@ const latestLeadName = leads[0]?.company || null;
 
 <div className="mt-4">
 
-          <div className="mt-4 border border-cyan-300/15 bg-black/35 backdrop-blur-2xl/[0.035] p-4">
+          <div className="mt-4 border border-white/10 bg-white/[0.035] p-4">
             <p className="mb-4 text-xs uppercase tracking-[0.28em] text-white/45">
               Lead Timeline
             </p>
@@ -549,7 +569,7 @@ const latestLeadName = leads[0]?.company || null;
                 </p>
               ) : (
                 leadActivity.map((event) => (
-                  <div key={event.id} className="border border-cyan-300/15 bg-black/25 backdrop-blur-xl p-3">
+                  <div key={event.id} className="border border-white/10 bg-black/30 p-3">
                     <div className="text-[10px] uppercase tracking-[0.18em] text-cyan-300">
                       {event.type.replaceAll("_", " ")}
                     </div>

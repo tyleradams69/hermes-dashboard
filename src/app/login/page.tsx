@@ -111,10 +111,10 @@ export default function LoginPage() {
         <div className="access-flash pointer-events-none fixed inset-0 z-50 flex items-center justify-center bg-cyan-300/10 backdrop-blur-sm">
           <div className="border border-cyan-200 bg-black/80 px-10 py-8 text-center shadow-[0_0_120px_rgba(103,232,249,0.55)]">
             <p className="text-xs uppercase tracking-[0.38em] text-cyan-200">
-              Access Signal Accepted
+              ACCESS GRANTED
             </p>
             <p className="mt-3 text-5xl font-black uppercase tracking-[-0.08em] text-white">
-              Entering Hermes
+             SPIRE LINK ESTABLISHED
             </p>
           </div>
         </div>
