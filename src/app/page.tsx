@@ -20,8 +20,7 @@ type LeadState = {
 
 type StateResponse = Record<string, LeadState>;
 
-const API_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:3002";
+const API_URL = "https://api.liminullai.com";
 
 function formatDate(value?: string) {
   if (!value) return "—";
@@ -73,6 +72,11 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [selectedLead, setSelectedLead] = useState<string | null>(null);
 const [leadActivity, setLeadActivity] = useState<any[]>([]);
+const [newCompany, setNewCompany] = useState("");
+const [newEmail, setNewEmail] = useState("");
+const [newPhone, setNewPhone] = useState("");
+const [newWebsite, setNewWebsite] = useState("");
+const [importing, setImporting] = useState(false);
 
   async function loadData() {
     try {
@@ -109,6 +113,61 @@ if (selectedLead) {
       setLoading(false);
     }
   }
+
+async function importLead() {
+
+  if (!newCompany.trim()) {
+    alert("Company name required");
+    return;
+  }
+
+  try {
+
+    setImporting(true);
+
+    const response = await fetch(
+      `${API_URL}/api/leads/import`,
+      {
+        method: "POST",
+
+        headers: {
+          "Content-Type": "application/json",
+        },
+
+        body: JSON.stringify({
+          company: newCompany,
+          email: newEmail,
+          phone: newPhone,
+          website: newWebsite,
+        }),
+      }
+    );
+
+    const result = await response.json();
+
+    if (!result.ok) {
+      alert(result.error || "Import failed");
+      return;
+    }
+
+    setNewCompany("");
+    setNewEmail("");
+    setNewPhone("");
+    setNewWebsite("");
+
+    await loadData();
+
+  } catch (err) {
+
+    console.error(err);
+
+    alert("Failed to import lead");
+
+  } finally {
+
+    setImporting(false);
+  }
+}
 
   useEffect(() => {
     loadData();
@@ -232,6 +291,56 @@ if (selectedLead) {
               </div>
             ))}
           </div>
+
+<div className="mb-6 border border-black/15 bg-white/60 p-4">
+
+  <div className="mb-4">
+    <p className="text-xs uppercase tracking-[0.25em] text-black/45">
+      Manual Lead Import
+    </p>
+  </div>
+
+  <div className="grid grid-cols-2 gap-3">
+
+    <input
+      value={newCompany}
+      onChange={(e) => setNewCompany(e.target.value)}
+      placeholder="Company"
+      className="border border-black/15 bg-white px-3 py-3 text-sm outline-none"
+    />
+
+    <input
+      value={newEmail}
+      onChange={(e) => setNewEmail(e.target.value)}
+      placeholder="Email"
+      className="border border-black/15 bg-white px-3 py-3 text-sm outline-none"
+    />
+
+    <input
+      value={newPhone}
+      onChange={(e) => setNewPhone(e.target.value)}
+      placeholder="Phone"
+      className="border border-black/15 bg-white px-3 py-3 text-sm outline-none"
+    />
+
+    <input
+      value={newWebsite}
+      onChange={(e) => setNewWebsite(e.target.value)}
+      placeholder="Website"
+      className="border border-black/15 bg-white px-3 py-3 text-sm outline-none"
+    />
+
+  </div>
+
+  <button
+    onClick={importLead}
+    disabled={importing}
+    className="mt-4 border border-black bg-black px-5 py-3 text-xs font-bold uppercase tracking-[0.2em] text-white transition hover:bg-cyan-300 hover:text-black disabled:opacity-40"
+  >
+    {importing ? "Importing..." : "Import Lead"}
+  </button>
+
+</div>
 
           <div className="grid grid-cols-3 gap-3">
             {loading ? (
