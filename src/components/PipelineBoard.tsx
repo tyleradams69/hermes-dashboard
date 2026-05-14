@@ -116,7 +116,13 @@ export default function PipelineBoard({
                       e.dataTransfer.effectAllowed = "move";
                     }}
                     onClick={() => onSelect(lead)}
-                    className={`w-full cursor-grab border p-4 text-left transition-all duration-300 ease-out hover:-translate-y-[4px] hover:border-cyan-300/40 hover:shadow-[0_12px_40px_rgba(34,211,238,0.14)] active:cursor-grabbing ${tone(stage)}`}
+                    className={`w-full cursor-grab border p-4 text-left transition-all duration-300 ease-out hover:-translate-y-[4px] hover:border-cyan-300/40 hover:shadow-[0_12px_40px_rgba(34,211,238,0.14)] active:cursor-grabbing ${tone(stage)} ${
+                                lead.leadPriority === "critical"
+                                  ? "border-red-300/70 bg-red-300/10 ring-2 ring-red-300/50 shadow-[0_0_100px_rgba(255,80,80,0.35)]"
+                                  : lead.leadTemperature === "hot"
+                                  ? "border-cyan-300/80 bg-cyan-300/10 ring-2 ring-cyan-300/50 shadow-[0_0_100px_rgba(34,211,238,0.30)]"
+                                  : ""
+                              }`}
                   >
                     <div className="mb-4 flex items-center justify-between">
                       <div className="h-2 w-2 rounded-full bg-cyan-300 shadow-[0_0_18px_rgba(103,232,249,0.9)]" />

@@ -1,6 +1,7 @@
 "use client";
 
 import AIFollowupPanel from "./AIFollowupPanel";
+import LeadMemoryPanel from "./LeadMemoryPanel";
 
 type Props = {
   open: boolean;
@@ -126,12 +127,28 @@ export default function LeadDrawer({
           </div>
         </div>
 
+          <div className="mt-4 border border-cyan-300/20 bg-cyan-300/5 p-4">
+            <p className="mb-3 text-[10px] uppercase tracking-[0.24em] text-cyan-200">
+              Suggested Next Action
+            </p>
+
+            <div className="border border-white/10 bg-black/20 px-4 py-4">
+              <p className="text-lg font-black uppercase tracking-[-0.04em] text-cyan-100">
+                {data?.suggestedNextAction ||
+                  "Awaiting operational guidance"}
+              </p>
+            </div>
+          </div>
+
+
 
 
           <p className="text-sm leading-7 text-white/70">
             {data?.latestReply || "No reply intelligence captured yet."}
           </p>
         </div>
+
+        <LeadMemoryPanel company={company} />
 
         <AIFollowupPanel company={company} />
 

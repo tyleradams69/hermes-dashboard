@@ -9,6 +9,8 @@ import SystemToasts from "../components/SystemToasts";
 import SystemStatusBar from "../components/SystemStatusBar";
 import OperatorPresence from "../components/OperatorPresence";
 import ApprovalQueue from "../components/ApprovalQueue";
+import AIAlerts from "../components/AIAlerts";
+import StrategyPanel from "../components/StrategyPanel";
 import ArtifactRuntime from "../components/ArtifactRuntime";
 import SystemBoot from "../components/SystemBoot";
 import OperatorAtmosphere from "../components/OperatorAtmosphere";
@@ -119,9 +121,15 @@ if (selectedLead) {
   );
 }
 
-      if (!selectedLead && Object.keys(stateJson).length > 0) {
-        setSelectedLead(Object.keys(stateJson)[0]);
-      }
+      setSelectedLead((current) => {
+        if (current) return current;
+
+        if (Object.keys(stateJson).length > 0) {
+          return Object.keys(stateJson)[0];
+        }
+
+        return null;
+      });
     } finally {
       setLoading(false);
     }
@@ -218,6 +226,7 @@ const latestLeadName = leads[0]?.company || null;
 <SignalAlert signal={latestLeadName} />
 <SystemStatusBar />
 <SystemToasts signal={latestLeadName} />
+<AIAlerts />
 <OperatorPresence />
 <ApprovalQueue />
 
@@ -332,6 +341,8 @@ const latestLeadName = leads[0]?.company || null;
 
            <div className="mb-6">
             <ArtifactRuntime />
+
+          <StrategyPanel />
           </div>
 
           <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
