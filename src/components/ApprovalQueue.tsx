@@ -8,6 +8,7 @@ const API_URL =
 
 export default function ApprovalQueue() {
   const [items, setItems] = useState<any[]>([]);
+  const [minimized, setMinimized] = useState(false);
 
   async function load() {
     try {
@@ -84,8 +85,20 @@ export default function ApprovalQueue() {
           <div className="border border-cyan-300/20 bg-cyan-300/10 px-2 py-1 text-[10px] font-bold text-cyan-100">
             {items.length}
           </div>
+          <button
+            onClick={() => setMinimized(!minimized)}
+            className="border border-cyan-300/20 bg-cyan-300/10 px-2 py-1 text-[10px] uppercase tracking-[0.18em] text-cyan-100 transition hover:bg-cyan-300 hover:text-black"
+          >
+            {minimized ? "Open" : "Min"}
+          </button>
         </div>
       </div>
+
+      {minimized ? (
+        <div className="px-4 py-4 text-xs uppercase tracking-[0.22em] text-white/45">
+          {items.length} pending approvals
+        </div>
+      ) : (
 
       <div className="max-h-[280px] overflow-y-auto">
         {items.length === 0 ? (
@@ -143,6 +156,7 @@ export default function ApprovalQueue() {
           ))
         )}
       </div>
+      )}
     </div>
   );
 }

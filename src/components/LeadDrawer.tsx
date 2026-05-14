@@ -2,6 +2,7 @@
 
 import AIFollowupPanel from "./AIFollowupPanel";
 import LeadMemoryPanel from "./LeadMemoryPanel";
+import PredictiveInsightsPanel from "./PredictiveInsightsPanel";
 
 type Props = {
   open: boolean;
@@ -147,6 +148,8 @@ export default function LeadDrawer({
             {data?.latestReply || "No reply intelligence captured yet."}
           </p>
         </div>
+
+        <PredictiveInsightsPanel company={company} />
 
         <LeadMemoryPanel company={company} />
 

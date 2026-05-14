@@ -10,6 +10,10 @@ import SystemStatusBar from "../components/SystemStatusBar";
 import OperatorPresence from "../components/OperatorPresence";
 import ApprovalQueue from "../components/ApprovalQueue";
 import AIAlerts from "../components/AIAlerts";
+import PredictiveSignals from "../components/PredictiveSignals";
+import PredictiveFeed from "../components/PredictiveFeed";
+import OperatorPerformancePanel from "../components/OperatorPerformancePanel";
+import OperationalCorrelationsPanel from "../components/OperationalCorrelationsPanel";
 import StrategyPanel from "../components/StrategyPanel";
 import ArtifactRuntime from "../components/ArtifactRuntime";
 import SystemBoot from "../components/SystemBoot";
@@ -227,6 +231,7 @@ const latestLeadName = leads[0]?.company || null;
 <SystemStatusBar />
 <SystemToasts signal={latestLeadName} />
 <AIAlerts />
+<PredictiveSignals />
 <OperatorPresence />
 <ApprovalQueue />
 
@@ -343,6 +348,12 @@ const latestLeadName = leads[0]?.company || null;
             <ArtifactRuntime />
 
           <StrategyPanel />
+
+          <PredictiveFeed />
+
+          <OperatorPerformancePanel />
+
+          <OperationalCorrelationsPanel />
           </div>
 
           <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
