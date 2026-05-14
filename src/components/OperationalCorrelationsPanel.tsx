@@ -58,9 +58,9 @@ export default function OperationalCorrelationsPanel() {
         </div>
       </div>
 
-      <div className="space-y-4">
+      <div className="space-y-3">
         {correlations.length === 0 ? (
-          <div className="border border-white/10 bg-black/20 p-4 text-sm text-white/35">
+          <div className="border border-white/10 bg-black/20 p-4 text-[13px] text-white/35">
             No operational correlations detected yet.
           </div>
         ) : (
@@ -70,7 +70,7 @@ export default function OperationalCorrelationsPanel() {
               className={`border p-4 ${tone(item.confidence || 0)}`}
             >
               <div className="mb-3 flex items-center justify-between">
-                <p className="text-sm font-black uppercase tracking-[-0.04em]">
+                <p className="text-[13px] font-black uppercase tracking-[-0.04em]">
                   {item.correlation_type?.replaceAll("_", " ")}
                 </p>
 
@@ -79,7 +79,7 @@ export default function OperationalCorrelationsPanel() {
                 </div>
               </div>
 
-              <p className="text-sm leading-7 text-white/70">
+              <p className="text-[13px] leading-6 text-white/70">
                 {item.observation}
               </p>
 
@@ -88,7 +88,7 @@ export default function OperationalCorrelationsPanel() {
                   Impact
                 </p>
 
-                <p className="text-sm leading-7 text-white/75">
+                <p className="text-[13px] leading-6 text-white/75">
                   {item.impact_summary}
                 </p>
               </div>

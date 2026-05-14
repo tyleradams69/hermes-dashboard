@@ -324,7 +324,8 @@ export default function PredictiveFeed() {
 
                         setAcknowledged((prev) => ({
                           ...prev,
-                          [`${event.company}-close`]: true,
+                          [`${event.company}-close`]:
+                            event.insight_signature || "",
                         }));
 
                         setEvents((current) =>

@@ -35,7 +35,7 @@ export default function OperatorPerformancePanel() {
 
   if (!stats) {
     return (
-      <div className="border border-white/10 bg-black/20 p-4 text-sm text-white/35">
+      <div className="border border-white/10 bg-black/20 p-4 text-[13px] text-white/35">
         No operator analytics yet.
       </div>
     );
@@ -65,7 +65,7 @@ export default function OperatorPerformancePanel() {
           Operational Insight
         </p>
 
-        <p className="text-sm leading-7 text-white/75">
+        <p className="text-[13px] leading-6 text-white/75">
           {stats.operational_insight}
         </p>
       </div>
