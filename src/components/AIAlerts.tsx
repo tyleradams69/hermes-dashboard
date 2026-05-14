@@ -61,7 +61,10 @@ export default function AIAlerts() {
     const timer =
       setInterval(poll, 4000);
 
-    return () => clearInterval(timer);
+    return () => {
+      clearTimeout(initial);
+      clearInterval(timer);
+    };
   }, []);
 
   if (!alert) return null;

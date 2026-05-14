@@ -91,7 +91,7 @@ export default function PredictiveSignals() {
 
         setTimeout(() => {
           setSignal(null);
-        }, 8000);
+        }, 6000);
 
         return;
       }
@@ -106,8 +106,10 @@ export default function PredictiveSignals() {
     const timer =
       setInterval(load, 8000);
 
-    return () =>
+    return () => {
+      clearTimeout(initial);
       clearInterval(timer);
+    };
   }, []);
 
   if (!signal) return null;
@@ -117,7 +119,7 @@ export default function PredictiveSignals() {
     signal.type === "stale_risk";
 
   return (
-    <div className={`pointer-events-none fixed bottom-10 right-10 z-[9999] w-[440px] border p-6 backdrop-blur-2xl ${
+    <div className={`pointer-events-none fixed bottom-8 right-8 z-[9999] w-[360px] border p-6 backdrop-blur-2xl ${
       urgent
         ? "border-red-300/30 bg-black/92 shadow-[0_0_140px_rgba(255,80,80,0.22)]"
         : "border-cyan-300/30 bg-black/90 shadow-[0_0_120px_rgba(34,211,238,0.24)]"
@@ -147,7 +149,7 @@ export default function PredictiveSignals() {
         {signal.label}
       </p>
 
-      <h1 className="text-4xl font-black uppercase tracking-[-0.08em] text-white">
+      <h1 className="text-3xl font-black uppercase tracking-[-0.08em] text-white">
         {signal.company}
       </h1>
 

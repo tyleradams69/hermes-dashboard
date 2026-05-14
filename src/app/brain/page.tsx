@@ -1,7 +1,5 @@
 "use client";
 
-import Link from "next/link";
-
 import StrategyPanel from "../../components/StrategyPanel";
 import PredictiveFeed from "../../components/PredictiveFeed";
 import OperatorPerformancePanel from "../../components/OperatorPerformancePanel";
@@ -20,12 +18,7 @@ export default function BrainPage() {
             Liminull AI
           </p>
 
-          <Link
-            href="/"
-            className="border border-cyan-300/20 bg-cyan-300/10 px-4 py-3 text-[10px] uppercase tracking-[0.24em] text-cyan-100 transition hover:bg-cyan-300 hover:text-black"
-          >
-            Return to Runtime
-          </Link>
+          <div />
         </div>
 
         <div className="grid grid-cols-12 items-center gap-8">

@@ -1,11 +1,13 @@
 "use client";
 
+import Link from "next/link";
+
 export default function BrainCoreVisual() {
   return (
-    <div className="pointer-events-none relative h-[380px] w-[560px] overflow-visible">
+    <div className="relative h-[390px] w-[620px] overflow-visible">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(34,211,238,0.18),transparent_68%)]" />
 
-      <div className="absolute left-1/2 top-1/2 h-[360px] w-[360px] -translate-x-1/2 -translate-y-1/2 animate-[artifactDrift_8s_ease-in-out_infinite] rounded-full bg-[radial-gradient(circle_at_center,rgba(34,211,238,0.14),rgba(0,0,0,0.72)_52%,transparent_74%)]">
+      <div className="pointer-events-none absolute bottom-[-8px] right-[18px] h-[360px] w-[360px] animate-[artifactDrift_8s_ease-in-out_infinite] rounded-full bg-[radial-gradient(circle_at_center,rgba(34,211,238,0.14),rgba(0,0,0,0.72)_52%,transparent_74%)]">
         <video
           className="artifact-video pointer-events-none absolute left-1/2 top-1/2 h-[135%] w-[135%] -translate-x-1/2 -translate-y-1/2 select-none object-cover opacity-95 mix-blend-screen drop-shadow-[0_0_55px_rgba(103,232,249,0.35)] [clip-path:circle(38%_at_50%_50%)] [mask-image:radial-gradient(circle_at_center,black_28%,rgba(0,0,0,0.75)_44%,transparent_66%),linear-gradient(to_bottom,black_0%,black_72%,transparent_100%)]"
           autoPlay
@@ -28,7 +30,13 @@ export default function BrainCoreVisual() {
         <div className="absolute inset-[-100px] animate-[artifactOrbit_34s_linear_infinite] rounded-full border border-cyan-300/5" />
       </div>
 
-      <div className="absolute bottom-10 left-1/2 z-30 h-px w-[220px] -translate-x-1/2 bg-gradient-to-r from-transparent via-cyan-200/40 to-transparent" />
+
+      
+      <Link
+        href="/"
+        aria-label="Return to Runtime"
+        className="absolute bottom-[42px] right-[108px] z-50 h-[255px] w-[155px] cursor-pointer rounded-full"
+      />
 
       <style jsx>{`
         .artifact-video::-webkit-media-controls {

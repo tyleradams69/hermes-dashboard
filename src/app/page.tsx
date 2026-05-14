@@ -11,6 +11,7 @@ import OperatorPresence from "../components/OperatorPresence";
 import ApprovalQueue from "../components/ApprovalQueue";
 import AIAlerts from "../components/AIAlerts";
 import PredictiveSignals from "../components/PredictiveSignals";
+import RuntimeBriefing from "../components/RuntimeBriefing";
 import PredictiveFeed from "../components/PredictiveFeed";
 import OperatorPerformancePanel from "../components/OperatorPerformancePanel";
 import OperationalCorrelationsPanel from "../components/OperationalCorrelationsPanel";
@@ -230,8 +231,9 @@ const latestLeadName = leads[0]?.company || null;
 <SignalAlert signal={latestLeadName} />
 <SystemStatusBar />
 <SystemToasts signal={latestLeadName} />
-<AIAlerts />
-<PredictiveSignals />
+
+
+<RuntimeBriefing />
 <OperatorPresence />
 <ApprovalQueue />
 

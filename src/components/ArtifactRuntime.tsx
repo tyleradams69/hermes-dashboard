@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 export default function ArtifactRuntime() {
   return (
     <div className="relative overflow-hidden border border-cyan-300/20 bg-black shadow-[0_0_120px_rgba(34,211,238,0.12)]">
@@ -22,6 +24,13 @@ export default function ArtifactRuntime() {
       </video>
 
       <div className="absolute inset-0 z-20 cursor-default border border-cyan-300/10" />
+      
+      <Link
+        href="/brain"
+        aria-label="Enter Live AI Brain"
+        className="absolute left-1/2 top-1/2 z-50 h-[260px] w-[180px] -translate-x-1/2 -translate-y-1/2 cursor-pointer rounded-full"
+      />
+
 
       <div className="absolute left-6 top-6 z-30 border border-cyan-300/20 bg-black/45 px-5 py-3 text-[10px] uppercase tracking-[0.28em] text-cyan-100 backdrop-blur-xl">
         3D Artifact Runtime
