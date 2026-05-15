@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import HermesAssistantPanel from "@/components/HermesAssistantPanel";
 
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL ||
@@ -257,6 +258,7 @@ export default function OperationsPage() {
           </Panel>
         </section>
       </div>
+          <HermesAssistantPanel businessId="liminull" />
     </main>
   );
 }
