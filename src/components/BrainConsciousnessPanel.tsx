@@ -14,7 +14,15 @@ export default function BrainConsciousnessPanel() {
     try {
       const res = await fetch(
         `${API_URL}/api/brain-consciousness?business_id=liminull`,
-        { cache: "no-store" }
+        {
+          cache: "no-store",
+          headers: {
+            "x-hermes-token":
+              process.env.NEXT_PUBLIC_HERMES_API_TOKEN || "",
+            "x-hermes-role":
+              "admin",
+          },
+        }
       );
 
       const json = await res.json();

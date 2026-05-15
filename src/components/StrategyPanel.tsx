@@ -13,7 +13,7 @@ export default function StrategyPanel() {
   async function load() {
     try {
       const res = await fetch(
-        `${API_URL}/api/strategy-memory`,
+        `${API_URL}/api/strategy-memory?business_id=liminull`,
         {
           cache: "no-store",
         }

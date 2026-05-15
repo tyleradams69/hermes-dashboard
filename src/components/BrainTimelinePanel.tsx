@@ -37,7 +37,15 @@ export default function BrainTimelinePanel() {
     try {
       const res = await fetch(
         `${API_URL}/api/brain-timeline?business_id=liminull`,
-        { cache: "no-store" }
+        {
+          cache: "no-store",
+          headers: {
+            "x-hermes-token":
+              process.env.NEXT_PUBLIC_HERMES_API_TOKEN || "",
+            "x-hermes-role":
+              "admin",
+          },
+        }
       );
 
       const data = await res.json();
