@@ -5,6 +5,13 @@ import PredictiveFeed from "../../components/PredictiveFeed";
 import OperatorPerformancePanel from "../../components/OperatorPerformancePanel";
 import OperationalCorrelationsPanel from "../../components/OperationalCorrelationsPanel";
 import RuntimeWeightsPanel from "../../components/RuntimeWeightsPanel";
+import BrainConsciousnessPanel from "../../components/BrainConsciousnessPanel";
+import BrainHealthPanel from "../../components/BrainHealthPanel";
+import BrainActivityHeatPanel from "../../components/BrainActivityHeatPanel";
+import PredictionDriftPanel from "../../components/PredictionDriftPanel";
+import NeuralDensityPanel from "../../components/NeuralDensityPanel";
+import InterventionSimulationPanel from "../../components/InterventionSimulationPanel";
+import InterventionChainPanel from "../../components/InterventionChainPanel";
 import BrainEvolutionFeed from "../../components/BrainEvolutionFeed";
 import BrainTimelinePanel from "../../components/BrainTimelinePanel";
 import BrainCoreVisual from "../../components/BrainCoreVisual";
@@ -42,6 +49,13 @@ export default function BrainPage() {
 
       <div className="grid grid-cols-12 gap-4 p-5">
         <div className="col-span-3 space-y-4">
+          <BrainConsciousnessPanel />
+          <BrainHealthPanel />
+          <BrainActivityHeatPanel />
+          <PredictionDriftPanel />
+          <NeuralDensityPanel />
+          <InterventionSimulationPanel />
+          <InterventionChainPanel />
           <RuntimeWeightsPanel />
           <OperatorPerformancePanel />
         </div>

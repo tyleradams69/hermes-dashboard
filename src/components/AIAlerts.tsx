@@ -62,7 +62,6 @@ export default function AIAlerts() {
       setInterval(poll, 4000);
 
     return () => {
-      clearTimeout(initial);
       clearInterval(timer);
     };
   }, []);

@@ -107,7 +107,6 @@ export default function PredictiveSignals() {
       setInterval(load, 8000);
 
     return () => {
-      clearTimeout(initial);
       clearInterval(timer);
     };
   }, []);
