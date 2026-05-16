@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import LogoutButton from "@/components/LogoutButton";
 
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL ||
@@ -55,6 +56,20 @@ export default function BusinessesPage() {
   return (
     <main className="min-h-screen bg-black p-6 text-white">
       <div className="mx-auto max-w-6xl space-y-6">
+        
+        <nav className="flex flex-wrap gap-3">
+          <a href="/operations" className="border border-cyan-300/20 bg-cyan-300/10 px-4 py-2 text-xs font-black uppercase tracking-[0.18em] text-cyan-100 transition hover:bg-cyan-300 hover:text-black">
+            Dashboard
+          </a>
+          <a href="/businesses" className="border border-cyan-300/20 bg-cyan-300/10 px-4 py-2 text-xs font-black uppercase tracking-[0.18em] text-cyan-100 transition hover:bg-cyan-300 hover:text-black">
+            Businesses
+          </a>
+          <a href="/brain" className="border border-cyan-300/20 bg-cyan-300/10 px-4 py-2 text-xs font-black uppercase tracking-[0.18em] text-cyan-100 transition hover:bg-cyan-300 hover:text-black">
+            Brain
+          </a>
+                  <LogoutButton />
+        </nav>
+
         <div>
           <p className="text-xs uppercase tracking-[0.35em] text-cyan-300">
             Hermes Client Infrastructure

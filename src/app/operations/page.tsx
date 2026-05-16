@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import HermesAssistantPanel from "@/components/HermesAssistantPanel";
+import LogoutButton from "@/components/LogoutButton";
 
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL ||
@@ -18,6 +19,9 @@ export default function OperationsPage() {
     useState<any[]>([]);
 
   const [rollbackSnapshots, setRollbackSnapshots] =
+    useState<any[]>([]);
+
+  const [proactiveRecommendations, setProactiveRecommendations] =
     useState<any[]>([]);
 
   async function load() {
@@ -42,7 +46,7 @@ export default function OperationsPage() {
       "x-hermes-role": "admin",
     };
 
-    const [healthRes, recoveryRes, rollbackRes] =
+    const [healthRes, recoveryRes, rollbackRes, proactiveRes] =
       await Promise.all([
         fetch(`${API_URL}/api/worker-health`, {
           cache: "no-store",
@@ -56,9 +60,14 @@ export default function OperationsPage() {
           cache: "no-store",
           headers,
         }),
+
+        fetch(`${API_URL}/api/proactive-recommendations?business_id=liminull`, {
+          cache: "no-store",
+          headers,
+        }),
       ]);
 
-    const [healthData, recoveryData, rollbackData] =
+    const [healthData, recoveryData, rollbackData, proactiveData] =
       await Promise.all([
         healthRes.json(),
         recoveryRes.json(),
@@ -68,6 +77,7 @@ export default function OperationsPage() {
     setWorkerHealth(healthData.alerts || []);
     setWorkerRecovery(recoveryData.recoveries || []);
     setRollbackSnapshots(rollbackData.snapshots || []);
+    setProactiveRecommendations(proactiveData?.recommendations || []);
   }
 
   useEffect(() => {
@@ -97,6 +107,20 @@ export default function OperationsPage() {
   return (
     <main className="min-h-screen bg-black p-6 text-white">
       <div className="mx-auto max-w-7xl space-y-6">
+
+        <nav className="flex flex-wrap gap-3">
+          <a href="/operations" className="border border-cyan-300/20 bg-cyan-300/10 px-4 py-2 text-xs font-black uppercase tracking-[0.18em] text-cyan-100 transition hover:bg-cyan-300 hover:text-black">
+            Operations
+          </a>
+          <a href="/businesses" className="border border-cyan-300/20 bg-cyan-300/10 px-4 py-2 text-xs font-black uppercase tracking-[0.18em] text-cyan-100 transition hover:bg-cyan-300 hover:text-black">
+            Businesses
+          </a>
+          <a href="/brain" className="border border-cyan-300/20 bg-cyan-300/10 px-4 py-2 text-xs font-black uppercase tracking-[0.18em] text-cyan-100 transition hover:bg-cyan-300 hover:text-black">
+            Brain
+          </a>
+                  <LogoutButton />
+        </nav>
+
         <div>
           <p className="text-xs uppercase tracking-[0.35em] text-cyan-300">
             Hermes Operations
@@ -231,8 +255,58 @@ export default function OperationsPage() {
               (overview?.deadLetters || []).slice(0, 8).map((job: any) => (
                 <div key={job.id} className="border border-red-300/20 bg-red-300/10 p-4">
                   <p className="font-black">{job.job_type}</p>
+
                   <p className="mt-2 text-xs text-red-100/70">
                     {job.last_error || "No error recorded."}
+                  </p>
+
+                  <button
+                    onClick={async () => {
+                      await fetch(
+                        `${API_URL}/api/dead-letter-jobs/${job.id}/retry`,
+                        {
+                          method: "POST",
+
+                          headers: {
+                            "x-hermes-token":
+                              process.env.NEXT_PUBLIC_HERMES_API_TOKEN || "",
+
+                            "x-hermes-role":
+                              "admin",
+                          },
+                        }
+                      );
+
+                      load();
+                    }}
+                    className="mt-4 border border-red-300/30 px-3 py-2 text-[10px] uppercase tracking-[0.2em] text-red-100 transition hover:bg-red-300 hover:text-black"
+                  >
+                    Retry Job
+                  </button>
+                </div>
+              ))
+            )}
+          </Panel>
+
+          <Panel title="Proactive Intelligence">
+            {proactiveRecommendations.length === 0 ? (
+              <Empty text="No proactive recommendations." />
+            ) : (
+              proactiveRecommendations.map((item: any, index: number) => (
+                <div
+                  key={index}
+                  className="border border-cyan-300/15 bg-cyan-300/10 p-4"
+                >
+                  <div className="flex items-center justify-between">
+                    <p className="font-black">{item.title}</p>
+
+                    <span className="text-[10px] uppercase tracking-[0.2em] text-cyan-200">
+                      {item.priority}
+                    </span>
+                  </div>
+
+                  <p className="mt-2 text-sm leading-6 text-white/70">
+                    {item.recommendation}
                   </p>
                 </div>
               ))
