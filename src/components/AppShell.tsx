@@ -22,19 +22,17 @@ export default function AppShell({
   ];
 
   return (
-    <main className="min-h-screen bg-[#0a0a0a] text-white">
+    <main className="min-h-screen bg-[#090909] text-white liminull-grid-bg">
       <div className="flex min-h-screen">
-        <aside className="hidden w-[260px] border-r border-white/5 bg-[#0f0f10] p-6 lg:flex lg:flex-col">
+        <aside className="hidden w-[268px] border-r border-white/5 bg-[#0d0d0e]/95 p-6 backdrop-blur-xl lg:flex lg:flex-col">
           <div>
-            <p className="text-[10px] uppercase tracking-[0.35em] text-cyan-300/80">
-              LIMINULL
-            </p>
+            <p className="liminull-eyebrow">LIMINULL</p>
 
-            <h1 className="mt-3 text-2xl font-black tracking-[-0.08em] text-white">
+            <h1 className="mt-3 text-2xl font-black tracking-[-0.08em]">
               Operations
             </h1>
 
-            <p className="mt-2 text-xs leading-5 text-white/35">
+            <p className="mt-2 text-xs leading-5 liminull-muted">
               Operational intelligence for active business workflows.
             </p>
           </div>
@@ -46,8 +44,8 @@ export default function AppShell({
                 href={item.href}
                 className={
                   active === item.id
-                    ? "block rounded-xl border border-cyan-300/10 bg-cyan-300/10 px-4 py-3 text-sm font-semibold text-cyan-100 transition hover:bg-cyan-300/15"
-                    : "block rounded-xl border border-white/5 bg-white/[0.025] px-4 py-3 text-sm text-white/70 transition hover:bg-white/[0.06] hover:text-white"
+                    ? "block rounded-2xl border border-cyan-300/10 bg-cyan-300/10 px-4 py-3 text-sm font-semibold text-cyan-100 shadow-[0_0_40px_rgba(103,232,249,0.06)]"
+                    : "block rounded-2xl border border-white/5 bg-white/[0.025] px-4 py-3 text-sm text-white/65 transition hover:bg-white/[0.06] hover:text-white"
                 }
               >
                 {item.label}
@@ -56,7 +54,7 @@ export default function AppShell({
           </nav>
 
           <div className="mt-auto space-y-3">
-            <div className="rounded-2xl border border-white/5 bg-white/[0.025] p-4">
+            <div className="liminull-card-soft p-4">
               <p className="text-[10px] uppercase tracking-[0.25em] text-white/30">
                 Workspace
               </p>
@@ -74,16 +72,14 @@ export default function AppShell({
 
         <section className="flex-1 p-6 lg:p-10">
           <div className="mb-8">
-            <p className="text-xs uppercase tracking-[0.35em] text-cyan-300">
-              {eyebrow}
-            </p>
+            <p className="liminull-eyebrow">{eyebrow}</p>
 
-            <h1 className="mt-2 text-4xl font-black tracking-[-0.08em]">
+            <h1 className="mt-2 text-5xl font-black tracking-[-0.09em]">
               {title}
             </h1>
 
             {description && (
-              <p className="mt-3 max-w-2xl text-sm leading-6 text-white/45">
+              <p className="mt-3 max-w-2xl text-sm leading-6 liminull-muted">
                 {description}
               </p>
             )}

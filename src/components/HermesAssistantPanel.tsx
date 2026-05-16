@@ -82,11 +82,11 @@ export default function HermesAssistantPanel({
       {open && (
         <div className="mb-3 w-[420px] max-w-[calc(100vw-2rem)] border border-cyan-300/20 bg-black p-4 text-white shadow-2xl shadow-cyan-500/10">
           <div className="mb-3">
-            <p className="text-[10px] uppercase tracking-[0.3em] text-cyan-300">
+            <p className="liminull-eyebrow">
               Liminull Assistant
             </p>
 
-            <p className="mt-1 text-sm text-white/45">
+            <p className="mt-1 text-sm liminull-muted">
               Ask Liminull about this business, operations, workers, approvals, or system health.
             </p>
           </div>
@@ -139,7 +139,7 @@ export default function HermesAssistantPanel({
               </p>
 
               <div className="max-h-[220px] space-y-3 overflow-y-auto pr-1">
-                {history.slice(0, 10).map((item, index) => (
+                {history.slice(0, 5).map((item, index) => (
                   <div
                     key={index}
                     className="border border-white/10 bg-white/[0.03] p-3"
