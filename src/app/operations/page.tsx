@@ -8,7 +8,7 @@ const API_URL =
   process.env.NEXT_PUBLIC_API_URL ||
   "http://localhost:3002";
 
-export default function OperationsPage() {
+export default function DashboardPage() {
   const [overview, setOverview] =
     useState<any>(null);
 
@@ -24,7 +24,14 @@ export default function OperationsPage() {
   const [proactiveRecommendations, setProactiveRecommendations] =
     useState<any[]>([]);
 
+  const [executiveBriefings, setExecutiveBriefings] =
+    useState<any[]>([]);
+
+  const [notifications, setNotifications] =
+    useState<any[]>([]);
+
   async function load() {
+    try {
     const res = await fetch(
       `${API_URL}/api/operations-overview?business_id=liminull`,
       {
@@ -46,7 +53,7 @@ export default function OperationsPage() {
       "x-hermes-role": "admin",
     };
 
-    const [healthRes, recoveryRes, rollbackRes, proactiveRes] =
+    const [healthRes, recoveryRes, rollbackRes, proactiveRes, briefingRes, notificationRes] =
       await Promise.all([
         fetch(`${API_URL}/api/worker-health`, {
           cache: "no-store",
@@ -65,19 +72,37 @@ export default function OperationsPage() {
           cache: "no-store",
           headers,
         }),
+
+        fetch(`${API_URL}/api/executive-briefings?business_id=demo-law-firm`, {
+          cache: "no-store",
+          headers,
+        }),
+
+        fetch(`${API_URL}/api/notifications?business_id=demo-law-firm`, {
+          cache: "no-store",
+          headers,
+        }),
       ]);
 
-    const [healthData, recoveryData, rollbackData, proactiveData] =
+    const [healthData, recoveryData, rollbackData, proactiveData, briefingData, notificationData] =
       await Promise.all([
         healthRes.json(),
         recoveryRes.json(),
         rollbackRes.json(),
+        proactiveRes.json(),
+        briefingRes.json(),
+        notificationRes.json(),
       ]);
 
     setWorkerHealth(healthData.alerts || []);
     setWorkerRecovery(recoveryData.recoveries || []);
     setRollbackSnapshots(rollbackData.snapshots || []);
     setProactiveRecommendations(proactiveData?.recommendations || []);
+    setExecutiveBriefings(briefingData?.briefings || []);
+    setNotifications(notificationData?.notifications || []);
+    } catch (err) {
+      console.warn("Operations dashboard load failed", err);
+    }
   }
 
   useEffect(() => {
@@ -105,33 +130,75 @@ export default function OperationsPage() {
   }, [overview]);
 
   return (
-    <main className="min-h-screen bg-black p-6 text-white">
-      <div className="mx-auto max-w-7xl space-y-6">
+    <main className="min-h-screen bg-[#0a0a0a] text-white">
+      <div className="flex min-h-screen">
 
-        <nav className="flex flex-wrap gap-3">
-          <a href="/operations" className="border border-cyan-300/20 bg-cyan-300/10 px-4 py-2 text-xs font-black uppercase tracking-[0.18em] text-cyan-100 transition hover:bg-cyan-300 hover:text-black">
-            Operations
-          </a>
-          <a href="/businesses" className="border border-cyan-300/20 bg-cyan-300/10 px-4 py-2 text-xs font-black uppercase tracking-[0.18em] text-cyan-100 transition hover:bg-cyan-300 hover:text-black">
-            Businesses
-          </a>
-          <a href="/brain" className="border border-cyan-300/20 bg-cyan-300/10 px-4 py-2 text-xs font-black uppercase tracking-[0.18em] text-cyan-100 transition hover:bg-cyan-300 hover:text-black">
-            Brain
-          </a>
-                  <LogoutButton />
-        </nav>
+
+        <aside className="hidden w-[260px] border-r border-white/5 bg-[#0f0f10] p-6 lg:flex lg:flex-col">
+          <div>
+            <p className="text-[10px] uppercase tracking-[0.35em] text-cyan-300/80">
+              LIMINULL
+            </p>
+
+            <h1 className="mt-3 text-2xl font-black tracking-[-0.08em] text-white">
+              Operations
+            </h1>
+
+            <p className="mt-2 text-xs leading-5 text-white/35">
+              Operational intelligence for active business workflows.
+            </p>
+          </div>
+
+          <nav className="mt-8 space-y-3">
+            <a href="/operations" className="block rounded-xl border border-cyan-300/10 bg-cyan-300/10 px-4 py-3 text-sm font-semibold text-cyan-100 transition hover:bg-cyan-300/15">
+              Dashboard
+            </a>
+
+            <a href="/businesses" className="block rounded-xl border border-white/5 bg-white/[0.025] px-4 py-3 text-sm text-white/70 transition hover:bg-white/[0.06] hover:text-white">
+              Clients
+            </a>
+
+            <a href="/brain" className="block rounded-xl border border-white/5 bg-white/[0.025] px-4 py-3 text-sm text-white/70 transition hover:bg-white/[0.06] hover:text-white">
+              Intelligence
+            </a>
+          </nav>
+
+          <div className="mt-auto space-y-3">
+            <div className="rounded-2xl border border-white/5 bg-white/[0.025] p-4">
+              <p className="text-[10px] uppercase tracking-[0.25em] text-white/30">
+                Workspace
+              </p>
+              <p className="mt-2 text-sm font-semibold text-white/80">
+                Liminull
+              </p>
+              <p className="mt-1 text-xs text-white/35">
+                Production monitor
+              </p>
+            </div>
+
+            <LogoutButton />
+          </div>
+        </aside>
+
+        <section className="flex-1 p-6 lg:p-10">
+
+        
 
         <div>
           <p className="text-xs uppercase tracking-[0.35em] text-cyan-300">
-            Hermes Operations
+            Operations Dashboard
           </p>
 
           <h1 className="mt-2 text-4xl font-black tracking-[-0.08em]">
-            Operational Command Center
+            Operations Dashboard
           </h1>
+
+          <p className="mt-3 max-w-2xl text-sm leading-6 text-white/45">
+            Today’s operational command center for workers, automations, notifications, executive briefings, and Liminull intelligence.
+          </p>
         </div>
 
-        <section className="grid grid-cols-2 gap-4 md:grid-cols-6">
+        <section className="grid grid-cols-2 gap-4 xl:grid-cols-6">
           <Stat label="Mode" value={overview?.mode?.mode || "unknown"} />
           <Stat label="Workers" value={stats.workersOnline} />
           <Stat label="Pending" value={stats.pending} />
@@ -238,7 +305,7 @@ export default function OperationsPage() {
               <Empty text="No recovery recommendations." />
             ) : (
               workerRecovery.map((item: any, index: number) => (
-                <div key={index} className="border border-cyan-300/15 bg-cyan-300/10 p-4">
+                <div key={index} className="rounded-2xl border border-white/5 bg-white/[0.025] p-4">
                   <p className="font-black">{item.recovery_type}</p>
                   <p className="mt-2 text-xs text-cyan-100/70">
                     {item.recommendation}
@@ -253,7 +320,7 @@ export default function OperationsPage() {
               <Empty text="No dead-letter jobs." />
             ) : (
               (overview?.deadLetters || []).slice(0, 8).map((job: any) => (
-                <div key={job.id} className="border border-red-300/20 bg-red-300/10 p-4">
+                <div key={job.id} className="rounded-2xl border border-red-400/10 bg-red-400/5 p-4">
                   <p className="font-black">{job.job_type}</p>
 
                   <p className="mt-2 text-xs text-red-100/70">
@@ -288,6 +355,107 @@ export default function OperationsPage() {
             )}
           </Panel>
 
+
+
+          <Panel title="Notifications">
+            {notifications.length === 0 ? (
+              <Empty text="No notifications." />
+            ) : (
+              notifications.slice(0, 10).map((notification: any) => (
+                <div
+                  key={notification.id}
+                  className="rounded-2xl border border-white/5 bg-white/[0.025] p-4"
+                >
+                  <div className="flex items-center justify-between">
+                    <p className="font-black">
+                      {notification.title}
+                    </p>
+
+                    <span className="text-[10px] uppercase tracking-[0.2em] text-white/35">
+                      {notification.priority}
+                    </span>
+                  </div>
+
+                  <p className="mt-2 text-sm leading-6 text-white/70">
+                    {notification.message}
+                  </p>
+
+                  <button
+                    onClick={async () => {
+                      await fetch(
+                        `${API_URL}/api/notifications/${notification.id}/read`,
+                        {
+                          method: "POST",
+
+                          headers: {
+                            "x-hermes-token":
+                              process.env.NEXT_PUBLIC_HERMES_API_TOKEN || "",
+
+                            "x-hermes-role":
+                              "admin",
+                          },
+                        }
+                      );
+
+                      load();
+                    }}
+                    className="mt-4 border border-cyan-300/20 px-3 py-2 text-[10px] uppercase tracking-[0.2em] text-cyan-100 transition hover:bg-cyan-300 hover:text-black"
+                  >
+                    Mark Read
+                  </button>
+                </div>
+              ))
+            )}
+          </Panel>
+
+
+          <Panel title="Executive Intelligence">
+            {executiveBriefings.length === 0 ? (
+              <Empty text="No executive briefings generated." />
+            ) : (
+              executiveBriefings.slice(0, 3).map((briefing: any) => (
+                <div
+                  key={briefing.id}
+                  className="rounded-2xl border border-white/5 bg-white/[0.025] p-5"
+                >
+                  <div className="flex items-center justify-between">
+                    <p className="text-lg font-black">
+                      {briefing.title}
+                    </p>
+
+                    <span className="text-[10px] uppercase tracking-[0.2em] text-white/35">
+                      {briefing.briefing_type}
+                    </span>
+                  </div>
+
+                  <p className="mt-4 text-sm leading-7 text-white/70">
+                    {briefing.summary}
+                  </p>
+
+                  <div className="mt-5 grid grid-cols-2 gap-3">
+                    {Object.entries(briefing.metrics || {}).map(
+                      ([key, value]: any) => (
+                        <div
+                          key={key}
+                          className="border border-white/10 bg-black/20 p-3"
+                        >
+                          <p className="text-[10px] uppercase tracking-[0.15em] text-white/35">
+                            {key.replaceAll("_", " ")}
+                          </p>
+
+                          <p className="mt-2 text-xl font-black">
+                            {String(value)}
+                          </p>
+                        </div>
+                      )
+                    )}
+                  </div>
+                </div>
+              ))
+            )}
+          </Panel>
+
+
           <Panel title="Proactive Intelligence">
             {proactiveRecommendations.length === 0 ? (
               <Empty text="No proactive recommendations." />
@@ -295,12 +463,12 @@ export default function OperationsPage() {
               proactiveRecommendations.map((item: any, index: number) => (
                 <div
                   key={index}
-                  className="border border-cyan-300/15 bg-cyan-300/10 p-4"
+                  className="rounded-2xl border border-white/5 bg-white/[0.025] p-4"
                 >
                   <div className="flex items-center justify-between">
                     <p className="font-black">{item.title}</p>
 
-                    <span className="text-[10px] uppercase tracking-[0.2em] text-cyan-200">
+                    <span className="text-[10px] uppercase tracking-[0.2em] text-white/35">
                       {item.priority}
                     </span>
                   </div>
@@ -331,8 +499,9 @@ export default function OperationsPage() {
             )}
           </Panel>
         </section>
-      </div>
           <HermesAssistantPanel businessId="liminull" />
+        </section>
+      </div>
     </main>
   );
 }
@@ -347,11 +516,11 @@ function Empty({ text }: { text: string }) {
 
 function Stat({ label, value }: { label: string; value: any }) {
   return (
-    <div className="border border-cyan-300/15 bg-cyan-300/10 p-4">
-      <p className="text-[10px] uppercase tracking-[0.2em] text-cyan-200">
+    <div className="rounded-2xl border border-white/5 bg-white/[0.025] p-4">
+      <p className="text-[10px] uppercase tracking-[0.2em] text-white/35">
         {label}
       </p>
-      <p className="mt-2 text-2xl font-black tracking-[-0.06em]">
+      <p className="mt-3 text-3xl font-black tracking-[-0.06em]">
         {value}
       </p>
     </div>
@@ -366,8 +535,8 @@ function Panel({
   children: React.ReactNode;
 }) {
   return (
-    <div className="border border-white/10 bg-white/[0.03] p-5">
-      <p className="mb-4 text-xs uppercase tracking-[0.25em] text-white/40">
+    <div className="rounded-2xl border border-white/5 bg-white/[0.025] p-5">
+      <p className="mb-4 text-[11px] uppercase tracking-[0.22em] text-white/35">
         {title}
       </p>
       <div className="space-y-3">{children}</div>
