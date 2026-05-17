@@ -15,7 +15,7 @@ export default function AppShell({
   description,
   children,
 }: {
-  active?: "dashboard" | "clients" | "onboarding" | "intelligence";
+  active?: "dashboard" | "clients" | "onboarding" | "settings" | "intelligence";
   title: string;
   eyebrow: string;
   description?: string;
@@ -91,6 +91,7 @@ export default function AppShell({
     { id: "dashboard", label: "Dashboard", href: "/operations" },
     { id: "clients", label: "Clients", href: "/businesses" },
     { id: "onboarding", label: "Onboarding", href: "/onboarding" },
+    { id: "settings", label: "Settings", href: "/settings" },
     { id: "intelligence", label: "Intelligence", href: "/brain" },
   ];
 

@@ -271,6 +271,51 @@ function OperationsContent() {
       </div>
 
 
+      <div className="mt-6 liminull-card p-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="liminull-eyebrow">
+              Operational Throughput
+            </p>
+
+            <h2 className="mt-3 text-3xl font-black tracking-[-0.07em]">
+              Live Activity
+            </h2>
+          </div>
+
+          <p className="text-xs liminull-muted">
+            Last 24 hours
+          </p>
+        </div>
+
+        <div className="mt-8 h-[220px]">
+          <div className="flex h-full items-end gap-3">
+            {[
+              stats.pending + 2,
+              stats.completed + 4,
+              stats.workersOnline + 3,
+              stats.failures + 1,
+              stats.deadLetters + 1,
+              stats.completed + 6,
+              stats.pending + 3,
+              stats.completed + 5,
+            ].map((v, i) => (
+              <div
+                key={i}
+                className="relative flex-1 overflow-hidden rounded-t-2xl bg-gradient-to-t from-cyan-300/10 via-cyan-300/40 to-cyan-200 liminull-float"
+                style={{
+                  height: `${Math.max(14, v * 12)}%`,
+                  animationDelay: `${i * 0.18}s`,
+                }}
+              >
+                <div className="absolute inset-0 bg-cyan-300/10 liminull-live-pulse" />
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+
       <div className="mt-6 grid items-start gap-6 xl:grid-cols-2">
         <Panel title="System Mode">
           <h2 className="text-3xl font-black uppercase text-cyan-100">
