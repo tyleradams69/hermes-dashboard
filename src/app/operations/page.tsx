@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import AppShell from "@/components/AppShell";
 import HermesAssistantPanel from "@/components/HermesAssistantPanel";
@@ -34,7 +34,7 @@ function Empty({ text }: { text: string }) {
   );
 }
 
-export default function OperationsPage() {
+function OperationsContent() {
 
   const searchParams =
     useSearchParams();
@@ -453,5 +453,13 @@ export default function OperationsPage() {
         </div>
 
     </AppShell>
+  );
+}
+
+export default function OperationsPage() {
+  return (
+    <Suspense fallback={null}>
+      <OperationsContent />
+    </Suspense>
   );
 }

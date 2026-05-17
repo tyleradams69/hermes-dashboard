@@ -7,6 +7,19 @@ const API_URL =
   process.env.NEXT_PUBLIC_API_URL ||
   "http://localhost:3002";
 
+type ChannelId =
+  | "website_form"
+  | "email_inbox"
+  | "calendar"
+  | "crm";
+
+const channelOptions: Array<[ChannelId, string]> = [
+  ["website_form", "Website Forms"],
+  ["email_inbox", "Inbox Integration"],
+  ["calendar", "Scheduling Calendar"],
+  ["crm", "CRM / Pipeline"],
+];
+
 const steps = [
   "Client",
   "Industry",
@@ -341,12 +354,7 @@ export default function OnboardingPage() {
             </p>
 
             <div className="mt-8 grid gap-4 md:grid-cols-2">
-              {[
-                ["website_form", "Website Forms"],
-                ["email_inbox", "Inbox Integration"],
-                ["calendar", "Scheduling Calendar"],
-                ["crm", "CRM / Pipeline"],
-              ].map(([id, label]) => (
+              {channelOptions.map(([id, label]) => (
                 <button
                   key={id}
                   onClick={() =>
