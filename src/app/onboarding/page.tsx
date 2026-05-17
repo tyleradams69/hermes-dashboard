@@ -55,6 +55,7 @@ export default function OnboardingPage() {
     name: "",
     website: "",
     industry: "",
+    customIndustry: "",
     supervision: "supervised",
 
     channels: {
@@ -335,6 +336,26 @@ export default function OnboardingPage() {
                 </button>
               ))}
             </div>
+            {form.industry === "custom" && (
+              <div className="mt-6">
+                <input
+                  placeholder="Enter custom business niche"
+                  value={form.customIndustry}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      customIndustry: e.target.value,
+                    })
+                  }
+                  className="w-full rounded-2xl border border-white/10 bg-black/30 px-5 py-4 text-sm text-white outline-none placeholder:text-white/25"
+                />
+
+                <p className="mt-3 text-sm liminull-muted">
+                  Example: med spa, roofing company, immigration law, private clinic, B2B SaaS, dental office.
+                </p>
+              </div>
+            )}
+
           </div>
         )}
 
