@@ -11,7 +11,6 @@ export default function HermesAssistantPanel({
 }: {
   businessId?: string;
 }) {
-  const [open, setOpen] = useState(false);
   const [question, setQuestion] = useState("");
   const [answer, setAnswer] = useState("");
   const [actions, setActions] = useState<any[]>([]);
@@ -40,10 +39,8 @@ export default function HermesAssistantPanel({
   }
 
   useEffect(() => {
-    if (open) {
-      loadHistory();
-    }
-  }, [open, businessId]);
+    loadHistory();
+  }, [businessId]);
 
   async function askHermes(e: React.FormEvent) {
     e.preventDefault();
@@ -71,100 +68,85 @@ export default function HermesAssistantPanel({
 
     setAnswer(data.answer || "Liminull could not answer that yet.");
     setActions(data.suggested_actions || []);
-    setLoading(false);
     setQuestion("");
+    setLoading(false);
 
     loadHistory();
   }
 
   return (
-    <div className="fixed bottom-5 right-5 z-50">
-      {open && (
-        <div className="mb-3 w-[420px] max-w-[calc(100vw-2rem)] border border-cyan-300/20 bg-black p-4 text-white shadow-2xl shadow-cyan-500/10">
-          <div className="mb-3">
-            <p className="liminull-eyebrow">
-              Liminull Assistant
-            </p>
+    <section className="liminull-card p-5">
+      <div className="mb-4">
+        <p className="liminull-eyebrow">Liminull Assistant</p>
 
-            <p className="mt-1 text-sm liminull-muted">
-              Ask Liminull about this business, operations, workers, approvals, or system health.
-            </p>
-          </div>
+        <h2 className="mt-2 text-2xl font-black tracking-[-0.06em]">
+          Operational Copilot
+        </h2>
 
-          <form onSubmit={askHermes} className="space-y-3">
-            <textarea
-              value={question}
-              onChange={(e) => setQuestion(e.target.value)}
-              placeholder="Ask Liminull..."
-              className="min-h-[90px] w-full border border-white/10 bg-white/[0.03] p-3 text-sm text-white outline-none placeholder:text-white/25"
-            />
+        <p className="mt-2 text-sm leading-6 liminull-muted">
+          Embedded operational intelligence for workflows, infrastructure,
+          supervision, and executive guidance.
+        </p>
+      </div>
 
-            <button className="w-full border border-cyan-300/30 px-4 py-3 text-xs uppercase tracking-[0.2em] text-cyan-100 transition hover:bg-cyan-300 hover:text-black">
-              {loading ? "Thinking..." : "Ask Liminull"}
-            </button>
-          </form>
+      <form onSubmit={askHermes} className="space-y-3">
+        <textarea
+          value={question}
+          onChange={(e) => setQuestion(e.target.value)}
+          placeholder="Ask Liminull..."
+          className="min-h-[110px] w-full rounded-2xl border border-white/5 bg-black/30 p-4 text-sm text-white outline-none placeholder:text-white/25"
+        />
 
-          {answer && (
-            <div className="mt-4 border border-white/10 bg-white/[0.03] p-3 text-sm leading-6 text-white/75">
-              {answer}
-            </div>
-          )}
+        <button className="liminull-button w-full">
+          {loading ? "Thinking..." : "Ask Liminull"}
+        </button>
+      </form>
 
-          {actions.length > 0 && (
-            <div className="mt-4 space-y-2">
-              <p className="text-[10px] uppercase tracking-[0.2em] text-cyan-300">
-                Suggested Actions
-              </p>
-
-              {actions.map((action, index) => (
-                <button
-                  key={index}
-                  onClick={() => {
-                    if (action.payload?.route) {
-                      window.location.href = action.payload.route;
-                    }
-                  }}
-                  className="w-full border border-cyan-300/20 bg-cyan-300/10 px-4 py-3 text-left text-xs uppercase tracking-[0.15em] text-cyan-100 transition hover:bg-cyan-300 hover:text-black"
-                >
-                  {action.title}
-                </button>
-              ))}
-            </div>
-          )}
-
-          {history.length > 0 && (
-            <div className="mt-5 border-t border-white/10 pt-4">
-              <p className="mb-3 text-[10px] uppercase tracking-[0.2em] text-cyan-300">
-                Conversation History
-              </p>
-
-              <div className="max-h-[220px] space-y-3 overflow-y-auto pr-1">
-                {history.slice(0, 5).map((item, index) => (
-                  <div
-                    key={index}
-                    className="border border-white/10 bg-white/[0.03] p-3"
-                  >
-                    <p className="text-xs font-black text-cyan-100">
-                      {item.question}
-                    </p>
-
-                    <p className="mt-2 text-xs leading-5 text-white/60">
-                      {item.answer}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+      {answer && (
+        <div className="mt-4 liminull-card-soft p-4 text-sm leading-6 text-white/70">
+          {answer}
         </div>
       )}
 
-      <button
-        onClick={() => setOpen(!open)}
-        className="border border-cyan-300/30 bg-cyan-300 px-5 py-3 text-xs font-black uppercase tracking-[0.2em] text-black shadow-2xl shadow-cyan-500/20"
-      >
-        {open ? "Close Liminull" : "Ask Liminull"}
-      </button>
-    </div>
+      {actions.length > 0 && (
+        <div className="mt-4 space-y-2">
+          <p className="liminull-eyebrow">Suggested Actions</p>
+
+          {actions.map((action, index) => (
+            <button
+              key={index}
+              onClick={() => {
+                if (action.payload?.route) {
+                  window.location.href = action.payload.route;
+                }
+              }}
+              className="liminull-button w-full text-left"
+            >
+              {action.title}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {history.length > 0 && (
+        <div className="mt-5 border-t border-white/5 pt-4">
+          <p className="liminull-eyebrow">Recent Context</p>
+
+          <div className="mt-3 max-h-[260px] space-y-3 overflow-y-auto pr-1">
+            {history.slice(0, 5).map((item, index) => (
+              <div key={index} className="liminull-card-soft p-3">
+                <p className="text-xs font-black text-cyan-100">
+                  {item.question}
+                </p>
+
+                <p className="mt-2 text-xs leading-5 liminull-muted">
+                  {item.answer}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </section>
   );
 }

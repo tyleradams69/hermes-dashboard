@@ -102,7 +102,7 @@ export default function BrainPage() {
 
       {/* LIVE PULSE */}
 
-      <div className="mt-6 rounded-2xl border border-cyan-300/10 bg-cyan-300/[0.05] p-5">
+      <div className="mt-6 rounded-2xl border border-cyan-300/10 bg-gradient-to-br from-cyan-300/[0.08] to-white/[0.02] p-6 shadow-[0_0_80px_rgba(103,232,249,0.06)]">
         <div className="flex items-center justify-between">
           <div>
             <p className="liminull-eyebrow">
@@ -117,7 +117,7 @@ export default function BrainPage() {
           </div>
 
           <div className="flex items-center gap-3">
-            <div className="h-3 w-3 rounded-full bg-cyan-300 animate-pulse" />
+            <div className="h-3 w-3 rounded-full bg-cyan-300 liminull-live-pulse" />
             <p className="text-xs uppercase tracking-[0.18em] text-cyan-100">
               Active
             </p>
@@ -135,7 +135,7 @@ export default function BrainPage() {
                 Operational Activity
               </p>
 
-              <h2 className="mt-2 text-2xl font-black tracking-[-0.06em]">
+              <h2 className="mt-2 text-3xl font-black tracking-[-0.07em]">
                 Intelligence Flow
               </h2>
             </div>
@@ -163,13 +163,13 @@ export default function BrainPage() {
                 return (
                 <div
                   key={i}
-                  className="relative flex-1 rounded-t-xl bg-gradient-to-t from-cyan-300/20 to-cyan-300 transition-all duration-700"
+                  className="relative flex-1 rounded-t-xl liminull-float bg-gradient-to-t from-cyan-300/10 via-cyan-300/50 to-cyan-200 transition-all duration-700"
                   style={{
                     height: `${v}%`,
                   }}
                   title={`${bucketCount} event(s)`}
                 >
-                  <div className="absolute inset-0 animate-pulse rounded-t-xl bg-cyan-300/10" />
+                  <div className="absolute inset-0 liminull-live-pulse rounded-t-xl bg-cyan-300/10" />
                 </div>
                 );
               })}
@@ -223,17 +223,17 @@ export default function BrainPage() {
               Cognitive Topology
             </p>
 
-            <h2 className="mt-2 text-2xl font-black tracking-[-0.06em]">
+            <h2 className="mt-2 text-3xl font-black tracking-[-0.07em]">
               Operational Intelligence Map
             </h2>
           </div>
 
           <div className="rounded-full border border-cyan-300/10 bg-cyan-300/10 px-3 py-1 text-xs uppercase tracking-[0.18em] text-cyan-100">
-            Live Sync
+            Operationally Synced
           </div>
         </div>
 
-        <div className="relative mt-8 h-[340px] overflow-hidden rounded-3xl border border-white/5 bg-black/25">
+        <div className="relative mt-8 h-[420px] overflow-hidden rounded-3xl border border-white/5 bg-black/25">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(103,232,249,0.07),transparent_62%)]" />
 
           <svg
@@ -248,7 +248,7 @@ export default function BrainPage() {
           </svg>
 
           <div className="absolute left-1/2 top-1/2 h-44 w-44 -translate-x-1/2 -translate-y-1/2 rounded-full border border-cyan-300/10" />
-          <div className="absolute left-1/2 top-1/2 h-28 w-28 -translate-x-1/2 -translate-y-1/2 rounded-full border border-cyan-300/20 bg-cyan-300/10 shadow-[0_0_80px_rgba(103,232,249,0.12)]">
+          <div className="absolute left-1/2 top-1/2 h-28 w-28 -translate-x-1/2 -translate-y-1/2 rounded-full border border-cyan-300/20 bg-cyan-300/10 shadow-[0_0_120px_rgba(103,232,249,0.16)] liminull-live-pulse">
             <div className="flex h-full flex-col items-center justify-center">
               <p className="text-[9px] uppercase tracking-[0.25em] text-cyan-300">
                 Core
@@ -267,7 +267,7 @@ export default function BrainPage() {
           ].map(([label, pos, count], i) => (
             <div
               key={i}
-              className={`absolute ${pos} w-[190px] rounded-2xl border border-white/5 bg-white/[0.04] p-4 shadow-2xl shadow-black/20 backdrop-blur-xl`}
+              className={`absolute ${pos} w-[190px] rounded-2xl border border-white/5 bg-white/[0.045] p-5 shadow-[0_20px_80px_rgba(0,0,0,0.35)] backdrop-blur-xl transition hover:bg-white/[0.06]`}
             >
               <div className="flex items-center justify-between">
                 <p className="text-[10px] uppercase tracking-[0.22em] liminull-muted">
@@ -298,7 +298,7 @@ export default function BrainPage() {
               Intelligence Timeline
             </p>
 
-            <h2 className="mt-2 text-2xl font-black tracking-[-0.06em]">
+            <h2 className="mt-2 text-3xl font-black tracking-[-0.07em]">
               Primary Intelligence Feed
             </h2>
           </div>
@@ -308,7 +308,7 @@ export default function BrainPage() {
           </p>
         </div>
 
-        <div className="grid max-h-[720px] gap-4 overflow-y-auto pr-2">
+        <div className="grid max-h-[720px] gap-4 overflow-y-auto liminull-scroll pr-2">
           {events.length === 0 && (
             <div className="liminull-card-soft p-6 liminull-muted">
               No intelligence events found yet.

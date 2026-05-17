@@ -65,29 +65,49 @@ export default function BusinessesPage() {
       title="Clients"
       description="Create, manage, and supervise client workspaces connected to Liminull operational intelligence."
     >
-      <form
-        onSubmit={createBusiness}
-        className="mb-8 grid gap-3 liminull-card-soft p-5 md:grid-cols-4"
-      >
-        {["id", "name", "industry", "website"].map((field) => (
-          <input
-            key={field}
-            placeholder={field}
-            value={(form as any)[field]}
-            onChange={(e) =>
-              setForm({
-                ...form,
-                [field]: e.target.value,
-              })
-            }
-            className="rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white outline-none placeholder:text-white/25"
-          />
-        ))}
+      <div className="mb-6 grid gap-4 md:grid-cols-3">
+        <div className="liminull-card-soft p-5">
+          <p className="liminull-eyebrow">Total Clients</p>
+          <p className="mt-3 text-4xl font-black tracking-[-0.08em]">
+            {businesses.length}
+          </p>
+        </div>
 
-        <button className="rounded-xl liminull-button md:col-span-4">
-          Create Client
-        </button>
-      </form>
+        <div className="liminull-card-soft p-5">
+          <p className="liminull-eyebrow">Active</p>
+          <p className="mt-3 text-4xl font-black tracking-[-0.08em]">
+            {businesses.filter((b) => b.status === "active").length}
+          </p>
+        </div>
+
+        <div className="liminull-card-soft p-5">
+          <p className="liminull-eyebrow">Industries</p>
+          <p className="mt-3 text-4xl font-black tracking-[-0.08em]">
+            {new Set(businesses.map((b) => b.industry).filter(Boolean)).size}
+          </p>
+        </div>
+      </div>
+
+
+      <div className="mb-8 flex items-center justify-between gap-4">
+        <div>
+          <p className="liminull-eyebrow">
+            Workspace Management
+          </p>
+
+          <p className="mt-2 text-sm liminull-muted">
+            Existing operational workspaces connected to Liminull intelligence.
+          </p>
+        </div>
+
+        <a
+          href="/onboarding"
+          className="liminull-button"
+        >
+          New Client Onboarding
+        </a>
+      </div>
+
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {loading && (
@@ -121,6 +141,42 @@ export default function BusinessesPage() {
             <div className="mt-5 space-y-2 text-sm text-white/60">
               <p>Industry: {business.industry || "unknown"}</p>
               <p>Website: {business.website || "none"}</p>
+            </div>
+
+            <div className="mt-6 grid grid-cols-2 gap-3">
+              <div className="rounded-xl border border-white/5 bg-black/20 p-3">
+                <p className="text-[10px] uppercase tracking-[0.18em] text-white/30">
+                  Readiness
+                </p>
+
+                <p className="mt-2 text-lg font-black text-cyan-100">
+                  Active
+                </p>
+              </div>
+
+              <div className="rounded-xl border border-white/5 bg-black/20 p-3">
+                <p className="text-[10px] uppercase tracking-[0.18em] text-white/30">
+                  Supervision
+                </p>
+
+                <p className="mt-2 text-lg font-black text-cyan-100">
+                  Live
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-5 flex items-center justify-between rounded-xl border border-white/5 bg-black/20 px-4 py-3">
+              <div>
+                <p className="text-[10px] uppercase tracking-[0.18em] text-white/30">
+                  Operational Status
+                </p>
+
+                <p className="mt-1 text-sm font-black text-cyan-100">
+                  Synced
+                </p>
+              </div>
+
+              <div className="h-3 w-3 rounded-full bg-cyan-300 liminull-live-pulse" />
             </div>
 
             <a
