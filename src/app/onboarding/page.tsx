@@ -82,9 +82,62 @@ export default function OnboardingPage() {
   const [readiness, setReadiness] =
     useState<any>(null);
 
+  const [verificationResults, setVerificationResults] =
+    useState<any>({});
+
   const progress = useMemo(() => {
     return Math.round(((step + 1) / steps.length) * 100);
   }, [step]);
+
+
+  async function verifyIntegration(
+    type: ChannelId
+  ) {
+
+    try {
+
+      const value =
+        form.channelDetails[type];
+
+      if (!value) return;
+
+      const res = await fetch(
+        `${API_URL}/api/verify-integration`,
+        {
+          method: "POST",
+
+          headers: {
+            "Content-Type":
+              "application/json",
+
+            "x-hermes-token":
+              process.env.NEXT_PUBLIC_HERMES_API_TOKEN || "",
+
+            "x-hermes-role":
+              "admin",
+          },
+
+          body: JSON.stringify({
+            type,
+            value,
+          }),
+        }
+      );
+
+      const data =
+        await res.json();
+
+      setVerificationResults({
+        ...verificationResults,
+
+        [type]:
+          data.verification,
+      });
+
+    } catch (err) {
+      console.error(err);
+    }
+  }
 
 
   async function loadReadiness(
@@ -376,75 +429,101 @@ export default function OnboardingPage() {
 
             <div className="mt-8 grid gap-4 md:grid-cols-2">
               {channelOptions.map(([id, label]) => (
-                <button
+                <div
                   key={id}
-                  onClick={() =>
-                    setForm({
-                      ...form,
-
-                      channels: {
-                        ...form.channels,
-
-                        [id]:
-                          !form.channels[id],
-                      },
-                    })
-                  }
                   className={
                     form.channels[id]
                       ? "liminull-card p-6 text-left border-cyan-300/20"
                       : "liminull-card-soft p-6 text-left transition hover:bg-white/[0.05]"
                   }
                 >
-                  <div className="flex items-center justify-between gap-4">
-                    <div>
-                      <p className="text-lg font-black">
-                        {label}
-                      </p>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setForm({
+                        ...form,
+                        channels: {
+                          ...form.channels,
+                          [id]: !form.channels[id],
+                        },
+                      })
+                    }
+                    className="w-full text-left"
+                  >
+                    <div className="flex items-center justify-between gap-4">
+                      <div>
+                        <p className="text-lg font-black">
+                          {label}
+                        </p>
 
-                      <p className="mt-3 text-sm leading-6 liminull-muted">
-                        Operational connection ready for onboarding workflows.
-                      </p>
+                        <p className="mt-3 text-sm leading-6 liminull-muted">
+                          Operational connection ready for onboarding workflows.
+                        </p>
+                      </div>
+
+                      <div
+                        className={
+                          form.channels[id]
+                            ? "h-4 w-4 rounded-full bg-cyan-300"
+                            : "h-4 w-4 rounded-full border border-white/20"
+                        }
+                      />
                     </div>
-
-                    <div
-                      className={
-                        form.channels[id]
-                          ? "h-4 w-4 rounded-full bg-cyan-300"
-                          : "h-4 w-4 rounded-full border border-white/20"
-                      }
-                    />
-                  </div>
+                  </button>
 
                   {form.channels[id] && (
-                    <input
-                      onClick={(e) => e.stopPropagation()}
-                      value={form.channelDetails[id]}
-                      onChange={(e) =>
-                        setForm({
-                          ...form,
+                    <div className="mt-5">
+                      <input
+                        value={form.channelDetails[id]}
+                        onChange={(e) =>
+                          setForm({
+                            ...form,
+                            channelDetails: {
+                              ...form.channelDetails,
+                              [id]: e.target.value,
+                            },
+                          })
+                        }
+                        placeholder={
+                          id === "website_form"
+                            ? "Webhook or contact form URL"
+                            : id === "email_inbox"
+                            ? "Intake inbox email"
+                            : id === "calendar"
+                            ? "Scheduling or booking link"
+                            : "CRM or pipeline URL"
+                        }
+                        className="w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none placeholder:text-white/25"
+                      />
 
-                          channelDetails: {
-                            ...form.channelDetails,
+                      <div className="mt-4 flex items-center justify-between gap-4">
+                        <button
+                          type="button"
+                          onClick={() => verifyIntegration(id)}
+                          className="liminull-button"
+                        >
+                          Verify
+                        </button>
 
-                            [id]:
-                              e.target.value,
-                          },
-                        })
-                      }
-                      placeholder={
-                        id === "website_form"
-                          ? "Webhook or contact form URL"
-                          : id === "email_inbox"
-                          ? "Intake inbox email"
-                          : id === "calendar"
-                          ? "Scheduling or booking link"
-                          : "CRM or pipeline URL"
-                      }
-                      className="mt-5 w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none placeholder:text-white/25"
-                    />
+                        {verificationResults[id] && (
+                          <div className="flex items-center gap-3">
+                            <div
+                              className={
+                                verificationResults[id].valid
+                                  ? "h-3 w-3 rounded-full bg-cyan-300"
+                                  : "h-3 w-3 rounded-full bg-red-400"
+                              }
+                            />
+
+                            <p className="text-xs liminull-muted">
+                              {verificationResults[id].reason}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   )}
-                </button>
+                </div>
               ))}
             </div>
           </div>
