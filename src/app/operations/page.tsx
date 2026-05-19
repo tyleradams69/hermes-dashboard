@@ -200,17 +200,37 @@ function OperationsContent() {
       description={`Operational intelligence, supervision, notifications, and live workflows for ${businessName}.`}
     >
       <section className="grid gap-6 xl:grid-cols-[1.35fr_0.65fr]">
-        <div className="relative overflow-hidden rounded-[34px] border border-black/[0.06] bg-white p-6 shadow-[0_28px_90px_rgba(0,0,0,0.08)] sm:p-8">
-          <div className="pointer-events-none absolute -right-20 -top-24 h-72 w-72 rounded-full bg-[#0071e3]/12 blur-3xl" />
-          <div className="pointer-events-none absolute -bottom-28 left-10 h-56 w-56 rounded-full bg-[#34c759]/10 blur-3xl" />
+        <div className="liminull-operational-abstract relative overflow-hidden rounded-[34px] border border-black/[0.06] bg-white p-4 shadow-[0_28px_90px_rgba(0,0,0,0.08)] sm:p-5">
+          <div className="liminull-operational-glow liminull-operational-glow-blue" />
+          <div className="liminull-operational-glow liminull-operational-glow-green" />
+
+          <div className="liminull-command-rail mb-4">
+            <div>
+              <span>LIVE COMMAND LAYER</span>
+              <strong>{businessName}</strong>
+            </div>
+            <div>
+              <span>QUEUE</span>
+              <strong>{stats.pending}</strong>
+            </div>
+            <div>
+              <span>WORKERS</span>
+              <strong>{stats.workersOnline}</strong>
+            </div>
+            <div>
+              <span>RISK</span>
+              <strong>{stats.failures + stats.deadLetters}</strong>
+            </div>
+          </div>
 
           <div className="relative flex flex-wrap items-start justify-between gap-6">
             <div className="max-w-2xl">
-              <div className="inline-flex items-center gap-2 rounded-full bg-[#eaf3ff] px-3 py-1.5 text-xs font-semibold text-[#0071e3]">
-                <span className="h-1.5 w-1.5 rounded-full bg-[#248a3d]" />
-                Live command layer
+              <div className="flex flex-wrap items-center gap-3">
+                <span className="liminull-fragment-label">memory mesh</span>
+                <span className="liminull-fragment-label">queue pressure</span>
+                <span className="liminull-fragment-label">rollback vectors</span>
               </div>
-              <h2 className="mt-5 text-4xl font-semibold tracking-[-0.045em] text-[#1d1d1f] sm:text-5xl">
+              <h2 className="mt-4 text-4xl font-semibold tracking-[-0.045em] text-[#1d1d1f] sm:text-5xl">
                 {businessName} is being actively supervised.
               </h2>
               <p className="mt-4 max-w-xl text-base leading-7 text-[#6e6e73]">

@@ -71,7 +71,7 @@ export default function AppShell({
   ];
 
   return (
-    <main className="liminull-apple relative min-h-screen overflow-hidden bg-background text-foreground liminull-grid-bg">
+    <main className="liminull-apple liminull-abstract-stage relative min-h-screen overflow-hidden bg-background text-foreground liminull-grid-bg">
       <div className="liminull-particle-field" aria-hidden="true">
         {[
           ["8%", "74%", "5px", "9s", "-1s", "18px"],
@@ -102,10 +102,16 @@ export default function AppShell({
           />
         ))}
       </div>
+      <div className="liminull-abstract-composition" aria-hidden="true">
+        <span />
+        <span />
+        <span />
+        <span />
+      </div>
       <header className="sticky top-0 z-50 border-b border-white/70 bg-white/58 backdrop-blur-2xl supports-[backdrop-filter]:bg-white/48">
         <div className="mx-auto flex max-w-[1180px] flex-col gap-3 px-4 py-3 sm:px-6 lg:flex-row lg:items-center lg:gap-5">
           <a href="/operations" className="flex shrink-0 items-center gap-3 rounded-full focus:outline-none focus:ring-2 focus:ring-[#0071e3]/25">
-            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#1d1d1f] text-sm font-semibold text-white shadow-sm">
+            <span className="liminull-mark flex h-8 w-8 items-center justify-center rounded-full bg-[#1d1d1f] text-sm font-semibold text-white shadow-sm">
               L
             </span>
             <span className="text-[15px] font-semibold tracking-[-0.025em] text-[#1d1d1f]">
@@ -143,36 +149,38 @@ export default function AppShell({
         </div>
       </header>
 
-      <div className="relative z-10 mx-auto w-full max-w-[1180px] px-4 py-8 sm:px-6 sm:py-10">
-        <section className="liminull-hero mb-7 overflow-hidden rounded-[34px] bg-[#1d1d1f] px-6 py-8 text-white shadow-[0_30px_80px_rgba(0,0,0,0.15)] sm:px-10 sm:py-11">
-          <div className="grid gap-8 lg:grid-cols-[1.2fr_0.8fr] lg:items-end">
+      <div className="relative z-10 mx-auto w-full max-w-[1180px] px-4 py-5 sm:px-6 sm:py-6">
+        <section className="liminull-hero liminull-abstract-hero liminull-compact-hero mb-5 overflow-hidden rounded-[26px] bg-[#1d1d1f] px-5 py-5 text-white shadow-[0_22px_64px_rgba(0,0,0,0.13)] sm:px-7 sm:py-6">
+          <div className="grid gap-5 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
             <div>
               <p className="text-sm font-medium text-white/55">{eyebrow}</p>
-              <h1 className="mt-3 max-w-3xl text-4xl font-semibold tracking-[-0.055em] sm:text-6xl">
+              <h1 className="mt-2 max-w-3xl text-3xl font-semibold tracking-[-0.055em] sm:text-5xl">
                 {title}
               </h1>
               {description && (
-                <p className="mt-4 max-w-2xl text-base leading-7 text-white/68 sm:text-lg">
+                <p className="mt-3 max-w-2xl text-sm leading-6 text-white/68 sm:text-base">
                   {description}
                 </p>
               )}
             </div>
 
-            <div className="liminull-glass-panel grid gap-3 rounded-[24px] bg-white p-4 text-[#1d1d1f] shadow-[0_18px_60px_rgba(0,0,0,0.18)] ring-1 ring-white/20">
-              <div className="flex items-center justify-between border-b border-black/[0.07] pb-3">
-                <span className="text-sm font-medium text-[#6e6e73]">Status</span>
+            <div className="liminull-glass-panel liminull-field-card grid gap-3 rounded-[20px] bg-white p-3 text-[#1d1d1f] shadow-[0_14px_44px_rgba(0,0,0,0.16)] ring-1 ring-white/20">
+              <div className="flex items-center justify-between border-b border-black/[0.07] pb-2">
+                <span className="text-[10px] font-semibold uppercase tracking-[0.34em] text-[#6e6e73]">Signal field</span>
                 <span className="inline-flex items-center gap-2 rounded-full bg-[#eaf8ee] px-3 py-1 text-xs font-semibold text-[#248a3d]">
                   <span className="h-1.5 w-1.5 rounded-full bg-[#248a3d]" />
                   Live
                 </span>
               </div>
-              <div className="flex items-center justify-between border-b border-black/[0.07] pb-3">
-                <span className="text-sm font-medium text-[#6e6e73]">Notifications</span>
-                <span className="text-sm font-semibold text-[#1d1d1f]">{unreadCount}</span>
+              <div className="liminull-field-map" aria-hidden="true">
+                <i />
+                <i />
+                <i />
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-[#6e6e73]">Workspace</span>
-                <span className="text-sm font-semibold text-[#1d1d1f]">Production</span>
+              <div className="grid grid-cols-3 gap-2">
+                <div className="liminull-micro-tile"><p>{unreadCount}</p><span>alerts</span></div>
+                <div className="liminull-micro-tile"><p>PRD</p><span>workspace</span></div>
+                <div className="liminull-micro-tile"><p>ON</p><span>runtime</span></div>
               </div>
             </div>
           </div>

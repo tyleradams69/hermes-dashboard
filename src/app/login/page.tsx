@@ -41,8 +41,14 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="liminull-apple relative min-h-screen overflow-hidden bg-[#f5f5f7] text-[#1d1d1f]">
+    <main className="liminull-apple liminull-abstract-stage relative min-h-screen overflow-hidden bg-[#f5f5f7] text-[#1d1d1f]">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_-10%,rgba(255,255,255,1),transparent_32rem),radial-gradient(circle_at_82%_18%,rgba(0,113,227,0.10),transparent_24rem),linear-gradient(180deg,#ffffff_0%,#f5f5f7_46%,#efeff3_100%)]" />
+      <div className="liminull-abstract-composition" aria-hidden="true">
+        <span />
+        <span />
+        <span />
+        <span />
+      </div>
       <div className="liminull-particle-field" aria-hidden="true">
         {[
           ["12%", "72%", "4px", "10s", "-2s", "14px"],
@@ -94,17 +100,33 @@ export default function LoginPage() {
             queue health, recovery paths, and executive supervision.
           </p>
 
-          <div className="mt-10 grid max-w-xl grid-cols-3 gap-3">
-            {[
-              ["Live", "System watch"],
-              ["Protected", "Private console"],
-              ["Synced", "Operational data"],
-            ].map(([label, detail]) => (
-              <div key={label} className="rounded-[24px] bg-white/64 p-4 shadow-[0_18px_50px_rgba(0,0,0,0.06)] ring-1 ring-black/[0.05] backdrop-blur-xl">
-                <p className="text-sm font-semibold text-[#1d1d1f]">{label}</p>
-                <p className="mt-1 text-xs leading-5 text-[#86868b]">{detail}</p>
+          <div className="liminull-signal-plate mt-10 max-w-xl p-5">
+            <div className="flex items-start justify-between gap-6">
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.34em] text-[#0071e3]">Field state</p>
+                <p className="mt-3 max-w-sm text-sm leading-6 text-[#6e6e73]">
+                  Operator access sits inside a living command field — client memory,
+                  worker pressure, recovery vectors, and private execution traces.
+                </p>
               </div>
-            ))}
+              <div className="liminull-mini-orbit" aria-hidden="true">
+                <span />
+                <span />
+                <span />
+              </div>
+            </div>
+            <div className="mt-5 grid grid-cols-3 gap-2">
+              {[
+                ["LIVE", "watch"],
+                ["NULL", "private"],
+                ["SYNC", "memory"],
+              ].map(([label, detail]) => (
+                <div key={label} className="liminull-micro-tile">
+                  <p>{label}</p>
+                  <span>{detail}</span>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
 
@@ -113,9 +135,46 @@ export default function LoginPage() {
             <div className="pointer-events-none absolute -right-16 -top-20 h-56 w-56 rounded-full bg-[#0071e3]/12 blur-3xl" />
             <div className="pointer-events-none absolute -bottom-24 left-8 h-48 w-48 rounded-full bg-[#34c759]/10 blur-3xl" />
 
+            <div className="liminull-auth-console">
+              <div className="liminull-auth-console-head">
+                <div>
+                  <p>AUTH CONSOLE</p>
+                  <span>private local gate</span>
+                </div>
+                <strong>SEALED</strong>
+              </div>
+
+              <div className="liminull-auth-console-body">
+                <div className="liminull-auth-orbit" aria-hidden="true">
+                  <span />
+                  <span />
+                  <span />
+                </div>
+                <div className="liminull-auth-rows">
+                  {[
+                    ["LOCALHOST", "127.0.0.1"],
+                    ["SESSION", "ENCRYPTED"],
+                    ["TRACE", "LOCAL ONLY"],
+                  ].map(([label, value]) => (
+                    <div key={label}>
+                      <span>{label}</span>
+                      <strong>{value}</strong>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="liminull-auth-bars" aria-hidden="true">
+                <span />
+                <span />
+                <span />
+                <span />
+              </div>
+            </div>
+
             <div className="relative">
               <div className="flex items-center justify-between gap-4">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#1d1d1f] text-lg font-semibold text-white shadow-[0_16px_42px_rgba(0,0,0,0.22)]">
+                <div className="liminull-mark flex h-12 w-12 items-center justify-center rounded-2xl bg-[#1d1d1f] text-lg font-semibold text-white shadow-[0_16px_42px_rgba(0,0,0,0.22)]">
                   L
                 </div>
                 <div className="rounded-full bg-[#eaf8ee] px-3 py-1.5 text-xs font-semibold text-[#248a3d]">
