@@ -180,7 +180,10 @@ select {
 .liminull-hero.text-white,
 .liminull-hero .text-white { color: #ffffff !important; }
 .liminull-hero [class*="text-white/"] { color: rgba(255,255,255,0.72) !important; }
-.liminull-hero h1 { color: #ffffff !important; font-weight: 650 !important; letter-spacing: -0.045em !important; }
+.liminull-hero h1,
+.liminull-dark-card h2 { color: #ffffff !important; font-weight: 650 !important; letter-spacing: -0.045em !important; }
+.liminull-dark-card .text-white { color: #ffffff !important; }
+.liminull-dark-card [class*="text-white/"] { color: rgba(255,255,255,0.72) !important; }
 .liminull-apple [class*="text-cyan-"] { color: var(--accent) !important; }
 .liminull-apple [class*="border-white/"] { border-color: var(--line) !important; }
 .liminull-apple [class*="border-cyan-"] { border-color: rgba(0,113,227,0.16) !important; }
