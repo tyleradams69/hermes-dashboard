@@ -19,35 +19,20 @@ export default function AppShell({
   description?: string;
   children: React.ReactNode;
 }) {
-
-  const [unreadCount, setUnreadCount] =
-    useState(0);
-
-  const [currentTime, setCurrentTime] =
-    useState("");
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [currentTime, setCurrentTime] = useState("");
 
   async function loadNotifications() {
     try {
+      const res = await fetch(`${API_URL}/api/notifications?business_id=demo-law-firm`, {
+        cache: "no-store",
+        headers: {
+          "x-hermes-role": "admin",
+        },
+      });
 
-      const res = await fetch(
-        `${API_URL}/api/notifications?business_id=demo-law-firm`,
-        {
-          cache: "no-store",
-
-          headers: {
-            "x-hermes-role":
-              "admin",
-          },
-        }
-      );
-
-      const data =
-        await res.json();
-
-      setUnreadCount(
-        (data.notifications || []).length
-      );
-
+      const data = await res.json();
+      setUnreadCount((data.notifications || []).length);
     } catch {
       setUnreadCount(0);
     }
@@ -67,21 +52,15 @@ export default function AppShell({
 
     updateClock();
 
-    const clockTimer =
-      setInterval(updateClock, 1000);
-
-    const timer =
-      setInterval(
-        loadNotifications,
-        10000
-      );
+    const clockTimer = setInterval(updateClock, 1000);
+    const timer = setInterval(loadNotifications, 10000);
 
     return () => {
       clearInterval(timer);
       clearInterval(clockTimer);
     };
-
   }, []);
+
   const nav = [
     { id: "dashboard", label: "Dashboard", href: "/operations" },
     { id: "clients", label: "Clients", href: "/businesses" },
@@ -91,36 +70,68 @@ export default function AppShell({
   ];
 
   return (
-    <main className="min-h-screen bg-[#090909] text-white liminull-grid-bg">
-      <div className="flex min-h-screen">
-        <aside className="hidden w-[268px] border-r border-white/5 bg-[#0d0d0e]/95 p-6 backdrop-blur-xl lg:flex lg:flex-col">
-          <div>
-            <p className="liminull-eyebrow">LIMINULL</p>
+    <main className="liminull-apple liminull-abstract-stage relative min-h-screen overflow-hidden bg-background text-foreground liminull-grid-bg">
+      <div className="liminull-particle-field" aria-hidden="true">
+        {[
+          ["8%", "74%", "5px", "9s", "-1s", "18px"],
+          ["18%", "38%", "3px", "11s", "-5s", "-12px"],
+          ["31%", "82%", "4px", "10s", "-3s", "22px"],
+          ["44%", "58%", "2px", "12s", "-7s", "-18px"],
+          ["57%", "31%", "4px", "9.5s", "-2s", "14px"],
+          ["68%", "76%", "3px", "13s", "-9s", "-22px"],
+          ["79%", "44%", "5px", "10.5s", "-4s", "16px"],
+          ["91%", "66%", "2px", "12.5s", "-8s", "-14px"],
+          ["12%", "18%", "3px", "14s", "-10s", "24px"],
+          ["37%", "24%", "2px", "10s", "-6s", "-20px"],
+          ["52%", "88%", "6px", "15s", "-11s", "18px"],
+          ["84%", "22%", "3px", "9s", "-3s", "-18px"],
+        ].map(([x, y, s, d, delay, drift], index) => (
+          <span
+            key={index}
+            style={
+              {
+                "--x": x,
+                "--y": y,
+                "--s": s,
+                "--d": d,
+                "--delay": delay,
+                "--particle-drift": drift,
+              } as React.CSSProperties
+            }
+          />
+        ))}
+      </div>
+      <div className="liminull-abstract-composition" aria-hidden="true">
+        <span />
+        <span />
+        <span />
+        <span />
+      </div>
+      <header className="sticky top-0 z-50 border-b border-white/70 bg-white/58 backdrop-blur-2xl supports-[backdrop-filter]:bg-white/48">
+        <div className="mx-auto flex max-w-[1180px] flex-col gap-3 px-4 py-3 sm:px-6 lg:flex-row lg:items-center lg:gap-5">
+          <a href="/operations" className="flex shrink-0 items-center gap-3 rounded-full focus:outline-none focus:ring-2 focus:ring-[#0071e3]/25">
+            <span className="liminull-mark flex h-8 w-8 items-center justify-center rounded-full bg-[#1d1d1f] text-sm font-semibold text-white shadow-sm">
+              L
+            </span>
+            <span className="text-[15px] font-semibold tracking-[-0.025em] text-[#1d1d1f]">
+              Liminull Operations
+            </span>
+          </a>
 
-            <h1 className="mt-3 text-2xl font-black tracking-[-0.08em]">
-              Operations
-            </h1>
-
-            <p className="mt-2 text-xs leading-5 liminull-muted">
-              Operational intelligence for active business workflows.
-            </p>
-          </div>
-
-          <nav className="mt-8 space-y-3">
+          <nav className="flex min-w-0 items-center gap-1 overflow-x-auto rounded-full bg-black/[0.035] p-1 liminull-scroll lg:flex-none">
             {nav.map((item) => (
               <a
                 key={item.id}
                 href={item.href}
                 className={
                   active === item.id
-                    ? "flex items-center justify-between rounded-2xl border border-cyan-300/10 bg-cyan-300/10 px-4 py-3 text-sm font-semibold text-cyan-100 shadow-[0_0_40px_rgba(103,232,249,0.06)]"
-                    : "flex items-center justify-between rounded-2xl border border-white/5 bg-white/[0.025] px-4 py-3 text-sm text-white/65 transition hover:bg-white/[0.06] hover:text-white"
+                    ? "inline-flex shrink-0 items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-semibold tracking-[-0.01em] text-[#1d1d1f] shadow-[0_1px_10px_rgba(0,0,0,0.08)]"
+                    : "inline-flex shrink-0 items-center gap-2 rounded-full px-4 py-2 text-sm font-medium tracking-[-0.01em] text-[#6e6e73] transition hover:bg-white/70 hover:text-[#1d1d1f]"
                 }
               >
                 <span>{item.label}</span>
-
                 {item.id === "dashboard" && unreadCount > 0 && (
-                  <span className="ml-2 inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-cyan-300 px-1 text-[10px] font-black text-black">
+                  <span className="inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-[#0071e3] px-1.5 text-[11px] font-semibold text-white">
                     {unreadCount}
                   </span>
                 )}
@@ -128,84 +139,64 @@ export default function AppShell({
             ))}
           </nav>
 
-          <div className="mt-auto space-y-3">
-            <div className="liminull-card-soft p-4">
-              <p className="text-[10px] uppercase tracking-[0.25em] text-white/30">
-                Workspace
-              </p>
-              <p className="mt-2 text-sm font-semibold text-white/80">
-                Liminull
-              </p>
-              <p className="mt-1 text-xs text-white/35">
-                Production monitor
-              </p>
+          <div className="flex shrink-0 items-center gap-2">
+            <div className="hidden rounded-full bg-white px-3 py-2 text-xs font-medium text-[#6e6e73] shadow-sm ring-1 ring-black/[0.04] md:flex">
+              {currentTime || "--:--"}
             </div>
-
-            <LogoutButton />
-          </div>
-        </aside>
-
-        <section className="flex-1 p-6 lg:p-10">
-          <div className="mb-6 flex items-start justify-between gap-6">
-            <div>
-            <p className="liminull-eyebrow">{eyebrow}</p>
-
-            <h1 className="mt-2 text-5xl font-black tracking-[-0.09em]">
-              {title}
-            </h1>
-
-            {description && (
-              <p className="mt-3 max-w-2xl text-sm leading-6 liminull-muted">
-                {description}
-              </p>
-            )}
-            </div>
-
             <NotificationCenter />
           </div>
+        </div>
+      </header>
 
-          <div className="mb-6 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-white/5 bg-white/[0.025] px-5 py-4">
-            <div className="flex items-center gap-6">
-              <div className="flex items-center gap-3">
-                <div className="h-2.5 w-2.5 rounded-full bg-cyan-300 animate-pulse" />
-
-                <div>
-                  <p className="text-[10px] uppercase tracking-[0.22em] text-cyan-300">
-                    Live
-                  </p>
-
-                  <p className="text-xs text-white/60">
-                    Operationally synced
-                  </p>
-                </div>
-              </div>
-
-              <div>
-                <p className="text-[10px] uppercase tracking-[0.22em] text-white/30">
-                  Notifications
+      <div className="relative z-10 mx-auto w-full max-w-[1180px] px-4 py-5 sm:px-6 sm:py-6">
+        <section className="liminull-hero liminull-abstract-hero liminull-compact-hero mb-5 overflow-hidden rounded-[26px] bg-[#1d1d1f] px-5 py-5 text-white shadow-[0_22px_64px_rgba(0,0,0,0.13)] sm:px-7 sm:py-6">
+          <div className="grid gap-5 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
+            <div>
+              <p className="text-sm font-medium text-white/55">{eyebrow}</p>
+              <h1 className="mt-2 max-w-3xl text-3xl font-semibold tracking-[-0.055em] sm:text-5xl">
+                {title}
+              </h1>
+              {description && (
+                <p className="mt-3 max-w-2xl text-sm leading-6 text-white/68 sm:text-base">
+                  {description}
                 </p>
-
-                <p className="mt-1 text-sm font-black">
-                  {unreadCount}
-                </p>
-              </div>
+              )}
             </div>
 
-            <div className="text-right">
-              <p className="text-[10px] uppercase tracking-[0.22em] text-white/30">
-                Local Time
-              </p>
-
-              <p className="mt-1 text-sm font-black">
-                {currentTime}
-              </p>
+            <div className="liminull-glass-panel liminull-field-card grid gap-3 rounded-[20px] bg-white p-3 text-[#1d1d1f] shadow-[0_14px_44px_rgba(0,0,0,0.16)] ring-1 ring-white/20">
+              <div className="flex items-center justify-between border-b border-black/[0.07] pb-2">
+                <span className="text-[10px] font-semibold uppercase tracking-[0.34em] text-[#6e6e73]">Signal field</span>
+                <span className="inline-flex items-center gap-2 rounded-full bg-[#eaf8ee] px-3 py-1 text-xs font-semibold text-[#248a3d]">
+                  <span className="h-1.5 w-1.5 rounded-full bg-[#248a3d]" />
+                  Live
+                </span>
+              </div>
+              <div className="liminull-field-map" aria-hidden="true">
+                <i />
+                <i />
+                <i />
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                <div className="liminull-micro-tile"><p>{unreadCount}</p><span>alerts</span></div>
+                <div className="liminull-micro-tile"><p>PRD</p><span>workspace</span></div>
+                <div className="liminull-micro-tile"><p>ON</p><span>runtime</span></div>
+              </div>
             </div>
           </div>
-
-
-          {children}
         </section>
+
+        <section className="space-y-6">{children}</section>
       </div>
+
+      <footer className="relative z-10 border-t border-white/70 bg-white/44 backdrop-blur-xl">
+        <div className="mx-auto flex max-w-[1180px] flex-col gap-3 px-4 py-5 text-xs text-[#6e6e73] sm:flex-row sm:items-center sm:justify-between sm:px-6">
+          <span>Liminull Operations</span>
+          <div className="flex items-center gap-4">
+            <span>Operational intelligence</span>
+            <LogoutButton />
+          </div>
+        </div>
+      </footer>
     </main>
   );
 }

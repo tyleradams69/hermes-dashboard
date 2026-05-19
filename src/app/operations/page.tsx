@@ -26,8 +26,16 @@ function Panel({
 
 function Empty({ text }: { text: string }) {
   return (
-    <div className="liminull-card-soft p-4 text-sm liminull-muted">
-      {text}
+    <div className="rounded-[20px] border border-dashed border-black/[0.09] bg-gradient-to-br from-white to-[#f5f5f7] p-5 text-sm text-[#6e6e73]">
+      <div className="flex items-center gap-3">
+        <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-[#0071e3] shadow-sm ring-1 ring-black/[0.05]">
+          —
+        </span>
+        <div>
+          <p className="font-medium text-[#1d1d1f]">Clear for now</p>
+          <p className="mt-0.5 text-xs text-[#86868b]">{text}</p>
+        </div>
+      </div>
     </div>
   );
 }
@@ -155,13 +163,31 @@ function OperationsContent() {
   }, [overview]);
 
   const statCards = [
-    ["System Mode", stats.mode],
-    ["Workers Online", stats.workersOnline],
-    ["Pending Jobs", stats.pending],
-    ["Completed Jobs", stats.completed],
-    ["Failures", stats.failures],
-    ["Dead Letters", stats.deadLetters],
+    { label: "Mode", value: stats.mode, detail: "Runtime posture", tone: "blue" },
+    { label: "Workers", value: stats.workersOnline, detail: "Online now", tone: "green" },
+    { label: "Queue", value: stats.pending, detail: "Pending jobs", tone: "amber" },
+    { label: "Completed", value: stats.completed, detail: "Closed jobs", tone: "blue" },
+    { label: "Failures", value: stats.failures, detail: "Needs review", tone: "red" },
+    { label: "Dead letters", value: stats.deadLetters, detail: "Quarantined", tone: "slate" },
   ];
+
+  const activityBars = [
+    stats.pending + 2,
+    stats.completed + 4,
+    stats.workersOnline + 3,
+    stats.failures + 1,
+    stats.deadLetters + 1,
+    stats.completed + 6,
+    stats.pending + 3,
+    stats.completed + 5,
+    stats.workersOnline + stats.pending + 4,
+    stats.completed + stats.failures + 3,
+  ];
+
+  const systemLoad = Math.min(
+    96,
+    Math.max(24, stats.pending * 10 + stats.failures * 14 + stats.deadLetters * 12 + 38)
+  );
 
   return (
     <AppShell
@@ -170,147 +196,182 @@ function OperationsContent() {
       title={`${businessName} Dashboard`}
       description={`Operational intelligence, supervision, notifications, and live workflows for ${businessName}.`}
     >
-      <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-6">
-        {statCards.map(([label, value]) => (
-          <div key={label} className="liminull-card-soft p-6">
-            <p className="liminull-eyebrow">{label}</p>
-            <p className="mt-3 text-3xl font-black tracking-[-0.08em]">
-              {String(value)}
-            </p>
-          </div>
-        ))}
-      </div>
+      <section className="grid gap-6 xl:grid-cols-[1.35fr_0.65fr]">
+        <div className="liminull-operational-abstract relative overflow-hidden rounded-[34px] border border-black/[0.06] bg-white p-4 shadow-[0_28px_90px_rgba(0,0,0,0.08)] sm:p-5">
+          <div className="liminull-operational-glow liminull-operational-glow-blue" />
+          <div className="liminull-operational-glow liminull-operational-glow-green" />
 
-      <div className="mt-6 liminull-card p-6">
-        <div className="flex flex-wrap items-center justify-between gap-6">
-          <div className="flex items-center gap-5">
-            <div className="flex h-20 w-20 items-center justify-center rounded-3xl border border-cyan-300/10 bg-cyan-300/10 text-3xl font-black text-cyan-100 shadow-[0_0_60px_rgba(103,232,249,0.08)]">
-              {businessName.charAt(0).toUpperCase()}
-            </div>
-
+          <div className="liminull-command-rail mb-4">
             <div>
-              <p className="liminull-eyebrow">
-                Active Workspace
-              </p>
-
-              <h2 className="mt-2 text-4xl font-black tracking-[-0.08em]">
-                {businessName}
-              </h2>
-
-              <p className="mt-2 text-sm liminull-muted">
-                Multi-tenant operational intelligence workspace.
-              </p>
+              <span>LIVE COMMAND LAYER</span>
+              <strong>{businessName}</strong>
+            </div>
+            <div>
+              <span>QUEUE</span>
+              <strong>{stats.pending}</strong>
+            </div>
+            <div>
+              <span>WORKERS</span>
+              <strong>{stats.workersOnline}</strong>
+            </div>
+            <div>
+              <span>RISK</span>
+              <strong>{stats.failures + stats.deadLetters}</strong>
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-4">
-            <div className="rounded-2xl border border-cyan-300/10 bg-cyan-300/10 px-5 py-4">
-              <p className="text-[10px] uppercase tracking-[0.22em] text-cyan-300">
-                Environment
-              </p>
-
-              <p className="mt-2 text-sm font-black text-cyan-100">
-                Production
+          <div className="relative flex flex-wrap items-start justify-between gap-6">
+            <div className="max-w-2xl">
+              <div className="flex flex-wrap items-center gap-3">
+                <span className="liminull-fragment-label">memory mesh</span>
+                <span className="liminull-fragment-label">queue pressure</span>
+                <span className="liminull-fragment-label">rollback vectors</span>
+              </div>
+              <h2 className="mt-4 text-4xl font-semibold tracking-[-0.045em] text-[#1d1d1f] sm:text-5xl">
+                {businessName} is being actively supervised.
+              </h2>
+              <p className="mt-4 max-w-xl text-base leading-7 text-[#6e6e73]">
+                A cleaner operating picture for queues, worker health, failures,
+                recovery paths, executive briefings, and automation safeguards.
               </p>
             </div>
 
-            <div className="rounded-2xl border border-white/5 bg-white/[0.03] px-5 py-4">
-              <p className="text-[10px] uppercase tracking-[0.22em] text-white/30">
-                Status
-              </p>
-
-              <div className="mt-2 flex items-center gap-3">
-                <div className="h-3 w-3 rounded-full bg-cyan-300 liminull-live-pulse" />
-
-                <p className="text-sm font-black text-cyan-100">
-                  Operational
-                </p>
+            <div className="w-full rounded-[26px] bg-[#f5f5f7] p-4 ring-1 ring-black/[0.05] sm:w-[260px]">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-medium text-[#6e6e73]">System pressure</p>
+                <p className="text-sm font-semibold text-[#1d1d1f]">{systemLoad}%</p>
+              </div>
+              <div className="mt-4 h-2 overflow-hidden rounded-full bg-black/[0.06]">
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-[#34c759] via-[#0071e3] to-[#5856d6]"
+                  style={{ width: `${systemLoad}%` }}
+                />
+              </div>
+              <div className="mt-5 grid grid-cols-2 gap-3">
+                <div className="rounded-2xl bg-white p-3 shadow-sm ring-1 ring-black/[0.04]">
+                  <p className="text-xs text-[#86868b]">Workers</p>
+                  <p className="mt-1 text-2xl font-semibold tracking-[-0.03em] text-[#1d1d1f]">
+                    {stats.workersOnline}
+                  </p>
+                </div>
+                <div className="rounded-2xl bg-white p-3 shadow-sm ring-1 ring-black/[0.04]">
+                  <p className="text-xs text-[#86868b]">Open risk</p>
+                  <p className="mt-1 text-2xl font-semibold tracking-[-0.03em] text-[#1d1d1f]">
+                    {stats.failures + stats.deadLetters}
+                  </p>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      </div>
 
-
-
-      <div className="mt-6 liminull-card p-6">
-        <div className="flex flex-wrap items-start justify-between gap-6">
-          <div className="max-w-3xl">
-            <p className="liminull-eyebrow">
-              Executive Summary
-            </p>
-
-            <h2 className="mt-3 text-3xl font-black tracking-[-0.07em]">
-              Operational systems are stable and actively supervised.
-            </h2>
-
-            <p className="mt-4 text-sm leading-7 liminull-muted">
-              Liminull is currently monitoring operational workflows,
-              infrastructure health, notifications, executive intelligence,
-              and automation safeguards in real time.
-            </p>
-          </div>
-
-          <div className="flex items-center gap-3 rounded-2xl border border-cyan-300/10 bg-cyan-300/10 px-5 py-4">
-            <div className="h-3 w-3 rounded-full bg-cyan-300 liminull-live-pulse" />
-
-            <div>
-              <p className="text-[10px] uppercase tracking-[0.22em] text-cyan-300">
-                Status
-              </p>
-
-              <p className="mt-1 text-sm font-black text-cyan-100">
-                Operationally Synced
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-
-      <div className="mt-6 liminull-card p-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="liminull-eyebrow">
-              Operational Throughput
-            </p>
-
-            <h2 className="mt-3 text-3xl font-black tracking-[-0.07em]">
-              Live Activity
-            </h2>
-          </div>
-
-          <p className="text-xs liminull-muted">
-            Last 24 hours
-          </p>
-        </div>
-
-        <div className="mt-8 h-[220px]">
-          <div className="flex h-full items-end gap-3">
-            {[
-              stats.pending + 2,
-              stats.completed + 4,
-              stats.workersOnline + 3,
-              stats.failures + 1,
-              stats.deadLetters + 1,
-              stats.completed + 6,
-              stats.pending + 3,
-              stats.completed + 5,
-            ].map((v, i) => (
+          <div className="relative mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {statCards.map((card) => (
               <div
-                key={i}
-                className="relative flex-1 overflow-hidden rounded-t-2xl bg-gradient-to-t from-cyan-300/10 via-cyan-300/40 to-cyan-200 liminull-float"
-                style={{
-                  height: `${Math.max(14, v * 12)}%`,
-                  animationDelay: `${i * 0.18}s`,
-                }}
+                key={card.label}
+                className="rounded-[22px] border border-black/[0.05] bg-[#fbfbfd]/85 p-4 shadow-[0_10px_30px_rgba(0,0,0,0.04)]"
               >
-                <div className="absolute inset-0 bg-cyan-300/10 liminull-live-pulse" />
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-sm font-medium text-[#6e6e73]">{card.label}</p>
+                  <span className="h-2 w-2 rounded-full bg-[#0071e3]" />
+                </div>
+                <p className="mt-3 truncate text-3xl font-semibold tracking-[-0.04em] text-[#1d1d1f]">
+                  {String(card.value)}
+                </p>
+                <p className="mt-1 text-xs text-[#86868b]">{card.detail}</p>
               </div>
             ))}
           </div>
         </div>
-      </div>
+
+        <div className="grid gap-6">
+          <div className="liminull-card p-6">
+            <p className="liminull-eyebrow">Executive Summary</p>
+            <h2 className="mt-3 text-2xl font-semibold tracking-[-0.035em] text-[#1d1d1f]">
+              Stable, monitored, ready to intervene.
+            </h2>
+            <p className="mt-3 text-sm leading-6 liminull-muted">
+              Liminull is watching workflow throughput, worker health,
+              notifications, recovery recommendations, and rollback safety.
+            </p>
+            <div className="mt-5 flex items-center gap-3 rounded-2xl bg-[#eaf8ee] px-4 py-3 text-sm font-semibold text-[#248a3d]">
+              <span className="h-2 w-2 rounded-full bg-[#248a3d] liminull-live-pulse" />
+              Operationally synced
+            </div>
+          </div>
+
+          <div className="liminull-card p-6">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="liminull-eyebrow">Active Workspace</p>
+                <h2 className="mt-2 text-3xl font-semibold tracking-[-0.04em] text-[#1d1d1f]">
+                  {businessName}
+                </h2>
+              </div>
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#1d1d1f] text-xl font-semibold text-white shadow-lg">
+                {businessName.charAt(0).toUpperCase()}
+              </div>
+            </div>
+            <div className="mt-5 grid gap-3">
+              <div className="flex items-center justify-between rounded-2xl bg-[#f5f5f7] px-4 py-3">
+                <span className="text-sm text-[#6e6e73]">Environment</span>
+                <span className="text-sm font-semibold text-[#1d1d1f]">Production</span>
+              </div>
+              <div className="flex items-center justify-between rounded-2xl bg-[#f5f5f7] px-4 py-3">
+                <span className="text-sm text-[#6e6e73]">Status</span>
+                <span className="text-sm font-semibold text-[#248a3d]">Operational</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="mt-6 grid gap-6 xl:grid-cols-[0.82fr_1.18fr]">
+        <div className="liminull-card p-6">
+          <p className="liminull-eyebrow">Operational Throughput</p>
+          <h2 className="mt-3 text-3xl font-semibold tracking-[-0.04em] text-[#1d1d1f]">
+            Live activity curve
+          </h2>
+          <p className="mt-2 text-sm liminull-muted">Last 24 hours, weighted by queue and completion flow.</p>
+
+          <div className="mt-8 h-[210px] rounded-[24px] bg-gradient-to-b from-[#f5f5f7] to-white p-5 ring-1 ring-black/[0.05]">
+            <div className="flex h-full items-end gap-2.5">
+              {activityBars.map((v, i) => (
+                <div
+                  key={i}
+                  className="relative flex-1 overflow-hidden rounded-t-2xl bg-gradient-to-t from-[#0071e3]/25 via-[#0071e3]/55 to-[#0071e3] shadow-[0_10px_24px_rgba(0,113,227,0.18)]"
+                  style={{ height: `${Math.min(100, Math.max(18, v * 11))}%` }}
+                >
+                  <div className="absolute inset-x-0 top-0 h-8 bg-white/25" />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="liminull-dark-card relative overflow-hidden rounded-[30px] bg-[#1d1d1f] p-6 text-white shadow-[0_28px_90px_rgba(0,0,0,0.14)]">
+          <div className="absolute -right-16 -top-16 h-64 w-64 rounded-full bg-[#0071e3]/35 blur-3xl" />
+          <div className="absolute -bottom-20 left-10 h-56 w-56 rounded-full bg-[#34c759]/20 blur-3xl" />
+          <div className="relative">
+            <p className="text-sm font-medium text-white/55">Priority Intelligence</p>
+            <h2 className="mt-3 max-w-xl text-3xl font-semibold tracking-[-0.04em] text-white">
+              Keep the operator focused on what changed, what broke, and what to approve next.
+            </h2>
+            <div className="mt-7 grid gap-3 sm:grid-cols-3">
+              {[
+                ["Alerts", notifications.length, "Notifications waiting"],
+                ["Briefings", executiveBriefings.length, "Executive summaries"],
+                ["Recoveries", workerRecovery.length, "Suggested repairs"],
+              ].map(([label, value, detail]) => (
+                <div key={String(label)} className="rounded-2xl bg-white/[0.09] p-4 ring-1 ring-white/10">
+                  <p className="text-xs text-white/50">{label}</p>
+                  <p className="mt-2 text-3xl font-semibold tracking-[-0.04em] text-white">{value}</p>
+                  <p className="mt-1 text-xs text-white/45">{detail}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
 
 
       <div className="mt-6 grid items-start gap-6 xl:grid-cols-2">

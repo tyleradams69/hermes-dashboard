@@ -1,8 +1,19 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f5f5f7;
+  --foreground: #1d1d1f;
+  --surface: #ffffff;
+  --surface-soft: #fbfbfd;
+  --muted: #6e6e73;
+  --muted-soft: #86868b;
+  --line: rgba(0, 0, 0, 0.08);
+  --line-strong: rgba(0, 0, 0, 0.12);
+  --accent: #0071e3;
+  --accent-soft: #eaf3ff;
+  --success: #248a3d;
+  --warning: #b26a00;
+  --danger: #d70015;
 }
 
 @theme inline {
@@ -12,156 +23,197 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  box-sizing: border-box;
+}
+
+html {
+  background: var(--background);
 }
 
 body {
-  background: var(--background);
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 50% -18%, rgba(255,255,255,0.95), transparent 32rem),
+    radial-gradient(circle at 85% 8%, rgba(0,113,227,0.08), transparent 22rem),
+    linear-gradient(180deg, #ffffff 0%, #f5f5f7 38%, #f2f2f5 100%);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
-/* LIMINULL DESIGN SYSTEM */
-
-.liminull-card {
-  border: 1px solid rgba(255,255,255,0.06);
-  background: rgba(255,255,255,0.028);
-  border-radius: 24px;
-  box-shadow: 0 20px 80px rgba(0,0,0,0.22);
+a {
+  color: inherit;
+  text-decoration: none;
 }
 
-.liminull-card-soft {
-  border: 1px solid rgba(255,255,255,0.05);
-  background: rgba(255,255,255,0.022);
-  border-radius: 20px;
+button,
+input,
+textarea,
+select {
+  font: inherit;
 }
 
-.liminull-eyebrow {
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.28em;
-  color: rgba(103,232,249,0.85);
+::selection {
+  background: var(--accent);
+  color: white;
 }
 
-.liminull-muted {
-  color: rgba(255,255,255,0.42);
+/* APPLE-LIKE LIMINULL DASHBOARD SYSTEM */
+
+.liminull-apple {
+  color: var(--foreground);
 }
 
-.liminull-button {
-  border: 1px solid rgba(103,232,249,0.18);
-  background: rgba(103,232,249,0.08);
-  color: rgb(207,250,254);
-  border-radius: 14px;
-  padding: 10px 14px;
-  font-size: 11px;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.18em;
-  transition: 160ms ease;
+.liminull-apple::before,
+.liminull-apple::after {
+  content: "";
+  position: fixed;
+  pointer-events: none;
+  z-index: 0;
+  filter: blur(0.2px);
 }
 
-.liminull-button:hover {
-  background: rgb(103,232,249);
-  color: black;
+.liminull-apple::before {
+  inset: -18% -12%;
+  background:
+    radial-gradient(ellipse at 72% 16%, rgba(0,113,227,0.24), transparent 26%),
+    radial-gradient(ellipse at 18% 72%, rgba(52,199,89,0.18), transparent 30%),
+    conic-gradient(from 218deg at 58% 44%, transparent 0deg, rgba(255,255,255,0.92) 36deg, rgba(0,113,227,0.18) 72deg, transparent 118deg, rgba(52,199,89,0.15) 172deg, transparent 236deg, rgba(88,86,214,0.12) 292deg, transparent 360deg);
+  opacity: 0.92;
+  mix-blend-mode: multiply;
+  animation: liminullCausticDrift 16s ease-in-out infinite;
+}
+
+.liminull-apple::after {
+  inset: 0;
+  background:
+    repeating-linear-gradient(112deg, transparent 0 34px, rgba(0,113,227,0.055) 35px, transparent 39px),
+    radial-gradient(circle at 78% 28%, rgba(255,255,255,0.98), transparent 14rem),
+    linear-gradient(130deg, transparent 0%, rgba(0,113,227,0.12) 42%, rgba(255,255,255,0.78) 50%, rgba(52,199,89,0.10) 58%, transparent 74%);
+  opacity: 0.82;
+  mix-blend-mode: soft-light;
+  animation: liminullPrismSweep 11s ease-in-out infinite;
 }
 
 .liminull-grid-bg {
-  background-image:
-    radial-gradient(circle at top right, rgba(103,232,249,0.08), transparent 34%),
-    linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
-  background-size: auto, 64px 64px, 64px 64px;
+  background:
+    radial-gradient(circle at 50% -18%, rgba(255,255,255,0.95), transparent 34rem),
+    radial-gradient(circle at 86% 10%, rgba(0,113,227,0.08), transparent 22rem),
+    linear-gradient(180deg, #ffffff 0%, #f5f5f7 42%, #f2f2f5 100%);
 }
 
-/* LIMINULL MOTION SYSTEM */
-
-@keyframes liminullFadeUp {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+.liminull-card {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.86);
+  background:
+    linear-gradient(135deg, rgba(255,255,255,0.72), rgba(255,255,255,0.42)),
+    radial-gradient(circle at 10% -10%, rgba(255,255,255,0.96), transparent 24rem),
+    radial-gradient(circle at 96% 18%, rgba(0,113,227,0.10), transparent 20rem);
+  border-radius: 20px;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.98),
+    inset 0 -26px 58px rgba(255,255,255,0.24),
+    inset 0 0 42px rgba(0,113,227,0.035),
+    0 28px 92px rgba(0, 0, 0, 0.095);
+  backdrop-filter: blur(34px) saturate(215%);
 }
 
-@keyframes liminullPulse {
-  0%, 100% {
-    opacity: 0.55;
-  }
-
-  50% {
-    opacity: 1;
-  }
+.liminull-card::before,
+.liminull-card-soft::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(112deg, rgba(255,255,255,0.92), transparent 30%, rgba(255,255,255,0.34) 48%, transparent 70%);
+  opacity: 0.72;
 }
 
-@keyframes liminullFloat {
-  0%, 100% {
-    transform: translateY(0px);
-  }
-
-  50% {
-    transform: translateY(-4px);
-  }
+.liminull-card::after,
+.liminull-card-soft::after {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  pointer-events: none;
+  border-radius: inherit;
+  background:
+    radial-gradient(circle at 16% 0%, rgba(255,255,255,0.72), transparent 22%),
+    radial-gradient(circle at 90% 16%, rgba(0,113,227,0.12), transparent 26%),
+    linear-gradient(180deg, rgba(255,255,255,0.24), transparent 46%);
+  mix-blend-mode: screen;
+  opacity: 0.68;
 }
 
-@keyframes liminullGlow {
-  0%, 100% {
-    box-shadow: 0 0 0 rgba(103,232,249,0);
-  }
-
-  50% {
-    box-shadow: 0 0 40px rgba(103,232,249,0.08);
-  }
+.liminull-card > *,
+.liminull-card-soft > * {
+  position: relative;
+  z-index: 1;
 }
 
-.liminull-card,
 .liminull-card-soft {
-  animation: liminullFadeUp 420ms ease;
-  transition:
-    transform 180ms ease,
-    background 180ms ease,
-    border-color 180ms ease,
-    box-shadow 220ms ease;
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.78);
+  background:
+    linear-gradient(145deg, rgba(255,255,255,0.64), rgba(255,255,255,0.34)),
+    radial-gradient(circle at 100% 0%, rgba(0,113,227,0.08), transparent 16rem);
+  border-radius: 18px;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.98),
+    inset 0 -18px 34px rgba(255,255,255,0.18),
+    0 18px 54px rgba(0, 0, 0, 0.065);
+  backdrop-filter: blur(30px) saturate(200%);
 }
 
-.liminull-card:hover,
-.liminull-card-soft:hover {
-  transform: translateY(-2px);
+.liminull-eyebrow {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  text-transform: none;
+  color: var(--muted);
+}
+
+.liminull-muted {
+  color: var(--muted);
 }
 
 .liminull-button {
-  transition:
-    transform 140ms ease,
-    background 140ms ease,
-    color 140ms ease,
-    box-shadow 180ms ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  background: var(--accent);
+  color: #ffffff !important;
+  border-radius: 18px;
+  padding: 10px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  text-transform: none;
+  transition: transform 140ms ease, background 140ms ease, box-shadow 180ms ease;
+  box-shadow: 0 8px 20px rgba(0, 113, 227, 0.18);
 }
 
 .liminull-button:hover {
   transform: translateY(-1px);
-  box-shadow: 0 10px 30px rgba(103,232,249,0.18);
+  background: #0077ed;
+  box-shadow: 0 12px 28px rgba(0, 113, 227, 0.22);
 }
 
 .liminull-live-pulse {
-  animation:
-    liminullPulse 2.2s ease-in-out infinite,
-    liminullGlow 3s ease-in-out infinite;
+  animation: liminullPulse 2.4s ease-in-out infinite;
 }
 
 .liminull-float {
-  animation: liminullFloat 5s ease-in-out infinite;
+  animation: none;
 }
 
 .liminull-scroll {
   scrollbar-width: thin;
-  scrollbar-color: rgba(255,255,255,0.14) transparent;
+  scrollbar-color: rgba(0,0,0,0.18) transparent;
 }
 
 .liminull-scroll::-webkit-scrollbar {
@@ -169,10 +221,893 @@ body {
 }
 
 .liminull-scroll::-webkit-scrollbar-thumb {
-  background: rgba(255,255,255,0.12);
+  background: rgba(0,0,0,0.16);
   border-radius: 999px;
 }
 
 .liminull-scroll::-webkit-scrollbar-track {
   background: transparent;
+}
+
+@keyframes liminullFadeUp {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes liminullPulse {
+  0%, 100% { opacity: 0.58; }
+  50% { opacity: 1; }
+}
+
+@keyframes liminullArtifactFloat {
+  0%, 100% { transform: translate3d(0, 0, 0) rotate(var(--artifact-rotate, 0deg)); }
+  50% { transform: translate3d(0, -14px, 0) rotate(calc(var(--artifact-rotate, 0deg) + 4deg)); }
+}
+
+@keyframes liminullCausticDrift {
+  0%, 100% { transform: translate3d(-2%, -1%, 0) rotate(-3deg) scale(1); }
+  50% { transform: translate3d(3%, 2%, 0) rotate(4deg) scale(1.05); }
+}
+
+@keyframes liminullPrismSweep {
+  0%, 100% { transform: translate3d(-6%, 0, 0) skewX(-8deg); opacity: 0.62; }
+  50% { transform: translate3d(5%, -1%, 0) skewX(7deg); opacity: 0.9; }
+}
+
+.liminull-artifact-float {
+  --artifact-rotate: -14deg;
+  animation: liminullArtifactFloat 8s ease-in-out infinite;
+}
+
+.liminull-artifact-float-delayed {
+  --artifact-rotate: 18deg;
+  animation: liminullArtifactFloat 9.5s ease-in-out infinite;
+  animation-delay: -2s;
+}
+
+.liminull-artifact-float-slow {
+  --artifact-rotate: 9deg;
+  animation: liminullArtifactFloat 12s ease-in-out infinite;
+  animation-delay: -4s;
+}
+
+@keyframes liminullParticleRise {
+  0% { opacity: 0; transform: translate3d(0, 26px, 0) scale(0.66); }
+  16% { opacity: 0.95; }
+  100% { opacity: 0; transform: translate3d(var(--particle-drift, 0px), -128px, 0) scale(1.18); }
+}
+
+.liminull-particle-field {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+  opacity: 1;
+  mix-blend-mode: normal;
+}
+
+.liminull-particle-field span {
+  position: absolute;
+  left: var(--x);
+  top: var(--y);
+  width: calc(var(--s) * 2.8);
+  height: calc(var(--s) * 2.8);
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(255,255,255,1), rgba(0,113,227,0.72) 34%, rgba(0,113,227,0.18) 58%, transparent 76%);
+  box-shadow: 0 0 18px rgba(0,113,227,0.45), 0 0 54px rgba(0,113,227,0.28), 0 0 94px rgba(255,255,255,0.74);
+  animation: liminullParticleRise var(--d) ease-in-out infinite;
+  animation-delay: var(--delay);
+}
+
+.liminull-particle-field span:nth-child(2n) {
+  background: radial-gradient(circle, rgba(255,255,255,1), rgba(52,199,89,0.68) 34%, rgba(52,199,89,0.16) 58%, transparent 76%);
+  box-shadow: 0 0 18px rgba(52,199,89,0.38), 0 0 58px rgba(52,199,89,0.2), 0 0 94px rgba(255,255,255,0.74);
+}
+
+.liminull-particle-field span:nth-child(3n) {
+  filter: blur(0.25px);
+  opacity: 0.88;
+}
+
+.liminull-particle-field::before {
+  content: "";
+  position: absolute;
+  left: 3%;
+  right: 3%;
+  top: 12%;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, rgba(0,113,227,0.58), rgba(255,255,255,0.98), rgba(52,199,89,0.44), transparent);
+  box-shadow:
+    0 78px 0 rgba(0,113,227,0.18),
+    0 156px 0 rgba(255,255,255,0.74),
+    0 234px 0 rgba(0,113,227,0.16),
+    0 312px 0 rgba(52,199,89,0.14);
+  opacity: 0.95;
+  transform: translateZ(0);
+}
+
+.liminull-apple input,
+.liminull-apple textarea,
+.liminull-apple select {
+  border-radius: 18px !important;
+}
+
+.liminull-glass-panel {
+  background:
+    linear-gradient(135deg, rgba(255,255,255,0.52), rgba(255,255,255,0.22)),
+    radial-gradient(circle at 8% -8%, rgba(255,255,255,1), transparent 18rem),
+    radial-gradient(circle at 100% 10%, rgba(0,113,227,0.24), transparent 18rem),
+    radial-gradient(circle at 18% 104%, rgba(52,199,89,0.18), transparent 15rem) !important;
+  border-color: rgba(255,255,255,0.98) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,1),
+    inset 0 -38px 82px rgba(255,255,255,0.26),
+    inset 0 0 72px rgba(0,113,227,0.09),
+    0 34px 110px rgba(0,0,0,0.13),
+    0 0 90px rgba(0,113,227,0.14) !important;
+  backdrop-filter: blur(42px) saturate(245%);
+}
+
+.liminull-glass-panel::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  pointer-events: none;
+  z-index: 0;
+  border-radius: inherit;
+  background:
+    linear-gradient(116deg, rgba(255,255,255,0.88), transparent 23%, rgba(0,113,227,0.18) 39%, rgba(255,255,255,0.92) 50%, rgba(52,199,89,0.16) 63%, transparent 80%),
+    repeating-linear-gradient(100deg, transparent 0 22px, rgba(255,255,255,0.18) 23px, transparent 29px);
+  opacity: 0.72;
+  mix-blend-mode: screen;
+  animation: liminullPrismSweep 13s ease-in-out infinite reverse;
+}
+
+.liminull-glass-panel > * {
+  position: relative;
+  z-index: 1;
+}
+
+.liminull-apple [class*="rounded-[38px]"] { border-radius: 24px !important; }
+.liminull-apple [class*="rounded-[34px]"] { border-radius: 24px !important; }
+.liminull-apple [class*="rounded-[32px]"] { border-radius: 22px !important; }
+.liminull-apple [class*="rounded-[30px]"] { border-radius: 22px !important; }
+.liminull-apple [class*="rounded-[28px]"] { border-radius: 20px !important; }
+.liminull-apple [class*="rounded-[26px]"] { border-radius: 20px !important; }
+.liminull-apple [class*="rounded-[24px]"] { border-radius: 18px !important; }
+
+.liminull-card,
+.liminull-card-soft {
+  animation: liminullFadeUp 320ms ease;
+  transition: transform 160ms ease, border-color 160ms ease, box-shadow 180ms ease, background 160ms ease;
+}
+
+.liminull-card:hover,
+.liminull-card-soft:hover {
+  transform: translateY(-1px);
+  border-color: var(--line-strong);
+}
+
+/* Compatibility pass for old dark/cyan Tailwind utility markup. */
+.liminull-apple .font-black { font-weight: 650 !important; }
+.liminull-apple [class*="tracking-[-0."] { letter-spacing: -0.025em !important; }
+.liminull-apple [class*="text-white/"] { color: var(--muted) !important; }
+.liminull-apple .text-white { color: var(--foreground) !important; }
+.liminull-hero.text-white,
+.liminull-hero .text-white { color: #ffffff !important; }
+.liminull-hero [class*="text-white/"] { color: rgba(255,255,255,0.72) !important; }
+.liminull-hero h1,
+.liminull-dark-card h2 { color: #ffffff !important; font-weight: 650 !important; letter-spacing: -0.045em !important; }
+.liminull-dark-card .text-white { color: #ffffff !important; }
+.liminull-dark-card [class*="text-white/"] { color: rgba(255,255,255,0.72) !important; }
+.liminull-apple [class*="text-cyan-"] { color: var(--accent) !important; }
+.liminull-apple [class*="border-white/"] { border-color: var(--line) !important; }
+.liminull-apple [class*="border-cyan-"] { border-color: rgba(0,113,227,0.16) !important; }
+.liminull-apple [class*="bg-white/"] { background-color: rgba(255,255,255,0.62) !important; }
+.liminull-apple [class*="bg-black/"] { background-color: rgba(0,0,0,0.035) !important; }
+.liminull-apple [class*="bg-cyan-"] { background-color: var(--accent-soft) !important; }
+.liminull-apple [class*="from-cyan-"] { --tw-gradient-from: rgba(0,113,227,0.18) var(--tw-gradient-from-position) !important; }
+.liminull-apple [class*="via-cyan-"] { --tw-gradient-via: rgba(0,113,227,0.46) var(--tw-gradient-via-position) !important; }
+.liminull-apple [class*="to-cyan-"] { --tw-gradient-to: rgba(0,113,227,0.92) var(--tw-gradient-to-position) !important; }
+.liminull-apple .bg-cyan-300 { background-color: var(--success) !important; }
+.liminull-apple .shadow-\[0_0_80px_rgba\(103\,232\,249\,0\.06\)\],
+.liminull-apple [class*="shadow-[0_0"] {
+  box-shadow: 0 18px 60px rgba(0,0,0,0.07) !important;
+}
+
+.liminull-apple textarea::placeholder,
+.liminull-apple input::placeholder {
+  color: #86868b !important;
+  opacity: 1 !important;
+}
+
+/* Abstract Liminull art direction: make the surface feel authored, not template-generated. */
+.liminull-abstract-stage {
+  isolation: isolate;
+}
+
+.liminull-abstract-composition {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.liminull-abstract-composition span {
+  position: absolute;
+  display: block;
+  border: 1px solid rgba(0,113,227,0.13);
+  background:
+    linear-gradient(135deg, rgba(255,255,255,0.72), rgba(255,255,255,0.18)),
+    radial-gradient(circle at 72% 26%, rgba(0,113,227,0.22), transparent 45%),
+    radial-gradient(circle at 20% 82%, rgba(52,199,89,0.16), transparent 42%);
+  box-shadow: 0 30px 120px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255,255,255,0.95);
+  backdrop-filter: blur(30px) saturate(210%);
+  opacity: 0.72;
+}
+
+.liminull-abstract-composition span:nth-child(1) {
+  width: 34vw;
+  height: 42vh;
+  right: -11vw;
+  top: 10vh;
+  border-radius: 44% 56% 32% 68% / 38% 36% 64% 62%;
+  transform: rotate(-17deg);
+  clip-path: polygon(0 11%, 76% 0, 100% 42%, 69% 100%, 8% 82%);
+}
+
+.liminull-abstract-composition span:nth-child(2) {
+  width: 24vw;
+  height: 28vh;
+  left: -8vw;
+  bottom: 10vh;
+  border-radius: 68% 32% 59% 41% / 46% 60% 40% 54%;
+  transform: rotate(21deg);
+  clip-path: polygon(18% 0, 100% 24%, 82% 100%, 0 70%);
+}
+
+.liminull-abstract-composition span:nth-child(3) {
+  width: 42vw;
+  height: 1px;
+  left: 29vw;
+  top: 28vh;
+  border: 0;
+  background: linear-gradient(90deg, transparent, rgba(0,113,227,0.55), rgba(255,255,255,0.95), rgba(52,199,89,0.36), transparent);
+  box-shadow: 0 88px 0 rgba(0,113,227,0.11), 0 176px 0 rgba(52,199,89,0.09), 0 264px 0 rgba(0,0,0,0.06);
+  transform: rotate(-9deg);
+}
+
+.liminull-abstract-composition span:nth-child(4) {
+  width: 18vw;
+  height: 18vw;
+  right: 24vw;
+  bottom: -9vw;
+  border-radius: 50%;
+  background:
+    conic-gradient(from 180deg, transparent, rgba(0,113,227,0.20), rgba(255,255,255,0.9), rgba(52,199,89,0.14), transparent),
+    radial-gradient(circle, rgba(255,255,255,0.18), transparent 62%);
+  opacity: 0.66;
+}
+
+.liminull-signal-plate,
+.liminull-field-card {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.82);
+  border-radius: 24px;
+  background:
+    linear-gradient(135deg, rgba(255,255,255,0.62), rgba(255,255,255,0.26)),
+    linear-gradient(108deg, transparent 0 38%, rgba(0,113,227,0.12) 39% 41%, transparent 42% 100%);
+  box-shadow: 0 24px 82px rgba(0,0,0,0.09), inset 0 1px 0 rgba(255,255,255,0.96);
+  backdrop-filter: blur(30px) saturate(220%);
+}
+
+.liminull-signal-plate::before,
+.liminull-field-card::after,
+.liminull-operational-abstract::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  pointer-events: none;
+  background:
+    repeating-linear-gradient(128deg, transparent 0 18px, rgba(0,113,227,0.045) 19px, transparent 23px),
+    radial-gradient(circle at 84% 18%, rgba(0,113,227,0.16), transparent 22rem);
+  opacity: 0.9;
+}
+
+.liminull-micro-tile {
+  position: relative;
+  overflow: hidden;
+  min-height: 68px;
+  border-radius: 16px;
+  padding: 12px;
+  background: rgba(255,255,255,0.62);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.95), 0 8px 24px rgba(0,0,0,0.045);
+  border: 1px solid rgba(0,0,0,0.045);
+}
+
+.liminull-micro-tile p {
+  font-size: 18px;
+  line-height: 1;
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  color: #1d1d1f;
+}
+
+.liminull-micro-tile span {
+  display: block;
+  margin-top: 9px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #86868b;
+}
+
+.liminull-mini-orbit {
+  position: relative;
+  width: 118px;
+  height: 82px;
+  flex: 0 0 auto;
+}
+
+.liminull-mini-orbit::before {
+  content: "";
+  position: absolute;
+  inset: 8px 0;
+  border: 1px solid rgba(0,113,227,0.32);
+  border-radius: 50%;
+  transform: rotate(-17deg);
+}
+
+.liminull-mini-orbit span {
+  position: absolute;
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  background: #0071e3;
+  box-shadow: 0 0 24px rgba(0,113,227,0.48);
+}
+
+.liminull-mini-orbit span:nth-child(1) { left: 12px; top: 34px; }
+.liminull-mini-orbit span:nth-child(2) { right: 18px; top: 16px; background: #34c759; }
+.liminull-mini-orbit span:nth-child(3) { right: 40px; bottom: 10px; background: #5856d6; }
+
+.liminull-abstract-hero {
+  position: relative;
+  border: 1px solid rgba(255,255,255,0.10);
+  background:
+    radial-gradient(circle at 86% 18%, rgba(0,113,227,0.36), transparent 22rem),
+    radial-gradient(circle at 20% 90%, rgba(52,199,89,0.18), transparent 18rem),
+    linear-gradient(135deg, #101014 0%, #1d1d1f 46%, #09090b 100%) !important;
+}
+
+.liminull-abstract-hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(118deg, transparent 0 34%, rgba(255,255,255,0.12) 35%, transparent 42%),
+    repeating-linear-gradient(90deg, rgba(255,255,255,0.035) 0 1px, transparent 1px 54px);
+  opacity: 0.72;
+}
+
+.liminull-compact-hero .liminull-micro-tile {
+  min-height: 50px;
+  padding: 9px;
+}
+
+.liminull-compact-hero .liminull-micro-tile p {
+  font-size: 15px;
+}
+
+.liminull-compact-hero .liminull-micro-tile span {
+  margin-top: 6px;
+  font-size: 9px;
+}
+
+.liminull-field-map {
+  position: relative;
+  min-height: 82px;
+  border-radius: 16px;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 28% 38%, rgba(0,113,227,0.20), transparent 28%),
+    radial-gradient(circle at 78% 62%, rgba(52,199,89,0.15), transparent 26%),
+    linear-gradient(135deg, rgba(0,0,0,0.035), rgba(255,255,255,0.4));
+}
+
+.liminull-field-map::before,
+.liminull-field-map::after {
+  content: "";
+  position: absolute;
+  inset: 18px;
+  border: 1px solid rgba(0,113,227,0.18);
+  border-radius: 47% 53% 44% 56% / 58% 36% 64% 42%;
+  transform: rotate(-12deg);
+}
+
+.liminull-field-map::after {
+  inset: 35px 46px;
+  border-color: rgba(52,199,89,0.22);
+  transform: rotate(19deg);
+}
+
+.liminull-field-map i {
+  position: absolute;
+  display: block;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #0071e3;
+  box-shadow: 0 0 24px rgba(0,113,227,0.55);
+}
+
+.liminull-field-map i:nth-child(1) { left: 22%; top: 38%; }
+.liminull-field-map i:nth-child(2) { right: 18%; top: 25%; background: #34c759; }
+.liminull-field-map i:nth-child(3) { right: 34%; bottom: 18%; background: #5856d6; }
+
+.liminull-operational-abstract {
+  background:
+    linear-gradient(135deg, rgba(255,255,255,0.92), rgba(255,255,255,0.70)),
+    radial-gradient(circle at 82% 8%, rgba(0,113,227,0.18), transparent 24rem),
+    radial-gradient(circle at 12% 100%, rgba(52,199,89,0.12), transparent 20rem) !important;
+}
+
+.liminull-operational-glow {
+  position: absolute;
+  z-index: 0;
+  pointer-events: none;
+  border-radius: 999px;
+  filter: blur(52px);
+}
+
+.liminull-operational-glow-blue {
+  right: -80px;
+  top: -96px;
+  width: 288px;
+  height: 288px;
+  background: rgba(0,113,227,0.12);
+}
+
+.liminull-operational-glow-green {
+  left: 40px;
+  bottom: -112px;
+  width: 224px;
+  height: 224px;
+  background: rgba(52,199,89,0.10);
+}
+
+.liminull-command-rail {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: minmax(180px, 1.25fr) repeat(3, minmax(82px, 0.45fr));
+  gap: 8px;
+  border-radius: 22px;
+  border: 1px solid rgba(0,0,0,0.055);
+  background:
+    linear-gradient(135deg, rgba(17,17,22,0.92), rgba(29,29,31,0.84)),
+    radial-gradient(circle at 18% 20%, rgba(0,113,227,0.28), transparent 18rem);
+  padding: 8px;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.13), 0 18px 54px rgba(0,0,0,0.10);
+}
+
+.liminull-command-rail div {
+  position: relative;
+  overflow: hidden;
+  min-height: 58px;
+  border-radius: 15px;
+  background: rgba(255,255,255,0.055);
+  padding: 11px 12px;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.075);
+}
+
+.liminull-command-rail div::after {
+  content: "";
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 8px;
+  height: 2px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(91,231,132,0.88), rgba(88,166,255,0.88), transparent);
+  opacity: 0.78;
+}
+
+.liminull-command-rail span {
+  display: block;
+  color: rgba(255,255,255,0.48);
+  font-size: 9px;
+  font-weight: 850;
+  letter-spacing: 0.18em;
+}
+
+.liminull-command-rail strong {
+  display: block;
+  margin-top: 7px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: rgba(255,255,255,0.96);
+  font-size: 15px;
+  font-weight: 750;
+  letter-spacing: -0.02em;
+}
+
+.liminull-command-rail div:not(:first-child) strong {
+  font-size: 22px;
+  letter-spacing: -0.055em;
+}
+
+@media (max-width: 760px) {
+  .liminull-command-rail {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.liminull-fragment-label {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  border-radius: 999px;
+  border: 1px solid rgba(0,113,227,0.12);
+  background: rgba(255,255,255,0.66);
+  padding: 0 10px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #6e6e73;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.045);
+}
+
+.liminull-signal-plate > *,
+.liminull-field-card > *,
+.liminull-abstract-hero > *,
+.liminull-operational-abstract > :not(.liminull-operational-glow) {
+  position: relative;
+  z-index: 1;
+}
+
+.liminull-mark {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  background:
+    radial-gradient(circle at 28% 22%, rgba(255,255,255,0.22), transparent 30%),
+    radial-gradient(circle at 78% 82%, rgba(0,113,227,0.42), transparent 40%),
+    #101014 !important;
+}
+
+.liminull-login-orbital {
+  position: relative;
+  z-index: 1;
+  min-height: 188px;
+  margin: -6px -4px 18px;
+  overflow: hidden;
+  border-radius: 24px;
+  border: 1px solid rgba(255,255,255,0.78);
+  background:
+    radial-gradient(circle at 24% 48%, rgba(0,113,227,0.18), transparent 30%),
+    radial-gradient(circle at 74% 34%, rgba(52,199,89,0.14), transparent 28%),
+    linear-gradient(135deg, rgba(255,255,255,0.50), rgba(255,255,255,0.18));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.86), 0 18px 54px rgba(0,0,0,0.055);
+}
+
+.liminull-auth-console {
+  position: relative;
+  z-index: 1;
+  margin: -8px -6px 18px;
+  overflow: hidden;
+  border-radius: 26px;
+  border: 1px solid rgba(255,255,255,0.18);
+  background:
+    radial-gradient(circle at 24% 52%, rgba(0,113,227,0.32), transparent 30%),
+    radial-gradient(circle at 78% 28%, rgba(52,199,89,0.20), transparent 26%),
+    linear-gradient(135deg, #111116 0%, #1c1d24 48%, #0b0c10 100%);
+  color: white;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.14),
+    inset 0 -24px 70px rgba(0,113,227,0.10),
+    0 24px 74px rgba(0,0,0,0.20);
+}
+
+.liminull-auth-console::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(118deg, transparent 0 32%, rgba(255,255,255,0.14) 33%, transparent 41%),
+    repeating-linear-gradient(90deg, rgba(255,255,255,0.045) 0 1px, transparent 1px 34px),
+    repeating-linear-gradient(0deg, rgba(255,255,255,0.035) 0 1px, transparent 1px 28px);
+  opacity: 0.78;
+}
+
+.liminull-auth-console-head,
+.liminull-auth-console-body,
+.liminull-auth-bars {
+  position: relative;
+  z-index: 1;
+}
+
+.liminull-auth-console-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 16px 12px;
+  border-bottom: 1px solid rgba(255,255,255,0.10);
+}
+
+.liminull-auth-console-head p {
+  font-size: 11px;
+  font-weight: 850;
+  letter-spacing: 0.28em;
+  color: rgba(255,255,255,0.92);
+}
+
+.liminull-auth-console-head span {
+  display: block;
+  margin-top: 5px;
+  font-size: 11px;
+  font-weight: 650;
+  color: rgba(255,255,255,0.54);
+}
+
+.liminull-auth-console-head strong {
+  border-radius: 999px;
+  background: rgba(52,199,89,0.14);
+  padding: 7px 10px;
+  color: #8ff0a8;
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  box-shadow: inset 0 0 0 1px rgba(143,240,168,0.24), 0 0 28px rgba(52,199,89,0.18);
+}
+
+.liminull-auth-console-body {
+  display: grid;
+  grid-template-columns: 0.84fr 1.16fr;
+  gap: 14px;
+  min-height: 132px;
+  padding: 14px 16px 12px;
+}
+
+.liminull-auth-orbit {
+  position: relative;
+  min-height: 116px;
+  border-radius: 20px;
+  background: rgba(255,255,255,0.045);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08);
+}
+
+.liminull-auth-orbit::before,
+.liminull-auth-orbit::after {
+  content: "";
+  position: absolute;
+  inset: 22px 10px;
+  border: 1px solid rgba(87,176,255,0.42);
+  border-radius: 50%;
+  transform: rotate(-18deg) scaleX(1.26);
+}
+
+.liminull-auth-orbit::after {
+  inset: 36px 24px;
+  border-color: rgba(91,231,132,0.34);
+  transform: rotate(22deg) scaleX(1.1);
+}
+
+.liminull-auth-orbit span {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #58a6ff;
+  box-shadow: 0 0 22px rgba(88,166,255,0.72);
+}
+
+.liminull-auth-orbit span:nth-child(1) { left: 18px; top: 54px; }
+.liminull-auth-orbit span:nth-child(2) { right: 18px; top: 27px; background: #5be784; }
+.liminull-auth-orbit span:nth-child(3) { right: 38px; bottom: 18px; background: #b7a7ff; }
+
+.liminull-auth-rows {
+  display: grid;
+  gap: 8px;
+}
+
+.liminull-auth-rows div {
+  display: grid;
+  grid-template-columns: minmax(72px, 0.9fr) minmax(82px, 1.1fr);
+  align-items: center;
+  gap: 14px;
+  min-height: 34px;
+  border-radius: 13px;
+  background: rgba(255,255,255,0.06);
+  padding: 0 11px;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08);
+}
+
+.liminull-auth-rows span {
+  color: rgba(255,255,255,0.45);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+}
+
+.liminull-auth-rows strong {
+  color: rgba(255,255,255,0.92);
+  font-size: 10px;
+  font-weight: 850;
+  letter-spacing: 0.12em;
+  text-align: right;
+}
+
+.liminull-auth-bars {
+  display: grid;
+  grid-template-columns: 1.1fr 0.7fr 1.4fr 0.5fr;
+  gap: 7px;
+  padding: 0 16px 16px;
+}
+
+.liminull-auth-bars span {
+  height: 4px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(91,231,132,0.82), rgba(88,166,255,0.92));
+  box-shadow: 0 0 20px rgba(88,166,255,0.24);
+}
+
+.liminull-auth-bars span:nth-child(2) { opacity: 0.56; }
+.liminull-auth-bars span:nth-child(3) { background: linear-gradient(90deg, rgba(88,166,255,0.92), rgba(183,167,255,0.8)); }
+.liminull-auth-bars span:nth-child(4) { opacity: 0.42; }
+
+.liminull-login-orbital::before,
+.liminull-login-orbital::after {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+}
+
+.liminull-login-orbital::before {
+  inset: 18px 22px;
+  border: 1px solid rgba(0,113,227,0.22);
+  border-radius: 50%;
+  transform: rotate(-13deg) scaleX(1.38);
+}
+
+.liminull-login-orbital::after {
+  left: 16px;
+  right: 16px;
+  top: 54%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(0,113,227,0.42), rgba(255,255,255,0.95), rgba(52,199,89,0.32), transparent);
+  box-shadow: 0 -34px 0 rgba(0,113,227,0.09), 0 36px 0 rgba(52,199,89,0.08);
+  transform: rotate(-8deg);
+}
+
+.liminull-login-orbital-core {
+  position: absolute;
+  left: 28px;
+  top: 62px;
+  width: 136px;
+  height: 104px;
+}
+
+.liminull-login-orbital-core::before,
+.liminull-login-orbital-core::after {
+  content: "";
+  position: absolute;
+  inset: 4px 0;
+  border: 1px solid rgba(0,113,227,0.28);
+  border-radius: 46% 54% 44% 56% / 58% 38% 62% 42%;
+  transform: rotate(18deg);
+}
+
+.liminull-login-orbital-core::after {
+  inset: 18px 20px;
+  border-color: rgba(52,199,89,0.24);
+  transform: rotate(-24deg);
+}
+
+.liminull-login-orbital-core span {
+  position: absolute;
+  display: block;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #0071e3;
+  box-shadow: 0 0 24px rgba(0,113,227,0.55);
+}
+
+.liminull-login-orbital-core span:nth-child(1) { left: 14px; top: 44px; }
+.liminull-login-orbital-core span:nth-child(2) { right: 16px; top: 18px; background: #34c759; }
+.liminull-login-orbital-core span:nth-child(3) { right: 34px; bottom: 12px; background: #5856d6; }
+
+.liminull-login-orbital-readout {
+  position: absolute;
+  right: 18px;
+  bottom: 20px;
+  max-width: 190px;
+  text-align: right;
+}
+
+.liminull-auth-telemetry {
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  top: 14px;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.liminull-auth-telemetry span {
+  display: flex;
+  min-height: 34px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  border: 1px solid rgba(0,0,0,0.05);
+  background: rgba(255,255,255,0.58);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.9), 0 8px 22px rgba(0,0,0,0.035);
+  color: #55555b;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-align: center;
+}
+
+.liminull-login-orbital-readout p {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.28em;
+  color: #1d1d1f;
+}
+
+.liminull-login-orbital-readout span {
+  display: block;
+  margin-top: 6px;
+  font-size: 11px;
+  line-height: 1.45;
+  font-weight: 600;
+  color: #55555b;
+}
+
+.liminull-mark::before,
+.liminull-mark::after {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+  z-index: -1;
+}
+
+.liminull-mark::before {
+  width: 72%;
+  height: 72%;
+  border: 1px solid rgba(255,255,255,0.36);
+  border-radius: 50%;
+  transform: rotate(-22deg) scaleX(1.28);
+}
+
+.liminull-mark::after {
+  inset: 0;
+  background: linear-gradient(118deg, transparent 0 42%, rgba(255,255,255,0.28) 43% 47%, transparent 48% 100%);
+}
+
+.liminull-muted,
+.liminull-apple [class*="text-[#6e6e73]"] {
+  color: #55555b !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
 }
