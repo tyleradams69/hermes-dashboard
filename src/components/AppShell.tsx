@@ -71,8 +71,34 @@ export default function AppShell({
   ];
 
   return (
-    <main className="liminull-apple min-h-screen bg-background text-foreground liminull-grid-bg">
-      <header className="sticky top-0 z-50 border-b border-black/[0.06] bg-white/72 backdrop-blur-2xl supports-[backdrop-filter]:bg-white/62">
+    <main className="liminull-apple relative min-h-screen overflow-hidden bg-background text-foreground liminull-grid-bg">
+      <div className="liminull-particle-field" aria-hidden="true">
+        {[
+          ["8%", "74%", "5px", "9s", "-1s", "18px"],
+          ["18%", "38%", "3px", "11s", "-5s", "-12px"],
+          ["31%", "82%", "4px", "10s", "-3s", "22px"],
+          ["44%", "58%", "2px", "12s", "-7s", "-18px"],
+          ["57%", "31%", "4px", "9.5s", "-2s", "14px"],
+          ["68%", "76%", "3px", "13s", "-9s", "-22px"],
+          ["79%", "44%", "5px", "10.5s", "-4s", "16px"],
+          ["91%", "66%", "2px", "12.5s", "-8s", "-14px"],
+        ].map(([x, y, s, d, delay, drift], index) => (
+          <span
+            key={index}
+            style={
+              {
+                "--x": x,
+                "--y": y,
+                "--s": s,
+                "--d": d,
+                "--delay": delay,
+                "--particle-drift": drift,
+              } as React.CSSProperties
+            }
+          />
+        ))}
+      </div>
+      <header className="sticky top-0 z-50 border-b border-white/70 bg-white/58 backdrop-blur-2xl supports-[backdrop-filter]:bg-white/48">
         <div className="mx-auto flex max-w-[1180px] flex-col gap-3 px-4 py-3 sm:px-6 lg:flex-row lg:items-center lg:gap-5">
           <a href="/operations" className="flex shrink-0 items-center gap-3 rounded-full focus:outline-none focus:ring-2 focus:ring-[#0071e3]/25">
             <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#1d1d1f] text-sm font-semibold text-white shadow-sm">
@@ -113,7 +139,7 @@ export default function AppShell({
         </div>
       </header>
 
-      <div className="mx-auto w-full max-w-[1180px] px-4 py-8 sm:px-6 sm:py-10">
+      <div className="relative z-10 mx-auto w-full max-w-[1180px] px-4 py-8 sm:px-6 sm:py-10">
         <section className="liminull-hero mb-7 overflow-hidden rounded-[34px] bg-[#1d1d1f] px-6 py-8 text-white shadow-[0_30px_80px_rgba(0,0,0,0.15)] sm:px-10 sm:py-11">
           <div className="grid gap-8 lg:grid-cols-[1.2fr_0.8fr] lg:items-end">
             <div>
@@ -128,7 +154,7 @@ export default function AppShell({
               )}
             </div>
 
-            <div className="grid gap-3 rounded-[24px] bg-white p-4 text-[#1d1d1f] shadow-[0_18px_60px_rgba(0,0,0,0.18)] ring-1 ring-white/20">
+            <div className="liminull-glass-panel grid gap-3 rounded-[24px] bg-white p-4 text-[#1d1d1f] shadow-[0_18px_60px_rgba(0,0,0,0.18)] ring-1 ring-white/20">
               <div className="flex items-center justify-between border-b border-black/[0.07] pb-3">
                 <span className="text-sm font-medium text-[#6e6e73]">Status</span>
                 <span className="inline-flex items-center gap-2 rounded-full bg-[#eaf8ee] px-3 py-1 text-xs font-semibold text-[#248a3d]">
@@ -151,7 +177,7 @@ export default function AppShell({
         <section className="space-y-6">{children}</section>
       </div>
 
-      <footer className="border-t border-black/[0.06] bg-white/44">
+      <footer className="relative z-10 border-t border-white/70 bg-white/44 backdrop-blur-xl">
         <div className="mx-auto flex max-w-[1180px] flex-col gap-3 px-4 py-5 text-xs text-[#6e6e73] sm:flex-row sm:items-center sm:justify-between sm:px-6">
           <span>Liminull Operations</span>
           <div className="flex items-center gap-4">

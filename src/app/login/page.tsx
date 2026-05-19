@@ -43,6 +43,30 @@ export default function LoginPage() {
   return (
     <main className="liminull-apple relative min-h-screen overflow-hidden bg-[#f5f5f7] text-[#1d1d1f]">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_-10%,rgba(255,255,255,1),transparent_32rem),radial-gradient(circle_at_82%_18%,rgba(0,113,227,0.10),transparent_24rem),linear-gradient(180deg,#ffffff_0%,#f5f5f7_46%,#efeff3_100%)]" />
+      <div className="liminull-particle-field" aria-hidden="true">
+        {[
+          ["12%", "72%", "4px", "10s", "-2s", "14px"],
+          ["24%", "48%", "2px", "12s", "-6s", "-10px"],
+          ["42%", "78%", "5px", "9s", "-4s", "20px"],
+          ["64%", "36%", "3px", "11s", "-7s", "-16px"],
+          ["78%", "70%", "4px", "13s", "-5s", "18px"],
+          ["90%", "44%", "2px", "10.5s", "-8s", "-12px"],
+        ].map(([x, y, s, d, delay, drift], index) => (
+          <span
+            key={index}
+            style={
+              {
+                "--x": x,
+                "--y": y,
+                "--s": s,
+                "--d": d,
+                "--delay": delay,
+                "--particle-drift": drift,
+              } as React.CSSProperties
+            }
+          />
+        ))}
+      </div>
 
       {/* Floating artifacts */}
       <div className="pointer-events-none absolute -left-10 top-[8%] hidden h-28 w-28 rotate-[-14deg] rounded-[30px] border border-white/70 bg-white/35 shadow-[0_30px_90px_rgba(0,0,0,0.08)] backdrop-blur-2xl md:block liminull-artifact-float" />
@@ -81,7 +105,7 @@ export default function LoginPage() {
         </div>
 
         <div className="mx-auto w-full max-w-[470px]">
-          <div className="relative overflow-hidden rounded-[38px] bg-white/82 p-6 shadow-[0_34px_110px_rgba(0,0,0,0.13)] ring-1 ring-black/[0.06] backdrop-blur-2xl sm:p-8">
+          <div className="liminull-glass-panel relative overflow-hidden rounded-[38px] bg-white/82 p-6 shadow-[0_34px_110px_rgba(0,0,0,0.13)] ring-1 ring-black/[0.06] backdrop-blur-2xl sm:p-8">
             <div className="pointer-events-none absolute -right-16 -top-20 h-56 w-56 rounded-full bg-[#0071e3]/12 blur-3xl" />
             <div className="pointer-events-none absolute -bottom-24 left-8 h-48 w-48 rounded-full bg-[#34c759]/10 blur-3xl" />
 
