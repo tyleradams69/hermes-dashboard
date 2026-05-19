@@ -5,9 +5,7 @@ import { useSearchParams } from "next/navigation";
 import AppShell from "@/components/AppShell";
 import HermesAssistantPanel from "@/components/HermesAssistantPanel";
 
-const API_URL =
-  process.env.NEXT_PUBLIC_API_URL ||
-  "http://localhost:3002";
+const API_URL = "/api/hermes";
 
 function Panel({
   title,
@@ -57,7 +55,6 @@ function OperationsContent() {
   async function load() {
     try {
       const headers = {
-        "x-hermes-token": process.env.NEXT_PUBLIC_HERMES_API_TOKEN || "",
         "x-hermes-role": "admin",
       };
 
@@ -369,8 +366,6 @@ function OperationsContent() {
                       await fetch(`${API_URL}/api/notifications/${notification.id}/read`, {
                         method: "POST",
                         headers: {
-                          "x-hermes-token":
-                            process.env.NEXT_PUBLIC_HERMES_API_TOKEN || "",
                           "x-hermes-role": "admin",
                         },
                       });

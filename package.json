@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "security:audit": "npm audit --audit-level=moderate",
+    "test": "vitest run"
   },
   "dependencies": {
     "@hello-pangea/dnd": "^18.0.1",
@@ -27,6 +29,10 @@
     "eslint": "^9",
     "eslint-config-next": "16.2.6",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.1.6"
+  },
+  "overrides": {
+    "postcss": "8.5.14"
   }
 }

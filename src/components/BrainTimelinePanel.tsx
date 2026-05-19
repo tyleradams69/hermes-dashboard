@@ -2,9 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-const API_URL =
-  process.env.NEXT_PUBLIC_API_URL ||
-  "http://localhost:3002";
+const API_URL = "/api/hermes";
 
 function formatValue(value: string) {
   const parsed = Number(value);
@@ -40,8 +38,6 @@ export default function BrainTimelinePanel() {
         {
           cache: "no-store",
           headers: {
-            "x-hermes-token":
-              process.env.NEXT_PUBLIC_HERMES_API_TOKEN || "",
             "x-hermes-role":
               "admin",
           },
