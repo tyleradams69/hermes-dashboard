@@ -3,9 +3,7 @@
 import { useEffect, useState } from "react";
 import AppShell from "@/components/AppShell";
 
-const API_URL =
-  process.env.NEXT_PUBLIC_API_URL ||
-  "http://localhost:3002";
+const API_URL = "/api/hermes";
 
 export default function BusinessesPage() {
   const [businesses, setBusinesses] = useState<any[]>([]);
@@ -23,7 +21,6 @@ export default function BusinessesPage() {
       const res = await fetch(`${API_URL}/api/businesses`, {
         cache: "no-store",
         headers: {
-          "x-hermes-token": process.env.NEXT_PUBLIC_HERMES_API_TOKEN || "",
           "x-hermes-role": "admin",
         },
       });
@@ -48,7 +45,6 @@ export default function BusinessesPage() {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "x-hermes-token": process.env.NEXT_PUBLIC_HERMES_API_TOKEN || "",
         "x-hermes-role": "admin",
       },
       body: JSON.stringify(form),

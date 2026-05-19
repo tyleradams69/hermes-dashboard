@@ -4,7 +4,9 @@ export function proxy(request: NextRequest) {
   const path = request.nextUrl.pathname;
 
   const isLoggedIn =
-    request.cookies.get("hermes_dashboard_auth")?.value === "true";
+    Boolean(process.env.HERMES_DASHBOARD_SESSION_TOKEN) &&
+    request.cookies.get("hermes_dashboard_auth")?.value ===
+      process.env.HERMES_DASHBOARD_SESSION_TOKEN;
 
   const isLoginPage = path === "/login";
 
