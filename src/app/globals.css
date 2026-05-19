@@ -76,16 +76,18 @@ select {
 .liminull-card {
   position: relative;
   overflow: hidden;
-  border: 1px solid rgba(255,255,255,0.72);
+  border: 1px solid rgba(255,255,255,0.86);
   background:
-    linear-gradient(135deg, rgba(255,255,255,0.86), rgba(255,255,255,0.58)),
-    radial-gradient(circle at 12% 0%, rgba(255,255,255,0.86), transparent 28rem);
+    linear-gradient(135deg, rgba(255,255,255,0.72), rgba(255,255,255,0.42)),
+    radial-gradient(circle at 10% -10%, rgba(255,255,255,0.96), transparent 24rem),
+    radial-gradient(circle at 96% 18%, rgba(0,113,227,0.10), transparent 20rem);
   border-radius: 20px;
   box-shadow:
-    inset 0 1px 0 rgba(255,255,255,0.9),
-    inset 0 -22px 44px rgba(255,255,255,0.18),
-    0 24px 80px rgba(0, 0, 0, 0.075);
-  backdrop-filter: blur(28px) saturate(190%);
+    inset 0 1px 0 rgba(255,255,255,0.98),
+    inset 0 -26px 58px rgba(255,255,255,0.24),
+    inset 0 0 42px rgba(0,113,227,0.035),
+    0 28px 92px rgba(0, 0, 0, 0.095);
+  backdrop-filter: blur(34px) saturate(215%);
 }
 
 .liminull-card::before,
@@ -95,8 +97,23 @@ select {
   inset: 0;
   pointer-events: none;
   background:
-    linear-gradient(115deg, rgba(255,255,255,0.65), transparent 36%, rgba(255,255,255,0.22) 54%, transparent 72%);
-  opacity: 0.55;
+    linear-gradient(112deg, rgba(255,255,255,0.92), transparent 30%, rgba(255,255,255,0.34) 48%, transparent 70%);
+  opacity: 0.72;
+}
+
+.liminull-card::after,
+.liminull-card-soft::after {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  pointer-events: none;
+  border-radius: inherit;
+  background:
+    radial-gradient(circle at 16% 0%, rgba(255,255,255,0.72), transparent 22%),
+    radial-gradient(circle at 90% 16%, rgba(0,113,227,0.12), transparent 26%),
+    linear-gradient(180deg, rgba(255,255,255,0.24), transparent 46%);
+  mix-blend-mode: screen;
+  opacity: 0.68;
 }
 
 .liminull-card > *,
@@ -108,13 +125,16 @@ select {
 .liminull-card-soft {
   position: relative;
   overflow: hidden;
-  border: 1px solid rgba(255,255,255,0.66);
-  background: linear-gradient(145deg, rgba(255,255,255,0.68), rgba(255,255,255,0.42));
+  border: 1px solid rgba(255,255,255,0.78);
+  background:
+    linear-gradient(145deg, rgba(255,255,255,0.64), rgba(255,255,255,0.34)),
+    radial-gradient(circle at 100% 0%, rgba(0,113,227,0.08), transparent 16rem);
   border-radius: 18px;
   box-shadow:
-    inset 0 1px 0 rgba(255,255,255,0.9),
-    0 14px 42px rgba(0, 0, 0, 0.05);
-  backdrop-filter: blur(24px) saturate(170%);
+    inset 0 1px 0 rgba(255,255,255,0.98),
+    inset 0 -18px 34px rgba(255,255,255,0.18),
+    0 18px 54px rgba(0, 0, 0, 0.065);
+  backdrop-filter: blur(30px) saturate(200%);
 }
 
 .liminull-eyebrow {
@@ -211,9 +231,9 @@ select {
 }
 
 @keyframes liminullParticleRise {
-  0% { opacity: 0; transform: translate3d(0, 20px, 0) scale(0.72); }
-  18% { opacity: 0.75; }
-  100% { opacity: 0; transform: translate3d(var(--particle-drift, 0px), -92px, 0) scale(1.08); }
+  0% { opacity: 0; transform: translate3d(0, 26px, 0) scale(0.66); }
+  16% { opacity: 0.95; }
+  100% { opacity: 0; transform: translate3d(var(--particle-drift, 0px), -128px, 0) scale(1.18); }
 }
 
 .liminull-particle-field {
@@ -222,7 +242,7 @@ select {
   z-index: 0;
   pointer-events: none;
   overflow: hidden;
-  opacity: 0.86;
+  opacity: 0.96;
   mix-blend-mode: screen;
 }
 
@@ -233,14 +253,14 @@ select {
   width: var(--s);
   height: var(--s);
   border-radius: 999px;
-  background: radial-gradient(circle, rgba(255,255,255,0.98), rgba(0,113,227,0.38) 45%, transparent 72%);
-  box-shadow: 0 0 18px rgba(0,113,227,0.28), 0 0 42px rgba(255,255,255,0.34);
+  background: radial-gradient(circle, rgba(255,255,255,1), rgba(0,113,227,0.56) 42%, transparent 74%);
+  box-shadow: 0 0 28px rgba(0,113,227,0.38), 0 0 68px rgba(255,255,255,0.48);
   animation: liminullParticleRise var(--d) ease-in-out infinite;
   animation-delay: var(--delay);
 }
 
 .liminull-particle-field span:nth-child(2n) {
-  background: radial-gradient(circle, rgba(255,255,255,0.95), rgba(52,199,89,0.34) 42%, transparent 72%);
+  background: radial-gradient(circle, rgba(255,255,255,1), rgba(52,199,89,0.50) 40%, transparent 74%);
 }
 
 .liminull-particle-field span:nth-child(3n) {
@@ -251,16 +271,17 @@ select {
 .liminull-particle-field::before {
   content: "";
   position: absolute;
-  left: 8%;
-  right: 8%;
-  top: 17%;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(0,113,227,0.20), rgba(255,255,255,0.72), rgba(52,199,89,0.14), transparent);
+  left: 4%;
+  right: 4%;
+  top: 14%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(0,113,227,0.34), rgba(255,255,255,0.90), rgba(52,199,89,0.26), transparent);
   box-shadow:
-    0 84px 0 rgba(0,113,227,0.06),
-    0 168px 0 rgba(255,255,255,0.34),
-    0 252px 0 rgba(0,113,227,0.05);
-  opacity: 0.72;
+    0 78px 0 rgba(0,113,227,0.12),
+    0 156px 0 rgba(255,255,255,0.48),
+    0 234px 0 rgba(0,113,227,0.10),
+    0 312px 0 rgba(52,199,89,0.08);
+  opacity: 0.86;
   transform: translateZ(0);
 }
 
@@ -272,14 +293,16 @@ select {
 
 .liminull-glass-panel {
   background:
-    linear-gradient(135deg, rgba(255,255,255,0.82), rgba(255,255,255,0.44)),
-    radial-gradient(circle at 12% 0%, rgba(255,255,255,0.9), transparent 20rem) !important;
-  border-color: rgba(255,255,255,0.72) !important;
+    linear-gradient(135deg, rgba(255,255,255,0.68), rgba(255,255,255,0.34)),
+    radial-gradient(circle at 8% -8%, rgba(255,255,255,0.98), transparent 18rem),
+    radial-gradient(circle at 100% 10%, rgba(0,113,227,0.14), transparent 18rem) !important;
+  border-color: rgba(255,255,255,0.88) !important;
   box-shadow:
-    inset 0 1px 0 rgba(255,255,255,0.92),
-    inset 0 -20px 48px rgba(255,255,255,0.16),
-    0 24px 80px rgba(0,0,0,0.08) !important;
-  backdrop-filter: blur(30px) saturate(190%);
+    inset 0 1px 0 rgba(255,255,255,1),
+    inset 0 -28px 64px rgba(255,255,255,0.24),
+    inset 0 0 48px rgba(0,113,227,0.045),
+    0 28px 96px rgba(0,0,0,0.105) !important;
+  backdrop-filter: blur(36px) saturate(220%);
 }
 
 .liminull-apple [class*="rounded-[38px]"] { border-radius: 24px !important; }
