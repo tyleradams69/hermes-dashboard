@@ -160,6 +160,28 @@ select {
   50% { opacity: 1; }
 }
 
+@keyframes liminullArtifactFloat {
+  0%, 100% { transform: translate3d(0, 0, 0) rotate(var(--artifact-rotate, 0deg)); }
+  50% { transform: translate3d(0, -14px, 0) rotate(calc(var(--artifact-rotate, 0deg) + 4deg)); }
+}
+
+.liminull-artifact-float {
+  --artifact-rotate: -14deg;
+  animation: liminullArtifactFloat 8s ease-in-out infinite;
+}
+
+.liminull-artifact-float-delayed {
+  --artifact-rotate: 18deg;
+  animation: liminullArtifactFloat 9.5s ease-in-out infinite;
+  animation-delay: -2s;
+}
+
+.liminull-artifact-float-slow {
+  --artifact-rotate: 9deg;
+  animation: liminullArtifactFloat 12s ease-in-out infinite;
+  animation-delay: -4s;
+}
+
 .liminull-card,
 .liminull-card-soft {
   animation: liminullFadeUp 320ms ease;
