@@ -2,9 +2,7 @@
 
 import { useState } from "react";
 
-const API_URL =
-  process.env.NEXT_PUBLIC_API_URL ||
-  "http://localhost:3002";
+const API_URL = "/api/hermes";
 
 export default function AIFollowupPanel({
   company,

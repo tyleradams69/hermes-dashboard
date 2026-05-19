@@ -2,9 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-const API_URL =
-  process.env.NEXT_PUBLIC_API_URL ||
-  "http://localhost:3002";
+const API_URL = "/api/hermes";
 
 export default function HermesAssistantPanel({
   businessId = "liminull",
@@ -24,8 +22,6 @@ export default function HermesAssistantPanel({
         {
           cache: "no-store",
           headers: {
-            "x-hermes-token":
-              process.env.NEXT_PUBLIC_HERMES_API_TOKEN || "",
             "x-hermes-role": "admin",
           },
         }
@@ -53,8 +49,6 @@ export default function HermesAssistantPanel({
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "x-hermes-token":
-          process.env.NEXT_PUBLIC_HERMES_API_TOKEN || "",
         "x-hermes-role": "admin",
       },
       body: JSON.stringify({

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import LogoutButton from "@/components/LogoutButton";
 import NotificationCenter from "@/components/NotificationCenter";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3002";
+const API_URL = "/api/hermes";
 
 export default function AppShell({
   active = "dashboard",
@@ -27,7 +27,6 @@ export default function AppShell({
       const res = await fetch(`${API_URL}/api/notifications?business_id=demo-law-firm`, {
         cache: "no-store",
         headers: {
-          "x-hermes-token": process.env.NEXT_PUBLIC_HERMES_API_TOKEN || "",
           "x-hermes-role": "admin",
         },
       });

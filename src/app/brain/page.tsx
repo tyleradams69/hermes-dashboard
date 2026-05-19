@@ -3,9 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import AppShell from "@/components/AppShell";
 
-const API_URL =
-  process.env.NEXT_PUBLIC_API_URL ||
-  "http://localhost:3002";
+const API_URL = "/api/hermes";
 
 export default function BrainPage() {
   const [events, setEvents] = useState<any[]>([]);
@@ -17,8 +15,6 @@ export default function BrainPage() {
         {
           cache: "no-store",
           headers: {
-            "x-hermes-token":
-              process.env.NEXT_PUBLIC_HERMES_API_TOKEN || "",
             "x-hermes-role": "admin",
           },
         }

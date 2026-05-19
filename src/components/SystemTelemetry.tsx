@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-const API_URL = "https://api.liminullai.com";
+const API_URL = "/api/hermes";
 
 export default function SystemTelemetry() {
   const [events, setEvents] = useState<any[]>([]);

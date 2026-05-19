@@ -21,7 +21,8 @@ export default function ActivityFeed() {
 
       const response =
         await fetch(
-          "http://localhost:3002/api/activity"
+          "/api/hermes/api/activity",
+          { cache: "no-store" }
         );
 
       const data =
