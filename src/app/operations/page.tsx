@@ -288,7 +288,7 @@ function OperationsContent() {
           </p>
         </div>
 
-        <div className="mt-8 h-[220px]">
+        <div className="mt-8 h-[160px]">
           <div className="flex h-full items-end gap-3">
             {[
               stats.pending + 2,
