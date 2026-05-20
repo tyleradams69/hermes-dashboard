@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import AppShell from "@/components/AppShell";
+import { buildOnboardingChecklist } from "@/lib/pilotWorkspace";
 
 const API_URL = "/api/hermes";
 
@@ -86,6 +87,21 @@ export default function OnboardingPage() {
   const progress = useMemo(() => {
     return Math.round(((step + 1) / steps.length) * 100);
   }, [step]);
+
+  const pilotChecklist = useMemo(() => {
+    const hasIntegrations = Object.values(form.channels).some(Boolean) || Object.keys(verificationResults).length > 0;
+    const hasSettings = Boolean(form.supervision);
+    const readinessChecks = readiness?.checks || [];
+
+    return buildOnboardingChecklist({
+      hasBusiness: created || Boolean(form.id && form.name),
+      hasSettings: created || hasSettings,
+      hasIntegrations: created || hasIntegrations,
+      hasActivity:
+        Boolean(readiness?.readiness && readiness.readiness >= 75) ||
+        readinessChecks.some((check: any) => check.id === "activity" && check.ok),
+    });
+  }, [created, form.channels, form.id, form.name, form.supervision, readiness, verificationResults]);
 
 
   async function verifyIntegration(
@@ -279,6 +295,31 @@ export default function OnboardingPage() {
             }}
           />
         </div>
+      </div>
+
+      <div className="mt-6 grid gap-4 lg:grid-cols-4">
+        {pilotChecklist.map((item) => (
+          <div
+            key={item.id}
+            className={
+              item.complete
+                ? "rounded-2xl border border-cyan-300/20 bg-cyan-300/10 p-4"
+                : "rounded-2xl border border-white/5 bg-white/[0.03] p-4"
+            }
+          >
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-sm font-black">{item.label}</p>
+              <span
+                className={
+                  item.complete
+                    ? "h-3 w-3 rounded-full bg-cyan-300"
+                    : "h-3 w-3 rounded-full border border-white/20"
+                }
+              />
+            </div>
+            <p className="mt-3 text-xs leading-5 liminull-muted">{item.description}</p>
+          </div>
+        ))}
       </div>
 
       <div className="mt-6 liminull-card p-6">

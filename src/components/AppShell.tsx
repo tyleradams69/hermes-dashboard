@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import LogoutButton from "@/components/LogoutButton";
 import NotificationCenter from "@/components/NotificationCenter";
+import { buildFeedbackMailto } from "@/lib/pilotWorkspace";
 
 const API_URL = "/api/hermes";
 
@@ -11,20 +12,23 @@ export default function AppShell({
   title,
   eyebrow,
   description,
+  businessId = "demo-law-firm",
   children,
 }: {
   active?: "dashboard" | "clients" | "onboarding" | "settings" | "intelligence";
   title: string;
   eyebrow: string;
   description?: string;
+  businessId?: string;
   children: React.ReactNode;
 }) {
   const [unreadCount, setUnreadCount] = useState(0);
   const [currentTime, setCurrentTime] = useState("");
+  const [currentPath, setCurrentPath] = useState<string>(active);
 
   async function loadNotifications() {
     try {
-      const res = await fetch(`${API_URL}/api/notifications?business_id=demo-law-firm`, {
+      const res = await fetch(`${API_URL}/api/notifications?business_id=${encodeURIComponent(businessId)}`, {
         cache: "no-store",
         headers: {
           "x-hermes-role": "admin",
@@ -39,6 +43,7 @@ export default function AppShell({
   }
 
   useEffect(() => {
+    setCurrentPath(window.location.pathname);
     loadNotifications();
 
     const updateClock = () => {
@@ -59,7 +64,7 @@ export default function AppShell({
       clearInterval(timer);
       clearInterval(clockTimer);
     };
-  }, []);
+  }, [businessId]);
 
   const nav = [
     { id: "dashboard", label: "Dashboard", href: "/operations" },
@@ -140,6 +145,15 @@ export default function AppShell({
           </nav>
 
           <div className="flex shrink-0 items-center gap-2">
+            <a
+              href={buildFeedbackMailto({
+                businessId,
+                page: currentPath,
+              })}
+              className="hidden rounded-full bg-white px-3 py-2 text-xs font-semibold text-[#1d1d1f] shadow-sm ring-1 ring-black/[0.04] transition hover:bg-[#eaf4ff] md:inline-flex"
+            >
+              Send feedback
+            </a>
             <div className="hidden rounded-full bg-white px-3 py-2 text-xs font-medium text-[#6e6e73] shadow-sm ring-1 ring-black/[0.04] md:flex">
               {currentTime || "--:--"}
             </div>
