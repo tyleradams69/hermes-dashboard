@@ -214,7 +214,7 @@ function OperationsContent() {
         </div>
       )}
 
-      <section className="grid gap-5 md:grid-cols-2 xl:grid-cols-6">
+      <section className="grid gap-6 xl:grid-cols-[1.35fr_0.65fr]">
         <div className="liminull-operational-abstract relative overflow-hidden rounded-[34px] border border-black/[0.06] bg-white p-4 shadow-[0_28px_90px_rgba(0,0,0,0.08)] sm:p-5">
           <div className="liminull-operational-glow liminull-operational-glow-blue" />
           <div className="liminull-operational-glow liminull-operational-glow-green" />

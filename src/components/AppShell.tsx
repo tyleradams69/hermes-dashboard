@@ -75,44 +75,8 @@ export default function AppShell({
   ];
 
   return (
-    <main className="liminull-apple liminull-abstract-stage relative min-h-screen overflow-hidden bg-background text-foreground liminull-grid-bg">
-      <div className="liminull-particle-field" aria-hidden="true">
-        {[
-          ["8%", "74%", "5px", "9s", "-1s", "18px"],
-          ["18%", "38%", "3px", "11s", "-5s", "-12px"],
-          ["31%", "82%", "4px", "10s", "-3s", "22px"],
-          ["44%", "58%", "2px", "12s", "-7s", "-18px"],
-          ["57%", "31%", "4px", "9.5s", "-2s", "14px"],
-          ["68%", "76%", "3px", "13s", "-9s", "-22px"],
-          ["79%", "44%", "5px", "10.5s", "-4s", "16px"],
-          ["91%", "66%", "2px", "12.5s", "-8s", "-14px"],
-          ["12%", "18%", "3px", "14s", "-10s", "24px"],
-          ["37%", "24%", "2px", "10s", "-6s", "-20px"],
-          ["52%", "88%", "6px", "15s", "-11s", "18px"],
-          ["84%", "22%", "3px", "9s", "-3s", "-18px"],
-        ].map(([x, y, s, d, delay, drift], index) => (
-          <span
-            key={index}
-            style={
-              {
-                "--x": x,
-                "--y": y,
-                "--s": s,
-                "--d": d,
-                "--delay": delay,
-                "--particle-drift": drift,
-              } as React.CSSProperties
-            }
-          />
-        ))}
-      </div>
-      <div className="liminull-abstract-composition" aria-hidden="true">
-        <span />
-        <span />
-        <span />
-        <span />
-      </div>
-      <header className="sticky top-0 z-50 border-b border-white/70 bg-white/58 backdrop-blur-2xl supports-[backdrop-filter]:bg-white/48">
+    <main className="liminull-apple relative min-h-screen bg-background text-foreground liminull-grid-bg">
+      <header className="relative z-50 border-b border-white/70 bg-white/92 shadow-sm">
         <div className="mx-auto flex max-w-[1180px] flex-col gap-3 px-4 py-3 sm:px-6 lg:flex-row lg:items-center lg:gap-5">
           <a href="/operations" className="flex shrink-0 items-center gap-3 rounded-full focus:outline-none focus:ring-2 focus:ring-[#0071e3]/25">
             <span className="liminull-mark flex h-8 w-8 items-center justify-center rounded-full bg-[#1d1d1f] text-sm font-semibold text-white shadow-sm">
@@ -202,7 +166,7 @@ export default function AppShell({
         <section className="space-y-6">{children}</section>
       </div>
 
-      <footer className="relative z-10 border-t border-white/70 bg-white/44 backdrop-blur-xl">
+      <footer className="relative z-10 border-t border-white/70 bg-white/86">
         <div className="mx-auto flex max-w-[1180px] flex-col gap-3 px-4 py-5 text-xs text-[#6e6e73] sm:flex-row sm:items-center sm:justify-between sm:px-6">
           <span>Liminull Operations</span>
           <div className="flex items-center gap-4">
