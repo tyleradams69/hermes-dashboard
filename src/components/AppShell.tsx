@@ -79,8 +79,12 @@ export default function AppShell({
       <header className="relative z-50 border-b border-white/70 bg-white/92 shadow-sm">
         <div className="mx-auto flex max-w-[1180px] flex-col gap-3 px-4 py-3 sm:px-6 lg:flex-row lg:items-center lg:gap-5">
           <a href="/operations" className="flex shrink-0 items-center gap-3 rounded-full focus:outline-none focus:ring-2 focus:ring-[#0071e3]/25">
-            <span className="liminull-mark flex h-8 w-8 items-center justify-center rounded-full bg-[#1d1d1f] text-sm font-semibold text-white shadow-sm">
-              L
+            <span className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full bg-[#030712] shadow-sm ring-1 ring-black/[0.08]">
+              <img
+                src="/assets/liminull-logo.png"
+                alt="Liminull logo"
+                className="h-full w-full object-cover"
+              />
             </span>
             <span className="text-[15px] font-semibold tracking-[-0.025em] text-[#1d1d1f]">
               Liminull Operations
