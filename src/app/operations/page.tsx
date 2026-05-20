@@ -59,6 +59,7 @@ function OperationsContent() {
   const [proactiveRecommendations, setProactiveRecommendations] = useState<any[]>([]);
   const [executiveBriefings, setExecutiveBriefings] = useState<any[]>([]);
   const [notifications, setNotifications] = useState<any[]>([]);
+  const [loadError, setLoadError] = useState("");
 
   async function load() {
     try {
@@ -135,8 +136,10 @@ function OperationsContent() {
       setProactiveRecommendations(proactiveData.recommendations || []);
       setExecutiveBriefings(briefingData.briefings || []);
       setNotifications(notificationData.notifications || []);
+      setLoadError("");
     } catch (err) {
       console.warn("Operations load failed", err);
+      setLoadError("Live dashboard data could not load. Check the API connection or try again in a moment.");
     }
   }
 
@@ -195,8 +198,23 @@ function OperationsContent() {
       eyebrow="Liminull Dashboard"
       title={`${businessName} Dashboard`}
       description={`Operational intelligence, supervision, notifications, and live workflows for ${businessName}.`}
+      businessId={businessId}
     >
-      <section className="grid gap-6 xl:grid-cols-[1.35fr_0.65fr]">
+      {loadError && (
+        <div className="liminull-card-soft border-red-300/20 bg-red-500/10 p-5 text-sm text-red-100">
+          <p className="font-black">Dashboard data unavailable</p>
+          <p className="mt-2 text-red-100/70">{loadError}</p>
+          <button onClick={load} className="liminull-button mt-4">Retry now</button>
+        </div>
+      )}
+
+      {!loadError && !overview && (
+        <div className="liminull-card-soft p-5 text-sm text-white/60">
+          Waiting for first pilot signal. Once activity lands for this client, the live operations panels will populate here.
+        </div>
+      )}
+
+      <section className="grid gap-5 md:grid-cols-2 xl:grid-cols-6">
         <div className="liminull-operational-abstract relative overflow-hidden rounded-[34px] border border-black/[0.06] bg-white p-4 shadow-[0_28px_90px_rgba(0,0,0,0.08)] sm:p-5">
           <div className="liminull-operational-glow liminull-operational-glow-blue" />
           <div className="liminull-operational-glow liminull-operational-glow-green" />

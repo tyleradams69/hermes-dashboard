@@ -2,12 +2,15 @@
 
 import { useEffect, useState } from "react";
 import AppShell from "@/components/AppShell";
+import { getClientNotesKey } from "@/lib/pilotWorkspace";
 
 const API_URL = "/api/hermes";
 
 export default function BusinessesPage() {
   const [businesses, setBusinesses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
+  const [clientNotes, setClientNotes] = useState<Record<string, string>>({});
 
   const [form, setForm] = useState({
     id: "",
@@ -26,9 +29,20 @@ export default function BusinessesPage() {
       });
 
       const data = await res.json();
-      setBusinesses(data.businesses || []);
+      const nextBusinesses = data.businesses || [];
+      setBusinesses(nextBusinesses);
+      setLoadError("");
+      setClientNotes(
+        Object.fromEntries(
+          nextBusinesses.map((business: any) => [
+            business.id,
+            window.localStorage.getItem(getClientNotesKey(business.id)) || "",
+          ])
+        )
+      );
     } catch {
       setBusinesses([]);
+      setLoadError("Client workspaces could not load. Check the backend connection, then retry.");
     } finally {
       setLoading(false);
     }
@@ -52,6 +66,11 @@ export default function BusinessesPage() {
 
     setForm({ id: "", name: "", industry: "", website: "" });
     load();
+  }
+
+  function saveClientNote(businessId: string, note: string) {
+    setClientNotes((current) => ({ ...current, [businessId]: note }));
+    window.localStorage.setItem(getClientNotesKey(businessId), note);
   }
 
   return (
@@ -112,9 +131,19 @@ export default function BusinessesPage() {
           </div>
         )}
 
-        {!loading && businesses.length === 0 && (
-          <div className="liminull-card-soft p-5 text-white/50">
-            No clients found.
+        {!loading && loadError && (
+          <div className="liminull-card-soft p-5 text-white/60 md:col-span-2 xl:col-span-3">
+            <p className="text-sm font-black text-red-200">Client data unavailable</p>
+            <p className="mt-2 text-sm liminull-muted">{loadError}</p>
+            <button onClick={load} className="liminull-button mt-4">Retry</button>
+          </div>
+        )}
+
+        {!loading && !loadError && businesses.length === 0 && (
+          <div className="liminull-card-soft p-5 text-white/60 md:col-span-2 xl:col-span-3">
+            <p className="text-sm font-black text-white">No pilot clients yet.</p>
+            <p className="mt-2 text-sm liminull-muted">Create a workspace from onboarding, then use this page to track pilot notes and follow-up.</p>
+            <a href="/onboarding" className="liminull-button mt-4 inline-flex">Start onboarding</a>
           </div>
         )}
 
@@ -173,6 +202,20 @@ export default function BusinessesPage() {
               </div>
 
               <div className="h-3 w-3 rounded-full bg-cyan-300 liminull-live-pulse" />
+            </div>
+
+            <div className="mt-5 rounded-2xl border border-white/5 bg-black/20 p-4">
+              <label className="text-[10px] uppercase tracking-[0.18em] text-white/30" htmlFor={`note-${business.id}`}>
+                Internal pilot notes
+              </label>
+              <textarea
+                id={`note-${business.id}`}
+                value={clientNotes[business.id] || ""}
+                onChange={(event) => saveClientNote(business.id, event.target.value)}
+                placeholder="Pain points, decision maker, follow-up date, package fit, next action..."
+                className="mt-3 min-h-24 w-full rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none placeholder:text-white/25"
+              />
+              <p className="mt-2 text-xs liminull-muted">Saved locally in this dashboard browser for pilot follow-up.</p>
             </div>
 
             <a
