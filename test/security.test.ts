@@ -4,6 +4,7 @@ import { NextRequest } from "next/server";
 import { POST as loginPost } from "../src/app/api/login/route";
 import { GET as hermesGet, POST as hermesPost } from "../src/app/api/hermes/[...path]/route";
 import { proxy } from "../src/proxy";
+import { createDashboardSession } from "../src/lib/authSession";
 
 function jsonRequest(url: string, body: unknown, headers: Record<string, string> = {}) {
   return new Request(url, {
@@ -22,49 +23,131 @@ function nextRequest(url: string, headers: Record<string, string> = {}) {
 
 describe("dashboard login security", () => {
   beforeEach(() => {
-    process.env.TYLER_DASHBOARD_PASSWORD = "correct-password";
-    process.env.JACK_DASHBOARD_PASSWORD = "other-password";
-    process.env.HERMES_DASHBOARD_SESSION_TOKEN = "session-token";
+    delete process.env.TYLER_DASHBOARD_PASSWORD;
+    delete process.env.JACK_DASHBOARD_PASSWORD;
+    process.env.SUPABASE_URL = "https://project.supabase.co";
+    process.env.SUPABASE_ANON_KEY = "public-anon-key";
+    process.env.HERMES_DASHBOARD_SESSION_TOKEN = "session-signing-secret";
     process.env.NODE_ENV = "production";
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        new Response(
+          JSON.stringify({
+            access_token: "supabase-access-token",
+            refresh_token: "supabase-refresh-token",
+            expires_in: 3600,
+            user: {
+              id: "user-123",
+              email: "employee@liminull.com",
+              user_metadata: { full_name: "Liminull Employee", role: "employee" },
+            },
+          }),
+          {
+            status: 200,
+            headers: { "content-type": "application/json" },
+          }
+        )
+      )
+    );
   });
 
-  it("sets an httpOnly secure bounded session cookie on successful login", async () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("authenticates employees through Supabase Auth and sets an httpOnly signed session cookie", async () => {
     const response = await loginPost(
-      jsonRequest("https://dashboard.example.com/api/login", { password: "correct-password" }, { "x-forwarded-for": "203.0.113.10" })
+      jsonRequest(
+        "https://dashboard.example.com/api/login",
+        { email: "employee@liminull.com", password: "correct-password" },
+        { "x-forwarded-for": "203.0.113.10" }
+      )
     );
 
     expect(response.status).toBe(200);
-    expect(await response.json()).toEqual({ ok: true });
+    expect(await response.json()).toEqual({
+      ok: true,
+      user: {
+        id: "user-123",
+        email: "employee@liminull.com",
+        name: "Liminull Employee",
+        role: "employee",
+      },
+    });
+
+    expect(fetch).toHaveBeenCalledWith(
+      "https://project.supabase.co/auth/v1/token?grant_type=password",
+      expect.objectContaining({
+        method: "POST",
+        cache: "no-store",
+      })
+    );
+    const [, options] = vi.mocked(fetch).mock.calls[0];
+    const headers = options?.headers as Headers;
+    expect(headers.get("apikey")).toBe("public-anon-key");
+    expect(headers.get("authorization")).toBe("Bearer public-anon-key");
+    expect(options?.body).toBe(
+      JSON.stringify({ email: "employee@liminull.com", password: "correct-password" })
+    );
 
     const setCookie = response.headers.get("set-cookie") || "";
-    expect(setCookie).toContain("hermes_dashboard_auth=session-token");
+    expect(setCookie).toContain("hermes_dashboard_auth=");
+    expect(setCookie).not.toContain("correct-password");
+    expect(setCookie).not.toContain("supabase-access-token");
+    expect(setCookie).not.toContain("supabase-refresh-token");
     expect(setCookie.toLowerCase()).toContain("httponly");
     expect(setCookie.toLowerCase()).toContain("secure");
     expect(setCookie.toLowerCase()).toContain("samesite=strict");
     expect(setCookie.toLowerCase()).toContain("max-age=28800");
   });
 
-  it("rejects invalid passwords", async () => {
+  it("rejects invalid Supabase employee credentials", async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(
+      new Response(JSON.stringify({ error_description: "Invalid login credentials" }), {
+        status: 400,
+        headers: { "content-type": "application/json" },
+      })
+    );
+
     const response = await loginPost(
-      jsonRequest("https://dashboard.example.com/api/login", { password: "wrong-password" }, { "x-forwarded-for": "203.0.113.11" })
+      jsonRequest(
+        "https://dashboard.example.com/api/login",
+        { email: "employee@liminull.com", password: "wrong-password" },
+        { "x-forwarded-for": "203.0.113.11" }
+      )
     );
 
     expect(response.status).toBe(401);
-    expect(await response.json()).toEqual({ ok: false, error: "Invalid password" });
+    expect(await response.json()).toEqual({ ok: false, error: "Invalid email or password" });
   });
 
   it("rate limits repeated login attempts from the same forwarded client IP", async () => {
+    vi.mocked(fetch).mockResolvedValue(
+      new Response(JSON.stringify({ error_description: "Invalid login credentials" }), {
+        status: 400,
+        headers: { "content-type": "application/json" },
+      })
+    );
     const headers = { "x-forwarded-for": "203.0.113.12" };
 
     for (let attempt = 0; attempt < 5; attempt += 1) {
       const response = await loginPost(
-        jsonRequest("https://dashboard.example.com/api/login", { password: "wrong-password" }, headers)
+        jsonRequest(
+          "https://dashboard.example.com/api/login",
+          { email: "employee@liminull.com", password: "wrong-password" },
+          headers
+        )
       );
       expect(response.status).toBe(401);
     }
 
     const blocked = await loginPost(
-      jsonRequest("https://dashboard.example.com/api/login", { password: "wrong-password" }, headers)
+      jsonRequest(
+        "https://dashboard.example.com/api/login",
+        { email: "employee@liminull.com", password: "wrong-password" },
+        headers
+      )
     );
 
     expect(blocked.status).toBe(429);
@@ -74,30 +157,51 @@ describe("dashboard login security", () => {
 
 describe("protected dashboard proxy", () => {
   beforeEach(() => {
-    process.env.HERMES_DASHBOARD_SESSION_TOKEN = "session-token";
+    process.env.HERMES_DASHBOARD_SESSION_TOKEN = "session-signing-secret";
   });
 
-  it("redirects unauthenticated private pages to /login", () => {
+  it("redirects unauthenticated private pages to /login", async () => {
     const response = proxy(nextRequest("https://dashboard.example.com/operations"));
 
-    expect(response.status).toBe(307);
-    expect(response.headers.get("location")).toBe("https://dashboard.example.com/login");
+    expect((await response).status).toBe(307);
+    expect((await response).headers.get("location")).toBe("https://dashboard.example.com/login");
   });
 
-  it("allows public login API requests", () => {
-    const response = proxy(nextRequest("https://dashboard.example.com/api/login"));
+  it("allows public login API requests", async () => {
+    const response = await proxy(nextRequest("https://dashboard.example.com/api/login"));
 
     expect(response.status).toBe(200);
   });
 
-  it("allows authenticated private pages", () => {
-    const response = proxy(
+  it("allows private pages only with a valid signed employee session", async () => {
+    const session = await createDashboardSession(
+      {
+        id: "user-123",
+        email: "employee@liminull.com",
+        name: "Liminull Employee",
+        role: "employee",
+      },
+      "session-signing-secret",
+      60 * 60 * 8
+    );
+    const response = await proxy(
       nextRequest("https://dashboard.example.com/operations", {
-        cookie: "hermes_dashboard_auth=session-token",
+        cookie: `hermes_dashboard_auth=${session}`,
       })
     );
 
     expect(response.status).toBe(200);
+  });
+
+  it("rejects forged dashboard session cookies", async () => {
+    const response = await proxy(
+      nextRequest("https://dashboard.example.com/operations", {
+        cookie: "hermes_dashboard_auth=forged-session-token",
+      })
+    );
+
+    expect(response.status).toBe(307);
+    expect(response.headers.get("location")).toBe("https://dashboard.example.com/login");
   });
 });
 

@@ -15,7 +15,7 @@ export default function AppShell({
   businessId = "demo-law-firm",
   children,
 }: {
-  active?: "dashboard" | "clients" | "onboarding" | "settings" | "intelligence";
+  active?: "dashboard" | "clients" | "leads" | "onboarding" | "settings" | "intelligence";
   title: string;
   eyebrow: string;
   description?: string;
@@ -69,6 +69,7 @@ export default function AppShell({
   const nav = [
     { id: "dashboard", label: "Dashboard", href: "/operations" },
     { id: "clients", label: "Clients", href: "/businesses" },
+    { id: "leads", label: "Lead Scraper", href: "/leads" },
     { id: "onboarding", label: "Onboarding", href: "/onboarding" },
     { id: "settings", label: "Settings", href: "/settings" },
     { id: "intelligence", label: "Intelligence", href: "/brain" },

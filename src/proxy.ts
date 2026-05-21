@@ -1,12 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 
-export function proxy(request: NextRequest) {
+import { verifyDashboardSession } from "./lib/authSession";
+
+export async function proxy(request: NextRequest) {
   const path = request.nextUrl.pathname;
 
-  const isLoggedIn =
-    Boolean(process.env.HERMES_DASHBOARD_SESSION_TOKEN) &&
-    request.cookies.get("hermes_dashboard_auth")?.value ===
-      process.env.HERMES_DASHBOARD_SESSION_TOKEN;
+  const session = await verifyDashboardSession(
+    request.cookies.get("hermes_dashboard_auth")?.value,
+    process.env.HERMES_DASHBOARD_SESSION_TOKEN
+  );
+  const isLoggedIn = Boolean(session);
 
   const isLoginPage = path === "/login";
 

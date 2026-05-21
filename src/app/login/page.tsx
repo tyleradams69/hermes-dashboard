@@ -1,11 +1,13 @@
 "use client";
 
+import Image from "next/image";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
   const router = useRouter();
 
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -22,7 +24,7 @@ export default function LoginPage() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ password }),
+        body: JSON.stringify({ email, password }),
       });
 
       const data = await res.json();
@@ -84,14 +86,14 @@ export default function LoginPage() {
       <div className="pointer-events-none absolute bottom-[12%] left-[16%] hidden h-24 w-44 rotate-[9deg] rounded-[999px] border border-white/70 bg-white/45 shadow-[0_24px_80px_rgba(0,0,0,0.08)] backdrop-blur-2xl lg:block liminull-artifact-float-slow" />
       <div className="pointer-events-none absolute bottom-[18%] right-[18%] h-20 w-20 rotate-45 rounded-[24px] bg-[#1d1d1f] shadow-[0_30px_90px_rgba(0,0,0,0.22)] liminull-artifact-float" />
 
-      <section className="relative z-10 mx-auto grid min-h-screen w-full max-w-[1180px] items-center gap-10 px-5 py-10 sm:px-8 lg:grid-cols-[1.05fr_0.95fr]">
-        <div className="hidden lg:block">
+      <section className="relative z-10 mx-auto grid min-h-screen w-full max-w-[1180px] items-center gap-8 px-5 py-6 sm:px-8 lg:grid-cols-[1fr_0.9fr]">
+        <div className="hidden lg:block lg:-mt-8">
           <div className="inline-flex items-center gap-2 rounded-full bg-white/70 px-3 py-1.5 text-xs font-semibold text-[#0071e3] shadow-sm ring-1 ring-black/[0.05] backdrop-blur-xl">
             <span className="h-1.5 w-1.5 rounded-full bg-[#248a3d]" />
             Secure operator access
           </div>
 
-          <h1 className="mt-6 max-w-xl text-6xl font-semibold tracking-[-0.06em] text-[#1d1d1f]">
+          <h1 className="mt-6 max-w-xl text-5xl font-semibold tracking-[-0.06em] text-[#1d1d1f] xl:text-6xl">
             Enter the Liminull operations layer.
           </h1>
 
@@ -100,7 +102,7 @@ export default function LoginPage() {
             queue health, recovery paths, and executive supervision.
           </p>
 
-          <div className="liminull-signal-plate mt-10 max-w-xl p-5">
+          <div className="liminull-signal-plate mt-8 hidden max-w-xl p-5 xl:block">
             <div className="flex items-start justify-between gap-6">
               <div>
                 <p className="text-[10px] font-semibold uppercase tracking-[0.34em] text-[#0071e3]">Field state</p>
@@ -130,76 +132,61 @@ export default function LoginPage() {
           </div>
         </div>
 
-        <div className="mx-auto w-full max-w-[470px]">
-          <div className="liminull-glass-panel relative overflow-hidden rounded-[38px] bg-white/82 p-6 shadow-[0_34px_110px_rgba(0,0,0,0.13)] ring-1 ring-black/[0.06] backdrop-blur-2xl sm:p-8">
-            <div className="pointer-events-none absolute -right-16 -top-20 h-56 w-56 rounded-full bg-[#0071e3]/12 blur-3xl" />
-            <div className="pointer-events-none absolute -bottom-24 left-8 h-48 w-48 rounded-full bg-[#34c759]/10 blur-3xl" />
-
-            <div className="liminull-auth-console">
-              <div className="liminull-auth-console-head">
-                <div>
-                  <p>AUTH CONSOLE</p>
-                  <span>private local gate</span>
-                </div>
-                <strong>SEALED</strong>
-              </div>
-
-              <div className="liminull-auth-console-body">
-                <div className="liminull-auth-orbit" aria-hidden="true">
-                  <span />
-                  <span />
-                  <span />
-                </div>
-                <div className="liminull-auth-rows">
-                  {[
-                    ["LOCALHOST", "127.0.0.1"],
-                    ["SESSION", "ENCRYPTED"],
-                    ["TRACE", "LOCAL ONLY"],
-                  ].map(([label, value]) => (
-                    <div key={label}>
-                      <span>{label}</span>
-                      <strong>{value}</strong>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="liminull-auth-bars" aria-hidden="true">
-                <span />
-                <span />
-                <span />
-                <span />
-              </div>
-            </div>
+        <div className="mx-auto w-full max-w-[430px]">
+          <div className="liminull-glass-panel relative overflow-hidden rounded-[34px] bg-white/86 p-6 shadow-[0_28px_90px_rgba(0,0,0,0.12)] ring-1 ring-black/[0.06] backdrop-blur-2xl sm:p-7">
+            <div className="pointer-events-none !absolute -right-16 -top-20 h-56 w-56 rounded-full bg-[#0071e3]/12 blur-3xl" />
+            <div className="pointer-events-none !absolute -bottom-24 left-8 h-48 w-48 rounded-full bg-[#34c759]/10 blur-3xl" />
 
             <div className="relative">
               <div className="flex items-center justify-between gap-4">
-                <div className="liminull-mark flex h-12 w-12 items-center justify-center rounded-2xl bg-[#1d1d1f] text-lg font-semibold text-white shadow-[0_16px_42px_rgba(0,0,0,0.22)]">
-                  L
+                <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl bg-white shadow-[0_16px_42px_rgba(0,0,0,0.14)] ring-1 ring-black/[0.06]">
+                  <Image
+                    src="/assets/liminull-real-logo.png"
+                    alt="Liminull"
+                    width={56}
+                    height={56}
+                    className="h-full w-full object-cover"
+                    priority
+                  />
                 </div>
                 <div className="rounded-full bg-[#eaf8ee] px-3 py-1.5 text-xs font-semibold text-[#248a3d]">
-                  Local preview
+                  Secure employee auth
                 </div>
               </div>
 
-              <p className="mt-7 text-sm font-medium text-[#6e6e73]">Liminull</p>
-              <h2 className="mt-2 text-4xl font-semibold tracking-[-0.055em] text-[#1d1d1f] sm:text-5xl">
+              <p className="mt-5 text-sm font-medium text-[#6e6e73]">Liminull</p>
+              <h2 className="mt-2 text-4xl font-semibold tracking-[-0.055em] text-[#1d1d1f]">
                 Operator login
               </h2>
               <p className="mt-4 text-sm leading-6 text-[#6e6e73]">
-                Authenticate to review the dashboard before merging the GitHub branch.
+                Authenticate with your Liminull employee account to enter the private operations workspace.
               </p>
 
-              <form onSubmit={login} className="mt-8 space-y-4">
+              <form onSubmit={login} className="mt-6 space-y-4">
                 <label className="block">
                   <span className="mb-2 block text-sm font-medium text-[#6e6e73]">
-                    Dashboard password
+                    Employee email
+                  </span>
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="you@liminull.com"
+                    autoComplete="email"
+                    className="w-full rounded-full border border-black/[0.08] bg-[#f5f5f7]/90 px-5 py-4 text-[15px] font-medium text-[#1d1d1f] outline-none shadow-inner placeholder:text-[#86868b] transition focus:border-[#0071e3]/45 focus:bg-white focus:ring-4 focus:ring-[#0071e3]/10"
+                  />
+                </label>
+
+                <label className="block">
+                  <span className="mb-2 block text-sm font-medium text-[#6e6e73]">
+                    Password
                   </span>
                   <input
                     type="password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="Enter password"
+                    autoComplete="current-password"
                     className="w-full rounded-full border border-black/[0.08] bg-[#f5f5f7]/90 px-5 py-4 text-[15px] font-medium text-[#1d1d1f] outline-none shadow-inner placeholder:text-[#86868b] transition focus:border-[#0071e3]/45 focus:bg-white focus:ring-4 focus:ring-[#0071e3]/10"
                   />
                 </label>
@@ -215,7 +202,7 @@ export default function LoginPage() {
                 </button>
               </form>
 
-              <div className="mt-7 rounded-[24px] bg-[#f5f5f7] p-4 ring-1 ring-black/[0.04]">
+              <div className="mt-5 rounded-[22px] bg-[#f5f5f7] p-4 ring-1 ring-black/[0.04]">
                 <div className="flex items-center justify-between">
                   <p className="text-sm font-medium text-[#6e6e73]">Session scope</p>
                   <p className="text-sm font-semibold text-[#1d1d1f]">Local only</p>

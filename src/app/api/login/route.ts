@@ -1,7 +1,10 @@
-import * as crypto from "crypto";
 import { NextResponse } from "next/server";
 
+import { createDashboardSession } from "../../../lib/authSession";
+import { authenticateSupabaseEmployee } from "../../../lib/supabaseAuth";
+
 const loginAttempts = new Map<string, { count: number; resetAt: number }>();
+const SESSION_TTL_SECONDS = 60 * 60 * 8;
 
 function getClientKey(req: Request) {
   const forwardedFor = req.headers.get("x-forwarded-for") || "";
@@ -30,34 +33,8 @@ function rateLimitLogin(req: Request) {
   return true;
 }
 
-function safeEqual(value: string, expected: string) {
-  const actualBuffer = Buffer.from(value);
-  const expectedBuffer = Buffer.from(expected);
-
-  if (actualBuffer.length !== expectedBuffer.length) {
-    return false;
-  }
-
-  return crypto.timingSafeEqual(actualBuffer, expectedBuffer);
-}
-
-function validPassword(password: unknown) {
-  if (typeof password !== "string") {
-    return false;
-  }
-
-  const allowedPasswords = [
-    process.env.TYLER_DASHBOARD_PASSWORD,
-    process.env.JACK_DASHBOARD_PASSWORD,
-  ].filter((value): value is string => Boolean(value));
-
-  if (allowedPasswords.length === 0) {
-    throw new Error("Dashboard password is not configured");
-  }
-
-  return allowedPasswords.some((allowedPassword) =>
-    safeEqual(password, allowedPassword)
-  );
+function readCredential(value: unknown) {
+  return typeof value === "string" ? value.trim() : "";
 }
 
 export async function POST(req: Request) {
@@ -68,7 +45,7 @@ export async function POST(req: Request) {
     );
   }
 
-  let body: { password?: unknown } = {};
+  let body: { email?: unknown; password?: unknown } = {};
 
   try {
     body = await req.json();
@@ -79,41 +56,50 @@ export async function POST(req: Request) {
     );
   }
 
-  let authenticated = false;
+  const email = readCredential(body.email).toLowerCase();
+  const password = readCredential(body.password);
 
-  try {
-    authenticated = validPassword(body.password);
-  } catch {
+  if (!email || !password) {
     return NextResponse.json(
-      { ok: false, error: "Dashboard password is not configured" },
-      { status: 500 }
+      { ok: false, error: "Email and password are required" },
+      { status: 400 }
     );
   }
 
-  if (!authenticated) {
-    return NextResponse.json(
-      { ok: false, error: "Invalid password" },
-      { status: 401 }
-    );
-  }
-
-  const sessionToken = process.env.HERMES_DASHBOARD_SESSION_TOKEN;
-
-  if (!sessionToken) {
+  const sessionSecret = process.env.HERMES_DASHBOARD_SESSION_TOKEN;
+  if (!sessionSecret) {
     return NextResponse.json(
       { ok: false, error: "Dashboard session token is not configured" },
       { status: 500 }
     );
   }
 
-  const response = NextResponse.json({ ok: true });
+  let authResult: Awaited<ReturnType<typeof authenticateSupabaseEmployee>>;
+  try {
+    authResult = await authenticateSupabaseEmployee(email, password);
+  } catch {
+    return NextResponse.json(
+      { ok: false, error: "Supabase auth is not configured" },
+      { status: 500 }
+    );
+  }
 
-  response.cookies.set("hermes_dashboard_auth", sessionToken, {
+  if (!authResult.ok) {
+    return NextResponse.json(
+      { ok: false, error: "Invalid email or password" },
+      { status: authResult.status === 400 ? 401 : authResult.status }
+    );
+  }
+
+  const session = await createDashboardSession(authResult.user, sessionSecret, SESSION_TTL_SECONDS);
+  const response = NextResponse.json({ ok: true, user: authResult.user });
+
+  response.cookies.set("hermes_dashboard_auth", session, {
     httpOnly: true,
     sameSite: "strict",
     secure: process.env.NODE_ENV === "production",
     path: "/",
-    maxAge: 60 * 60 * 8,
+    maxAge: SESSION_TTL_SECONDS,
   });
 
   return response;
