@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { createDashboardSession, verifyDashboardSession } from "../../../lib/authSession";
+import { readServerEnv } from "../../../lib/env";
 import { updateSupabaseEmployee } from "../../../lib/supabaseAuth";
 
 const SESSION_TTL_SECONDS = 60 * 60 * 8;
@@ -8,7 +9,7 @@ const SESSION_TTL_SECONDS = 60 * 60 * 8;
 async function getSession(request: NextRequest) {
   return verifyDashboardSession(
     request.cookies.get("hermes_dashboard_auth")?.value,
-    process.env.HERMES_DASHBOARD_SESSION_TOKEN
+    readServerEnv("HERMES_DASHBOARD_SESSION_TOKEN")
   );
 }
 
@@ -83,7 +84,7 @@ export async function PATCH(request: NextRequest) {
   }
 
   const response = accountJson({ ok: true, user: updateResult.user });
-  const sessionSecret = process.env.HERMES_DASHBOARD_SESSION_TOKEN;
+  const sessionSecret = readServerEnv("HERMES_DASHBOARD_SESSION_TOKEN");
 
   if (sessionSecret) {
     const nextSession = await createDashboardSession(updateResult.user, sessionSecret, SESSION_TTL_SECONDS);

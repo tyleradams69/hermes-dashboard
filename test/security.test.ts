@@ -102,6 +102,56 @@ describe("dashboard login security", () => {
     expect(setCookie.toLowerCase()).toContain("max-age=28800");
   });
 
+  it("normalizes quoted Supabase env values before calling Supabase Auth", async () => {
+    process.env.SUPABASE_URL = '"https://project.supabase.co"';
+    process.env.SUPABASE_ANON_KEY = '"public-anon-key"';
+    process.env.HERMES_DASHBOARD_SESSION_TOKEN = '"session-signing-secret"';
+
+    const response = await loginPost(
+      jsonRequest(
+        "https://dashboard.example.com/api/login",
+        { email: "employee@liminull.com", password: "correct-password" },
+        { "x-forwarded-for": "203.0.113.13" }
+      )
+    );
+
+    expect(response.status).toBe(200);
+    expect(fetch).toHaveBeenCalledWith(
+      "https://project.supabase.co/auth/v1/token?grant_type=password",
+      expect.objectContaining({ method: "POST" })
+    );
+    const [, options] = vi.mocked(fetch).mock.calls[0];
+    const headers = options?.headers as Headers;
+    expect(headers.get("apikey")).toBe("public-anon-key");
+    expect(headers.get("authorization")).toBe("Bearer public-anon-key");
+    expect(response.headers.get("set-cookie") || "").toContain("hermes_dashboard_auth=");
+  });
+
+  it("falls back to configured employee passwords when Supabase Auth is unreachable", async () => {
+    process.env.TYLER_DASHBOARD_PASSWORD = "local-tyler-password";
+    vi.mocked(fetch).mockRejectedValueOnce(new TypeError("fetch failed"));
+
+    const response = await loginPost(
+      jsonRequest(
+        "https://dashboard.example.com/api/login",
+        { email: "tyler@liminull.com", password: "local-tyler-password" },
+        { "x-forwarded-for": "203.0.113.14" }
+      )
+    );
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({
+      ok: true,
+      user: {
+        id: "env-tyler",
+        email: "tyler@liminull.com",
+        name: "Tyler",
+        role: "admin",
+      },
+    });
+    expect(response.headers.get("set-cookie") || "").toContain("hermes_dashboard_auth=");
+  });
+
   it("rejects invalid Supabase employee credentials", async () => {
     vi.mocked(fetch).mockResolvedValueOnce(
       new Response(JSON.stringify({ error_description: "Invalid login credentials" }), {

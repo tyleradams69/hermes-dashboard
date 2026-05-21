@@ -1,3 +1,5 @@
+import { readServerEnv } from "./env";
+
 export type SupabaseAuthUser = {
   id: string;
   email: string;
@@ -28,8 +30,8 @@ type SupabaseTokenResponse = {
 };
 
 function getSupabaseAuthConfig() {
-  const url = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const anonKey = process.env.SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const url = readServerEnv("SUPABASE_URL") || readServerEnv("NEXT_PUBLIC_SUPABASE_URL");
+  const anonKey = readServerEnv("SUPABASE_ANON_KEY") || readServerEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY");
 
   if (!url || !anonKey) {
     throw new Error("Supabase auth is not configured");
@@ -42,8 +44,8 @@ function getSupabaseAuthConfig() {
 }
 
 function getSupabaseAdminConfig() {
-  const url = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const url = readServerEnv("SUPABASE_URL") || readServerEnv("NEXT_PUBLIC_SUPABASE_URL");
+  const serviceRoleKey = readServerEnv("SUPABASE_SERVICE_ROLE_KEY");
 
   if (!url || !serviceRoleKey) {
     throw new Error("Supabase admin auth is not configured");

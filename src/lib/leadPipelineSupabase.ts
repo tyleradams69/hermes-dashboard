@@ -7,6 +7,7 @@ import {
   type PipelineLead,
 } from "./leadPipeline";
 import type { LeadRecord } from "./leadScraper";
+import { readServerEnv } from "./env";
 
 export type SupabaseLeadPipelineConfig = {
   url: string;
@@ -43,8 +44,8 @@ type SupabaseErrorBody = {
 };
 
 export function getSupabaseLeadPipelineConfig(): SupabaseLeadPipelineConfig | null {
-  const url = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const url = readServerEnv("SUPABASE_URL") || readServerEnv("NEXT_PUBLIC_SUPABASE_URL");
+  const serviceRoleKey = readServerEnv("SUPABASE_SERVICE_ROLE_KEY");
 
   if (!url || !serviceRoleKey) {
     return null;

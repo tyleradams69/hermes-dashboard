@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { verifyDashboardSession } from "./lib/authSession";
+import { readServerEnv } from "./lib/env";
 
 export async function proxy(request: NextRequest) {
   const path = request.nextUrl.pathname;
 
   const session = await verifyDashboardSession(
     request.cookies.get("hermes_dashboard_auth")?.value,
-    process.env.HERMES_DASHBOARD_SESSION_TOKEN
+    readServerEnv("HERMES_DASHBOARD_SESSION_TOKEN")
   );
   const isLoggedIn = Boolean(session);
 
