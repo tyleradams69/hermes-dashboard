@@ -60,6 +60,25 @@ select {
   color: white;
 }
 
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+.liminull-card,
+.liminull-card-soft,
+.liminull-dark-card {
+  content-visibility: auto;
+  contain-intrinsic-size: 360px;
+}
+
 /* APPLE-LIKE LIMINULL DASHBOARD SYSTEM */
 
 .liminull-apple {

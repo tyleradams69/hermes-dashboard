@@ -166,6 +166,23 @@ export type PipelineOwnerSummary = {
   dueSoonLeads: number;
 };
 
+export type PipelineAttentionReason =
+  | "missing_next_action"
+  | "missing_follow_up"
+  | "stale_untouched"
+  | "hot_without_prep"
+  | "overdue_active_stage"
+  | "approved_prep_unused";
+
+export type PipelineAttentionItem = {
+  lead: PipelineLead;
+  reasons: PipelineAttentionReason[];
+  severity: "critical" | "warning" | "info";
+  score: number;
+  summary: string;
+  nextBestAction: string;
+};
+
 export type PipelineLeadFilters = {
   owner?: string;
   stage?: LeadPipelineStage | "all";
@@ -274,6 +291,93 @@ export function selectStaleLeadNudges(leads: PipelineLead[], now = new Date(), l
     .filter((lead) => isLeadStale(lead, now))
     .sort((a, b) => Date.parse(a.nextFollowUpAt || a.lastTouchedAt || a.updatedAt) - Date.parse(b.nextFollowUpAt || b.lastTouchedAt || b.updatedAt))
     .slice(0, limit);
+}
+
+function isFollowUpOverdue(lead: PipelineLead, now: Date) {
+  const followUpAt = lead.nextFollowUpAt ? Date.parse(lead.nextFollowUpAt) : NaN;
+  return !Number.isNaN(followUpAt) && followUpAt <= now.getTime();
+}
+
+export function selectPipelineAttentionItems(leads: PipelineLead[], now = new Date(), limit = 8): PipelineAttentionItem[] {
+  return leads
+    .filter((lead) => isOpenPipelineStage(lead.stage))
+    .map((lead) => {
+      const reasons: PipelineAttentionReason[] = [];
+      const priority = deriveLeadPriority(lead, now);
+      const missingNextAction = !lead.nextAction.trim();
+      const missingFollowUp = !lead.nextFollowUpAt && lead.stage !== "new_lead";
+      const staleUntouched = isLeadStale(lead, now);
+      const hotWithoutPrep = priority.tier === "hot" && lead.salesPrepStatus !== "ready" && lead.salesPrepStatus !== "used";
+      const overdueActiveStage = isFollowUpOverdue(lead, now) && ["contacted", "interested", "pricing_requested", "meeting_requested"].includes(lead.stage);
+      const approvedPrepUnused = lead.salesPrepStatus === "ready";
+
+      if (missingNextAction) reasons.push("missing_next_action");
+      if (missingFollowUp) reasons.push("missing_follow_up");
+      if (staleUntouched) reasons.push("stale_untouched");
+      if (hotWithoutPrep) reasons.push("hot_without_prep");
+      if (overdueActiveStage) reasons.push("overdue_active_stage");
+      if (approvedPrepUnused) reasons.push("approved_prep_unused");
+
+      const score =
+        (overdueActiveStage ? 38 : 0) +
+        (staleUntouched ? 28 : 0) +
+        (hotWithoutPrep ? 24 : 0) +
+        (missingNextAction ? 18 : 0) +
+        (missingFollowUp ? 14 : 0) +
+        (approvedPrepUnused ? 10 : 0) +
+        Math.min(20, Math.round(priority.score / 8));
+
+      const severity: PipelineAttentionItem["severity"] = score >= 62 ? "critical" : score >= 38 ? "warning" : "info";
+      const nextBestAction = overdueActiveStage || staleUntouched
+        ? "Send follow-up or mark the lead worked today"
+        : hotWithoutPrep
+          ? "Create and approve sales prep before outreach"
+          : missingFollowUp
+            ? "Set a concrete next follow-up date"
+            : missingNextAction
+              ? "Write the next action before this lead goes stale"
+              : approvedPrepUnused
+                ? "Open the approved packet and work the sales brief"
+                : "Review lead context and choose the next move";
+      const summary = reasons.map(formatPipelineAttentionReason).join(" · ");
+
+      return { lead, reasons, severity, score, summary, nextBestAction };
+    })
+    .filter((item) => item.reasons.length > 0)
+    .sort((a, b) => b.score - a.score || a.lead.company.localeCompare(b.lead.company))
+    .slice(0, limit);
+}
+
+export function formatPipelineAttentionReason(reason: PipelineAttentionReason) {
+  switch (reason) {
+    case "missing_next_action":
+      return "missing next action";
+    case "missing_follow_up":
+      return "missing follow-up date";
+    case "stale_untouched":
+      return "stale or due";
+    case "hot_without_prep":
+      return "hot without prep";
+    case "overdue_active_stage":
+      return "overdue active stage";
+    case "approved_prep_unused":
+      return "approved prep unused";
+  }
+}
+
+export function formatPipelineAttentionBriefForCopy(leads: PipelineLead[], now = new Date(), limit = 8) {
+  const items = selectPipelineAttentionItems(leads, now, limit);
+  const lines = items.map((item, index) => {
+    const followUp = item.lead.nextFollowUpAt ? item.lead.nextFollowUpAt.slice(0, 10) : "not scheduled";
+    return `${index + 1}. ${item.lead.company} — ${item.lead.owner} — ${item.severity.toUpperCase()} ${item.score} — ${item.summary} — next: ${item.nextBestAction} — follow-up ${followUp}`;
+  });
+
+  return [
+    `Liminull pipeline needs-attention queue — ${now.toISOString().slice(0, 10)}`,
+    `Items: ${items.length}`,
+    "",
+    lines.length > 0 ? lines.join("\n") : "No pipeline attention items under the current filters.",
+  ].join("\n");
 }
 
 export function getLeadQuickActions(lead: PipelineLead): PipelineLeadQuickAction[] {

@@ -94,4 +94,20 @@ describe("lead scraper page wiring", () => {
     expect(source).toContain("Next follow-up");
     expect(source).toContain("formatPipelineDate");
   });
+
+  it("keeps the admin needs-attention queue and saved views wired to pipeline filters", async () => {
+    const source = await readFile("src/app/leads/page.tsx", "utf8");
+
+    expect(source).toContain("selectPipelineAttentionItems");
+    expect(source).toContain("Needs attention");
+    expect(source).toContain("Pipeline health");
+    expect(source).toContain("Hot without prep");
+    expect(source).toContain("No follow-up date");
+    expect(source).toContain("Copy attention queue");
+    expect(source).toContain("formatPipelineAttentionBriefForCopy");
+    expect(source).toContain("pipelineSavedViews");
+    expect(source).toContain("Hot no-website");
+    expect(source).toContain("applyPipelineSavedView");
+    expect(source).toContain("Attention queue worked — follow up on response");
+  });
 });

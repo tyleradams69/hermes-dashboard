@@ -1,11 +1,20 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import Image from "next/image";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import LogoutButton from "@/components/LogoutButton";
 import NotificationCenter from "@/components/NotificationCenter";
 import { buildFeedbackMailto } from "@/lib/pilotWorkspace";
 
 const API_URL = "/api/hermes";
+
+
+function formatHeaderTime() {
+  return new Date().toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
 
 export default function AppShell({
   active = "dashboard",
@@ -23,10 +32,12 @@ export default function AppShell({
   children: React.ReactNode;
 }) {
   const [unreadCount, setUnreadCount] = useState(0);
-  const [currentTime, setCurrentTime] = useState("");
-  const [currentPath, setCurrentPath] = useState<string>(active);
+  const [currentTime, setCurrentTime] = useState(() => formatHeaderTime());
+  const [currentPath] = useState<string>(() => typeof window === "undefined" ? active : window.location.pathname);
 
-  async function loadNotifications() {
+  const loadNotifications = useCallback(async () => {
+    if (typeof document !== "undefined" && document.visibilityState === "hidden") return;
+
     try {
       const res = await fetch(`${API_URL}/api/notifications?business_id=${encodeURIComponent(businessId)}`, {
         cache: "no-store",
@@ -40,40 +51,43 @@ export default function AppShell({
     } catch {
       setUnreadCount(0);
     }
-  }
+  }, [businessId]);
 
   useEffect(() => {
-    setCurrentPath(window.location.pathname);
-    loadNotifications();
+    queueMicrotask(() => void loadNotifications());
 
     const updateClock = () => {
       setCurrentTime(
-        new Date().toLocaleTimeString([], {
-          hour: "2-digit",
-          minute: "2-digit",
-        })
+        formatHeaderTime()
       );
     };
 
-    updateClock();
+    const clockTimer = setInterval(updateClock, 30000);
+    const notificationTimer = setInterval(() => void loadNotifications(), 30000);
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        updateClock();
+        void loadNotifications();
+      }
+    };
 
-    const clockTimer = setInterval(updateClock, 1000);
-    const timer = setInterval(loadNotifications, 10000);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
 
     return () => {
-      clearInterval(timer);
+      clearInterval(notificationTimer);
       clearInterval(clockTimer);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
-  }, [businessId]);
+  }, [loadNotifications]);
 
-  const nav = [
+  const nav = useMemo(() => [
     { id: "dashboard", label: "Dashboard", href: "/operations" },
     { id: "clients", label: "Clients", href: "/businesses" },
     { id: "leads", label: "Lead Scraper", href: "/leads" },
     { id: "onboarding", label: "Onboarding", href: "/onboarding" },
     { id: "settings", label: "Settings", href: "/settings" },
     { id: "intelligence", label: "Intelligence", href: "/brain" },
-  ];
+  ], []);
 
   return (
     <main className="liminull-apple relative min-h-screen bg-background text-foreground liminull-grid-bg">
@@ -81,9 +95,13 @@ export default function AppShell({
         <div className="mx-auto flex max-w-[1180px] flex-col gap-3 px-4 py-3 sm:px-6 lg:flex-row lg:items-center lg:gap-5">
           <a href="/operations" className="flex shrink-0 items-center gap-3 rounded-full focus:outline-none focus:ring-2 focus:ring-[#0071e3]/25">
             <span className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full bg-[#030712] shadow-sm ring-1 ring-black/[0.08]">
-              <img
+              <Image
                 src="/assets/liminull-logo.png"
                 alt="Liminull logo"
+                width={36}
+                height={36}
+                priority
+                sizes="36px"
                 className="h-full w-full object-cover"
               />
             </span>

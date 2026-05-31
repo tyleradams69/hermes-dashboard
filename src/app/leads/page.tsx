@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import AppShell from "@/components/AppShell";
 import { buildClientWorkspaceFromPipelineLead } from "@/lib/clientWorkspace";
 import {
@@ -8,12 +8,16 @@ import {
   deriveLeadPriority,
   filterPipelineLeads,
   formatPipelineDailyBriefForCopy,
+  formatPipelineAttentionBriefForCopy,
+  formatPipelineAttentionReason,
   formatPipelineLeadBriefForCopy,
   formatPipelineOwnerSummaryForCopy,
   getLeadQuickActions,
+  selectPipelineAttentionItems,
   selectStaleLeadNudges,
   selectTodayFocusLeads,
   summarizePipelineByOwner,
+  type PipelineAttentionItem,
   type PipelineLead,
   type PipelineOwnerSummary,
   type LeadPipelineStage,
@@ -190,6 +194,13 @@ const defaultPipelineFilters = {
   hasPhoneOnly: false,
   hotScoreOnly: false,
 };
+
+const pipelineSavedViews = [
+  { label: "Today", filters: { stage: "all" as LeadPipelineStage | "all", sortBy: "priority" as const } },
+  { label: "Hot no-website", filters: { stage: "all" as LeadPipelineStage | "all", sortBy: "priority" as const, hotScoreOnly: true, noWebsiteOnly: true } },
+  { label: "Stale follow-ups", filters: { stage: "all" as LeadPipelineStage | "all", sortBy: "priority" as const } },
+  { label: "Prep-ready", filters: { stage: "all" as LeadPipelineStage | "all", sortBy: "priority" as const } },
+] as const;
 
 type PipelineFilters = typeof defaultPipelineFilters;
 
@@ -441,6 +452,118 @@ function BulkPipelineActions({
           </button>
           <p className="text-xs leading-5 text-white/40">Creates packets only for selected hot leads without saved prep.</p>
         </div>
+      </div>
+    </div>
+  );
+}
+
+type PipelineHealthPanelProps = {
+  totalLeads: number;
+  openLeads: number;
+  closedWonLeads: number;
+  hotWithoutPrep: number;
+  activeWithoutFollowUp: number;
+  staleByEmployee: PipelineOwnerSummary[];
+};
+
+function PipelineHealthPanel({ totalLeads, openLeads, closedWonLeads, hotWithoutPrep, activeWithoutFollowUp, staleByEmployee }: PipelineHealthPanelProps) {
+  return (
+    <div className="mt-5 rounded-2xl border border-cyan-300/10 bg-cyan-300/[0.035] p-4">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="text-sm font-black text-white">Pipeline health</p>
+          <p className="mt-1 text-xs liminull-muted">Admin snapshot of queue size, conversion pressure, prep gaps, and follow-up hygiene.</p>
+        </div>
+        <span className="rounded-full bg-cyan-300/10 px-3 py-1 text-xs font-black text-cyan-100">{openLeads} open / {totalLeads} total</span>
+      </div>
+
+      <div className="mt-4 grid gap-3 md:grid-cols-4">
+        <div className="rounded-2xl border border-white/5 bg-black/20 p-3">
+          <p className="text-[10px] font-black uppercase tracking-[0.16em] text-white/35">Closed-won</p>
+          <p className="mt-2 text-2xl font-black tracking-[-0.06em] text-white">{closedWonLeads}</p>
+          <p className="mt-1 text-xs text-white/40">Ready for delivery conversion or workspace check</p>
+        </div>
+        <div className="rounded-2xl border border-white/5 bg-black/20 p-3">
+          <p className="text-[10px] font-black uppercase tracking-[0.16em] text-white/35">Hot without prep</p>
+          <p className="mt-2 text-2xl font-black tracking-[-0.06em] text-white">{hotWithoutPrep}</p>
+          <p className="mt-1 text-xs text-white/40">Needs packet before outreach</p>
+        </div>
+        <div className="rounded-2xl border border-white/5 bg-black/20 p-3">
+          <p className="text-[10px] font-black uppercase tracking-[0.16em] text-white/35">No follow-up date</p>
+          <p className="mt-2 text-2xl font-black tracking-[-0.06em] text-white">{activeWithoutFollowUp}</p>
+          <p className="mt-1 text-xs text-white/40">Contacted/interested/pricing/meeting leads without a date</p>
+        </div>
+        <div className="rounded-2xl border border-white/5 bg-black/20 p-3">
+          <p className="text-[10px] font-black uppercase tracking-[0.16em] text-white/35">Stale by employee</p>
+          <p className="mt-2 text-sm font-black text-white">
+            {staleByEmployee.filter((summary) => summary.staleLeads > 0).slice(0, 2).map((summary) => `${summary.owner}: ${summary.staleLeads}`).join(" · ") || "No stale pressure"}
+          </p>
+          <p className="mt-1 text-xs text-white/40">Sorted by employee name in the rollup below</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+type NeedsAttentionPanelProps = {
+  items: PipelineAttentionItem[];
+  onCopyQueue: () => void;
+  onSelectLead: (id: string) => void;
+  onMarkWorked: (lead: PipelineLead) => void;
+  onCreatePrep: (lead: PipelineLead) => void;
+};
+
+function NeedsAttentionPanel({ items, onCopyQueue, onSelectLead, onMarkWorked, onCreatePrep }: NeedsAttentionPanelProps) {
+  return (
+    <div className="mt-5 rounded-2xl border border-amber-300/10 bg-amber-300/[0.04] p-4">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="text-sm font-black text-white">Needs attention</p>
+          <p className="mt-1 text-xs liminull-muted">Admin triage for missing actions, overdue follow-ups, hot leads without prep, and approved prep waiting to be worked.</p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={onCopyQueue}
+            className="rounded-full border border-amber-300/20 bg-amber-300/10 px-3 py-1.5 text-xs font-black text-amber-50 transition hover:border-amber-300/40"
+          >
+            Copy attention queue
+          </button>
+          <span className="rounded-full bg-amber-300/10 px-3 py-1.5 text-xs font-black text-amber-100">{items.length} flagged</span>
+        </div>
+      </div>
+
+      <div className="mt-4 grid gap-3 lg:grid-cols-2">
+        {items.length === 0 ? (
+          <div className="rounded-2xl border border-white/5 bg-black/20 p-4 text-sm liminull-muted">No attention items under the current filters.</div>
+        ) : items.map((item) => (
+          <article key={item.lead.id} className="rounded-2xl border border-white/5 bg-black/20 p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <h3 className="truncate text-sm font-black text-white">{item.lead.company}</h3>
+                <p className="mt-1 text-xs text-white/45">{item.lead.owner} · {stageLabel(item.lead.stage)} · follow-up {formatPipelineDate(item.lead.nextFollowUpAt)}</p>
+              </div>
+              <span className={`rounded-full px-2.5 py-1 text-[10px] font-black uppercase ${item.severity === "critical" ? "bg-rose-300/10 text-rose-100" : item.severity === "warning" ? "bg-amber-300/10 text-amber-100" : "bg-cyan-300/10 text-cyan-100"}`}>
+                {item.severity} · {item.score}
+              </span>
+            </div>
+            <p className="mt-3 text-xs leading-5 text-amber-50/80">{item.nextBestAction}</p>
+            <div className="mt-3 flex flex-wrap gap-1.5">
+              {item.reasons.map((reason) => (
+                <span key={`${item.lead.id}-${reason}`} className="rounded-full bg-white/5 px-2 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-white/45">
+                  {formatPipelineAttentionReason(reason)}
+                </span>
+              ))}
+            </div>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <button type="button" onClick={() => onSelectLead(item.lead.id)} className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5 text-xs font-bold text-white/70">Select lead</button>
+              <button type="button" onClick={() => onMarkWorked(item.lead)} className="rounded-full border border-emerald-300/20 bg-emerald-300/10 px-3 py-1.5 text-xs font-bold text-emerald-50">Worked today</button>
+              {item.reasons.includes("hot_without_prep") && (
+                <button type="button" onClick={() => onCreatePrep(item.lead)} className="rounded-full border border-violet-300/20 bg-violet-300/10 px-3 py-1.5 text-xs font-bold text-violet-50">Create prep</button>
+              )}
+            </div>
+          </article>
+        ))}
       </div>
     </div>
   );
@@ -1007,6 +1130,21 @@ export default function LeadsPage() {
   }
 
   const leads = result?.leads || [];
+  async function copyPipelineAttentionBrief() {
+    const text = formatPipelineAttentionBriefForCopy(filteredPipelineLeads);
+
+    try {
+      await navigator.clipboard.writeText(text);
+      setPipelineMessage("Attention queue copied for admin triage.");
+    } catch {
+      setPipelineMessage(text);
+    }
+  }
+
+  function applyPipelineSavedView(filters: Partial<PipelineFilters>) {
+    setPipelineFilters((current) => ({ ...current, ...filters }));
+  }
+
   const sourceLinks = result?.sourceLinks || [];
   const queries = result?.queries || [];
   const isAdminAccount = account?.role === "admin";
@@ -1014,18 +1152,26 @@ export default function LeadsPage() {
   const effectivePipelineOwner = isAdminAccount
     ? (pipelineFilters.owner === "all" ? undefined : pipelineFilters.owner)
     : signedInEmployeeName || undefined;
-  const pipelineOwners = Array.from(new Set(pipelineLeads.map((lead) => lead.owner))).sort((a, b) => a.localeCompare(b));
-  const pipelineOwnerOptions = isAdminAccount ? pipelineOwners : pipelineOwners.filter((owner) => owner !== signedInEmployeeName);
+  const { stage: pipelineStageFilter, sortBy: pipelineSortBy, noWebsiteOnly, hasPhoneOnly, hotScoreOnly } = pipelineFilters;
+  const pipelineOwners = useMemo(
+    () => Array.from(new Set(pipelineLeads.map((lead) => lead.owner))).sort((a, b) => a.localeCompare(b)),
+    [pipelineLeads]
+  );
+  const pipelineOwnerOptions = useMemo(
+    () => isAdminAccount ? pipelineOwners : pipelineOwners.filter((owner) => owner !== signedInEmployeeName),
+    [isAdminAccount, pipelineOwners, signedInEmployeeName]
+  );
   const filteredPipelineLeads = filterPipelineLeads(pipelineLeads, {
     owner: effectivePipelineOwner,
-    stage: pipelineFilters.stage,
-    sortBy: pipelineFilters.sortBy,
-    noWebsiteOnly: pipelineFilters.noWebsiteOnly,
-    hasPhoneOnly: pipelineFilters.hasPhoneOnly,
-    hotScoreOnly: pipelineFilters.hotScoreOnly,
+    stage: pipelineStageFilter,
+    sortBy: pipelineSortBy,
+    noWebsiteOnly,
+    hasPhoneOnly,
+    hotScoreOnly,
   });
-  const ownerPipelineSummaries = summarizePipelineByOwner(pipelineLeads);
-  const allOwnerSummary = ownerPipelineSummaries.reduce(
+  const pipelineNow = useMemo(() => new Date(), []);
+  const ownerPipelineSummaries = useMemo(() => summarizePipelineByOwner(pipelineLeads), [pipelineLeads]);
+  const allOwnerSummary = useMemo(() => ownerPipelineSummaries.reduce(
     (summary, owner) => ({
       openLeads: summary.openLeads + owner.openLeads,
       hotLeads: summary.hotLeads + owner.hotLeads,
@@ -1034,19 +1180,33 @@ export default function LeadsPage() {
       dueSoonLeads: summary.dueSoonLeads + owner.dueSoonLeads,
     }),
     { openLeads: 0, hotLeads: 0, staleLeads: 0, prepReadyLeads: 0, dueSoonLeads: 0 }
-  );
-  const todayFocusLeads = selectTodayFocusLeads(filteredPipelineLeads, new Date(), 3);
-  const salesPrepQueue = Object.values(savedIntelligencePackets)
+  ), [ownerPipelineSummaries]);
+  const todayFocusLeads = useMemo(() => selectTodayFocusLeads(filteredPipelineLeads, pipelineNow, 3), [filteredPipelineLeads, pipelineNow]);
+  const salesPrepQueue = useMemo(() => Object.values(savedIntelligencePackets)
     .filter((packet) => packet.status === "approved")
     .map((packet) => ({ packet, lead: pipelineLeads.find((lead) => lead.id === packet.leadId) }))
     .filter((item): item is { packet: LeadIntelligencePacket; lead: PipelineLead } => Boolean(item.lead) && item.lead?.salesPrepStatus !== "used")
     .sort((a, b) => deriveLeadPriority(b.lead).score - deriveLeadPriority(a.lead).score || Date.parse(b.packet.generatedAt) - Date.parse(a.packet.generatedAt))
-    .slice(0, 6);
-  const staleLeadNudges = selectStaleLeadNudges(filteredPipelineLeads, new Date(), 6);
-  const activeClientReadyLeads = pipelineLeads.filter((lead) => lead.stage === "closed_won").length;
-  const selectedPipelineLeads = filteredPipelineLeads.filter((lead) => selectedPipelineLeadIds.includes(lead.id));
-  const selectedHotPipelineLeads = selectedPipelineLeads.filter((lead) => deriveLeadPriority(lead).tier === "hot");
-  const allFilteredPipelineLeadsSelected = filteredPipelineLeads.length > 0 && filteredPipelineLeads.every((lead) => selectedPipelineLeadIds.includes(lead.id));
+    .slice(0, 6), [pipelineLeads, savedIntelligencePackets]);
+  const attentionItems = useMemo(() => selectPipelineAttentionItems(filteredPipelineLeads, pipelineNow, 8), [filteredPipelineLeads, pipelineNow]);
+  const staleLeadNudges = useMemo(() => selectStaleLeadNudges(filteredPipelineLeads, pipelineNow, 6), [filteredPipelineLeads, pipelineNow]);
+  const pipelineHealth = useMemo(() => pipelineLeads.reduce(
+    (health, lead) => {
+      const isClosed = lead.stage === "closed_won" || lead.stage === "closed_lost";
+      if (lead.stage === "closed_won") health.closedWon += 1;
+      if (!isClosed) {
+        health.open += 1;
+        if (deriveLeadPriority(lead).tier === "hot" && lead.salesPrepStatus !== "ready" && lead.salesPrepStatus !== "used") health.hotWithoutPrep += 1;
+      }
+      if (["contacted", "interested", "pricing_requested", "meeting_requested"].includes(lead.stage) && !lead.nextFollowUpAt) health.activeWithoutFollowUp += 1;
+      return health;
+    },
+    { open: 0, closedWon: 0, hotWithoutPrep: 0, activeWithoutFollowUp: 0 }
+  ), [pipelineLeads]);
+  const selectedPipelineLeadSet = useMemo(() => new Set(selectedPipelineLeadIds), [selectedPipelineLeadIds]);
+  const selectedPipelineLeads = useMemo(() => filteredPipelineLeads.filter((lead) => selectedPipelineLeadSet.has(lead.id)), [filteredPipelineLeads, selectedPipelineLeadSet]);
+  const selectedHotPipelineLeads = useMemo(() => selectedPipelineLeads.filter((lead) => deriveLeadPriority(lead).tier === "hot"), [selectedPipelineLeads]);
+  const allFilteredPipelineLeadsSelected = filteredPipelineLeads.length > 0 && filteredPipelineLeads.every((lead) => selectedPipelineLeadSet.has(lead.id));
 
   function togglePipelineLeadSelection(id: string) {
     setSelectedPipelineLeadIds((current) => current.includes(id) ? current.filter((leadId) => leadId !== id) : [...current, id]);
@@ -1182,13 +1342,13 @@ export default function LeadsPage() {
           <p className="mt-1 text-xs liminull-muted">Approved packets not marked used</p>
         </div>
         <div className="liminull-card-soft p-4">
-          <p className="text-xs font-black uppercase tracking-[0.16em] text-amber-100/60">Stale nudges</p>
-          <p className="mt-2 text-3xl font-black tracking-[-0.08em] text-white">{staleLeadNudges.length}</p>
-          <p className="mt-1 text-xs liminull-muted">Due or untouched open leads</p>
+          <p className="text-xs font-black uppercase tracking-[0.16em] text-amber-100/60">Needs attention</p>
+          <p className="mt-2 text-3xl font-black tracking-[-0.08em] text-white">{attentionItems.length}</p>
+          <p className="mt-1 text-xs liminull-muted">Missing action, prep, or follow-up pressure</p>
         </div>
         <div className="liminull-card-soft p-4">
           <p className="text-xs font-black uppercase tracking-[0.16em] text-emerald-100/60">Client handoffs</p>
-          <p className="mt-2 text-3xl font-black tracking-[-0.08em] text-white">{activeClientReadyLeads}</p>
+          <p className="mt-2 text-3xl font-black tracking-[-0.08em] text-white">{pipelineHealth.closedWon}</p>
           <p className="mt-1 text-xs liminull-muted">Closed-won leads ready for delivery OS</p>
         </div>
       </div>
@@ -1759,12 +1919,49 @@ export default function LeadsPage() {
         )}
 
         {isAdminAccount && (
+          <PipelineHealthPanel
+            totalLeads={pipelineLeads.length}
+            openLeads={pipelineHealth.open}
+            closedWonLeads={pipelineHealth.closedWon}
+            hotWithoutPrep={pipelineHealth.hotWithoutPrep}
+            activeWithoutFollowUp={pipelineHealth.activeWithoutFollowUp}
+            staleByEmployee={ownerPipelineSummaries}
+          />
+        )}
+
+        {isAdminAccount && (
           <EmployeePipelineSummary
             summaries={ownerPipelineSummaries}
             allSummary={allOwnerSummary}
             selectedOwner={pipelineFilters.owner}
             onSelectOwner={(owner) => setPipelineFilters((current) => ({ ...current, owner }))}
             onCopySummary={copyEmployeePipelineRollup}
+          />
+        )}
+
+        <div className="mt-5 rounded-2xl border border-white/5 bg-black/20 p-4">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm font-black text-white">Saved views</p>
+              <p className="mt-1 text-xs liminull-muted">Jump into the highest-use pipeline cuts without rebuilding filters by hand.</p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {pipelineSavedViews.map((view) => (
+                <button key={view.label} type="button" onClick={() => applyPipelineSavedView(view.filters)} className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5 text-xs font-bold text-white/65 transition hover:border-cyan-300/25 hover:text-cyan-50">
+                  {view.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {isAdminAccount && (
+          <NeedsAttentionPanel
+            items={attentionItems}
+            onCopyQueue={copyPipelineAttentionBrief}
+            onSelectLead={togglePipelineLeadSelection}
+            onMarkWorked={(lead) => markLeadTouched(lead, "Attention queue worked — follow up on response", 3)}
+            onCreatePrep={(lead) => createIntelligencePacket(pipelineLeadToLeadRecord(lead))}
           />
         )}
 

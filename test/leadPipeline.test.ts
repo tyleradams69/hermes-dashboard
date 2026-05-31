@@ -5,6 +5,7 @@ import {
   createPipelineLead,
   deriveLeadPriority,
   filterPipelineLeads,
+  formatPipelineAttentionBriefForCopy,
   formatPipelineDailyBriefForCopy,
   formatPipelineLeadBriefForCopy,
   formatPipelineOwnerSummaryForCopy,
@@ -12,6 +13,7 @@ import {
   importLeadIntoPipeline,
   isLeadStale,
   normalizeLeadDedupeKey,
+  selectPipelineAttentionItems,
   selectStaleLeadNudges,
   selectTodayFocusLeads,
   summarizePipelineByOwner,
@@ -144,6 +146,35 @@ describe("lead pipeline helpers", () => {
     const focus = selectTodayFocusLeads([warm, closed, hot], now, 2);
 
     expect(focus.map((lead) => lead.id)).toEqual([hot.id, warm.id]);
+  });
+
+  it("selects pipeline needs-attention items by urgency and formats the admin queue", () => {
+    const now = new Date("2026-05-10T12:00:00.000Z");
+    const overdueActive = {
+      ...updatePipelineLead(createPipelineLead({ ...scrapedLead, id: "google:overdue", company: "Overdue Dental", score: 90 }, "Jack"), {
+        stage: "interested",
+        nextAction: "Follow up on discovery",
+        nextFollowUpAt: "2026-05-08T12:00:00.000Z",
+      }),
+      updatedAt: "2026-05-07T12:00:00.000Z",
+    };
+    const hotWithoutPrep = createPipelineLead({ ...scrapedLead, id: "google:hot-no-prep", company: "Hot No Prep", score: 96, website: undefined }, "Tyler");
+    const missingFollowUp = updatePipelineLead(createPipelineLead({ ...scrapedLead, id: "google:missing-date", company: "Missing Date", score: 72 }, "Tyler"), {
+      stage: "contacted",
+      nextAction: "Wait for response",
+    });
+
+    const items = selectPipelineAttentionItems([missingFollowUp, hotWithoutPrep, overdueActive], now, 5);
+
+    expect(items.map((item) => item.lead.company)).toEqual(["Overdue Dental", "Hot No Prep", "Missing Date"]);
+    expect(items[0].reasons).toEqual(expect.arrayContaining(["stale_untouched", "overdue_active_stage"]));
+    expect(items[1].reasons).toContain("hot_without_prep");
+    expect(items[2].reasons).toContain("missing_follow_up");
+
+    const brief = formatPipelineAttentionBriefForCopy([missingFollowUp, hotWithoutPrep, overdueActive], now);
+    expect(brief).toContain("Liminull pipeline needs-attention queue — 2026-05-10");
+    expect(brief).toContain("Overdue Dental — Jack");
+    expect(brief).toContain("hot without prep");
   });
 
   it("returns stage-aware quick actions for moving leads through the pipeline", () => {
