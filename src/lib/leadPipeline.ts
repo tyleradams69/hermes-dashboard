@@ -131,4 +131,86 @@ export function updatePipelineLead(
   };
 }
 
+export type PipelineLeadPriorityTier = "hot" | "warm" | "watch";
+
+export type PipelineLeadPriority = {
+  score: number;
+  tier: PipelineLeadPriorityTier;
+  signals: string[];
+};
+
+export type PipelineLeadFilters = {
+  owner?: string;
+  stage?: LeadPipelineStage | "all";
+  noWebsiteOnly?: boolean;
+  hasPhoneOnly?: boolean;
+  hotScoreOnly?: boolean;
+};
+
 export const emptyLeadPipelineState: LeadPipelineState = { leads: [] };
+
+function daysSince(value: string, now: Date) {
+  const timestamp = Date.parse(value);
+  if (Number.isNaN(timestamp)) return 0;
+  return Math.max(0, (now.getTime() - timestamp) / (1000 * 60 * 60 * 24));
+}
+
+function isOpenPipelineStage(stage: LeadPipelineStage) {
+  return stage !== "closed_won" && stage !== "closed_lost";
+}
+
+export function deriveLeadPriority(lead: PipelineLead, now = new Date()): PipelineLeadPriority {
+  const signals: string[] = [];
+  let priorityScore = lead.score;
+
+  if (lead.score >= 85) {
+    priorityScore += 10;
+    signals.push("high score");
+  }
+
+  if (!lead.website) {
+    priorityScore += 14;
+    signals.push("no website");
+  }
+
+  if (lead.phone || lead.localPhone) {
+    priorityScore += 8;
+    signals.push("phone available");
+  }
+
+  if (daysSince(lead.updatedAt, now) >= 3 && isOpenPipelineStage(lead.stage)) {
+    priorityScore += 12;
+    signals.push("stale next action");
+  }
+
+  if (lead.stage === "interested" || lead.stage === "pricing_requested" || lead.stage === "meeting_requested") {
+    priorityScore += 10;
+    signals.push("active buying signal");
+  }
+
+  const tier: PipelineLeadPriorityTier = priorityScore >= 90 ? "hot" : priorityScore >= 70 ? "warm" : "watch";
+
+  return { score: priorityScore, tier, signals };
+}
+
+export function selectTodayFocusLeads(leads: PipelineLead[], now = new Date(), limit = 5) {
+  return leads
+    .filter((lead) => isOpenPipelineStage(lead.stage))
+    .map((lead) => ({ lead, priority: deriveLeadPriority(lead, now) }))
+    .sort((a, b) => b.priority.score - a.priority.score || Date.parse(b.lead.updatedAt) - Date.parse(a.lead.updatedAt))
+    .slice(0, limit)
+    .map(({ lead }) => lead);
+}
+
+export function filterPipelineLeads(leads: PipelineLead[], filters: PipelineLeadFilters) {
+  const owner = filters.owner?.trim().toLowerCase();
+
+  return leads.filter((lead) => {
+    if (owner && lead.owner.trim().toLowerCase() !== owner) return false;
+    if (filters.stage && filters.stage !== "all" && lead.stage !== filters.stage) return false;
+    if (filters.noWebsiteOnly && lead.website) return false;
+    if (filters.hasPhoneOnly && !lead.phone && !lead.localPhone) return false;
+    if (filters.hotScoreOnly && deriveLeadPriority(lead).tier !== "hot") return false;
+    return true;
+  });
+}

@@ -2,24 +2,36 @@
 
 import { useEffect, useState } from "react";
 import AppShell from "@/components/AppShell";
+import { clientWorkspacesStorageKey, formatClientHandoffSummary, type ClientWorkspace } from "@/lib/clientWorkspace";
 import { getClientNotesKey } from "@/lib/pilotWorkspace";
 
 const API_URL = "/api/hermes";
 
+type BusinessWorkspace = {
+  id: string;
+  name: string;
+  industry?: string;
+  website?: string;
+  status?: string;
+};
+
 export default function BusinessesPage() {
-  const [businesses, setBusinesses] = useState<any[]>([]);
+  const [businesses, setBusinesses] = useState<BusinessWorkspace[]>([]);
+  const [clientWorkspaces, setClientWorkspaces] = useState<ClientWorkspace[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [clientNotes, setClientNotes] = useState<Record<string, string>>({});
 
-  const [form, setForm] = useState({
-    id: "",
-    name: "",
-    industry: "",
-    website: "",
-  });
-
   async function load() {
+    try {
+      const savedWorkspaces = window.localStorage.getItem(clientWorkspacesStorageKey);
+      const localWorkspaces = savedWorkspaces ? (JSON.parse(savedWorkspaces) as ClientWorkspace[]) : [];
+      setClientWorkspaces(localWorkspaces);
+    } catch {
+      window.localStorage.removeItem(clientWorkspacesStorageKey);
+      setClientWorkspaces([]);
+    }
+
     try {
       const res = await fetch(`${API_URL}/api/businesses`, {
         cache: "no-store",
@@ -29,12 +41,12 @@ export default function BusinessesPage() {
       });
 
       const data = await res.json();
-      const nextBusinesses = data.businesses || [];
+      const nextBusinesses = (data.businesses || []) as BusinessWorkspace[];
       setBusinesses(nextBusinesses);
       setLoadError("");
       setClientNotes(
         Object.fromEntries(
-          nextBusinesses.map((business: any) => [
+          nextBusinesses.map((business: BusinessWorkspace) => [
             business.id,
             window.localStorage.getItem(getClientNotesKey(business.id)) || "",
           ])
@@ -49,24 +61,10 @@ export default function BusinessesPage() {
   }
 
   useEffect(() => {
-    load();
-  }, []);
-
-  async function createBusiness(e: React.FormEvent) {
-    e.preventDefault();
-
-    await fetch(`${API_URL}/api/businesses`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-hermes-role": "admin",
-      },
-      body: JSON.stringify(form),
+    queueMicrotask(() => {
+      void load();
     });
-
-    setForm({ id: "", name: "", industry: "", website: "" });
-    load();
-  }
+  }, []);
 
   function saveClientNote(businessId: string, note: string) {
     setClientNotes((current) => ({ ...current, [businessId]: note }));
@@ -84,21 +82,21 @@ export default function BusinessesPage() {
         <div className="liminull-card-soft p-5">
           <p className="liminull-eyebrow">Total Clients</p>
           <p className="mt-3 text-4xl font-black tracking-[-0.08em]">
-            {businesses.length}
+            {businesses.length + clientWorkspaces.length}
           </p>
         </div>
 
         <div className="liminull-card-soft p-5">
           <p className="liminull-eyebrow">Active</p>
           <p className="mt-3 text-4xl font-black tracking-[-0.08em]">
-            {businesses.filter((b) => b.status === "active").length}
+            {businesses.filter((b) => b.status === "active").length + clientWorkspaces.filter((workspace) => workspace.phase !== "launched").length}
           </p>
         </div>
 
         <div className="liminull-card-soft p-5">
           <p className="liminull-eyebrow">Industries</p>
           <p className="mt-3 text-4xl font-black tracking-[-0.08em]">
-            {new Set(businesses.map((b) => b.industry).filter(Boolean)).size}
+            {new Set([...businesses.map((b) => b.industry), ...clientWorkspaces.map((workspace) => workspace.packageFit)].filter(Boolean)).size}
           </p>
         </div>
       </div>
@@ -122,6 +120,57 @@ export default function BusinessesPage() {
           New Client Onboarding
         </a>
       </div>
+
+      {clientWorkspaces.length > 0 && (
+        <div className="mb-8 liminull-card-soft p-5">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="liminull-eyebrow">Lead-to-client handoff</p>
+              <h2 className="mt-2 text-2xl font-black tracking-[-0.05em] text-white">Delivery workspaces</h2>
+              <p className="mt-2 text-sm liminull-muted">
+                Closed-won pipeline leads converted into internal delivery handoff seeds. Saved locally until durable client storage is added.
+              </p>
+            </div>
+            <span className="rounded-full bg-emerald-300/10 px-3 py-1 text-xs font-black text-emerald-100">
+              {clientWorkspaces.length} from pipeline
+            </span>
+          </div>
+
+          <div className="mt-5 grid gap-3 lg:grid-cols-2">
+            {clientWorkspaces.map((workspace) => (
+              <article key={workspace.id} className="rounded-2xl border border-emerald-300/10 bg-emerald-300/[0.04] p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <h3 className="truncate text-lg font-black text-white">{workspace.name}</h3>
+                    <p className="mt-1 text-xs liminull-muted">{workspace.owner} · {workspace.location}</p>
+                  </div>
+                  <span className="rounded-full bg-emerald-300/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-emerald-100">
+                    {workspace.phase}
+                  </span>
+                </div>
+
+                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                  <div className="rounded-xl border border-white/5 bg-black/20 p-3">
+                    <p className="text-[10px] uppercase tracking-[0.18em] text-white/30">Package</p>
+                    <p className="mt-2 text-sm font-black text-emerald-50">{workspace.packageFit}</p>
+                  </div>
+                  <div className="rounded-xl border border-white/5 bg-black/20 p-3">
+                    <p className="text-[10px] uppercase tracking-[0.18em] text-white/30">Next deliverable</p>
+                    <p className="mt-2 text-sm font-black text-emerald-50">{workspace.nextDeliverable}</p>
+                  </div>
+                </div>
+
+                <details className="mt-4 rounded-xl border border-white/5 bg-black/20 p-3 text-sm text-white/70">
+                  <summary className="cursor-pointer text-xs font-black uppercase tracking-[0.16em] text-emerald-100/70">
+                    Handoff summary
+                  </summary>
+                  <pre className="mt-3 whitespace-pre-wrap text-xs leading-5 text-white/60">{formatClientHandoffSummary(workspace)}</pre>
+                </details>
+              </article>
+            ))}
+          </div>
+        </div>
+      )}
 
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">

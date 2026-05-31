@@ -6,20 +6,38 @@ import {
   buildPlaceDetailsUrl,
   buildPlacesTextSearchUrl,
   enrichLeadWithPlaceDetails,
+  isWeakWebsiteCandidate,
+  leadMatchesSearchFilters,
   mapGooglePlaceToLead,
   normalizeLeadSearchInput,
   rankLead,
 } from "../src/lib/leadScraper";
 
 describe("lead scraper helpers", () => {
-  it("normalizes the no-website search filter", () => {
+  it("normalizes advanced lead search filters", () => {
     expect(normalizeLeadSearchInput({ business: "clinics", location: "Austin" })).toMatchObject({
       onlyWithoutWebsite: false,
+      hasPhoneOnly: false,
+      minRating: 0,
+      minReviews: 0,
+      weakWebsiteCandidate: false,
     });
     expect(
-      normalizeLeadSearchInput({ business: "clinics", location: "Austin", onlyWithoutWebsite: true })
+      normalizeLeadSearchInput({
+        business: "clinics",
+        location: "Austin",
+        onlyWithoutWebsite: true,
+        hasPhoneOnly: true,
+        minRating: 4.7,
+        minReviews: 50.6,
+        weakWebsiteCandidate: true,
+      })
     ).toMatchObject({
       onlyWithoutWebsite: true,
+      hasPhoneOnly: true,
+      minRating: 4.7,
+      minReviews: 51,
+      weakWebsiteCandidate: true,
     });
   });
 
@@ -130,5 +148,41 @@ describe("lead scraper helpers", () => {
       localPhone: "(615) 555-0199",
       website: "https://nashvilledental.example.com",
     });
+  });
+
+  it("matches leads against advanced filters after enrichment", () => {
+    const baseLead = mapGooglePlaceToLead(
+      {
+        place_id: "abc123",
+        name: "Austin HVAC Pros",
+        formatted_address: "1 Main St, Austin, TX",
+        rating: 4.6,
+        user_ratings_total: 120,
+      },
+      { niche: "missed-call automation", location: "Austin, TX" }
+    );
+    const enrichedLead = enrichLeadWithPlaceDetails(baseLead, {
+      formatted_phone_number: "(512) 555-0101",
+      website: "https://austin-hvac.business.site",
+    });
+
+    expect(
+      leadMatchesSearchFilters(enrichedLead, {
+        business: "HVAC",
+        location: "Austin",
+        hasPhoneOnly: true,
+        minRating: 4.5,
+        minReviews: 100,
+        weakWebsiteCandidate: true,
+      })
+    ).toBe(true);
+    expect(isWeakWebsiteCandidate(enrichedLead)).toBe(true);
+    expect(
+      leadMatchesSearchFilters(enrichedLead, {
+        business: "HVAC",
+        location: "Austin",
+        onlyWithoutWebsite: true,
+      })
+    ).toBe(false);
   });
 });

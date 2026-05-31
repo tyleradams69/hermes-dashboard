@@ -2,8 +2,11 @@ import { describe, expect, it } from "vitest";
 
 import {
   createPipelineLead,
+  deriveLeadPriority,
+  filterPipelineLeads,
   importLeadIntoPipeline,
   normalizeLeadDedupeKey,
+  selectTodayFocusLeads,
   updatePipelineLead,
   type LeadPipelineState,
 } from "../src/lib/leadPipeline";
@@ -74,5 +77,57 @@ describe("lead pipeline helpers", () => {
       dedupeKey: "google:place-1",
     });
     expect(updated.updatedAt).not.toBe(lead.updatedAt);
+  });
+
+  it("derives priority from score, contactability, weak web presence, and stale follow-up", () => {
+    const staleHighFitLead = {
+      ...createPipelineLead({ ...scrapedLead, phone: undefined, website: undefined, score: 92 }, "Tyler"),
+      updatedAt: "2026-05-01T12:00:00.000Z",
+    };
+
+    const priority = deriveLeadPriority(staleHighFitLead, new Date("2026-05-06T12:00:00.000Z"));
+
+    expect(priority.tier).toBe("hot");
+    expect(priority.score).toBeGreaterThanOrEqual(90);
+    expect(priority.signals).toEqual(
+      expect.arrayContaining(["high score", "no website", "stale next action"])
+    );
+    expect(priority.signals).not.toContain("phone available");
+  });
+
+  it("selects today's focus leads sorted by priority and excludes closed leads", () => {
+    const now = new Date("2026-05-06T12:00:00.000Z");
+    const hot = {
+      ...createPipelineLead({ ...scrapedLead, id: "google:hot", score: 96, website: undefined }, "Tyler"),
+      updatedAt: "2026-05-02T12:00:00.000Z",
+    };
+    const warm = createPipelineLead({ ...scrapedLead, id: "google:warm", score: 78 }, "Jack");
+    const closed = {
+      ...createPipelineLead({ ...scrapedLead, id: "google:closed", score: 99, website: undefined }, "Tyler"),
+      stage: "closed_won" as const,
+    };
+
+    const focus = selectTodayFocusLeads([warm, closed, hot], now, 2);
+
+    expect(focus.map((lead) => lead.id)).toEqual([hot.id, warm.id]);
+  });
+
+  it("filters pipeline leads by owner, stage, no website, phone presence, and hot score", () => {
+    const tylerHotNoWebsite = createPipelineLead({ ...scrapedLead, id: "google:tyler-hot", score: 91, website: undefined }, "Tyler");
+    const jackHotWithWebsite = createPipelineLead({ ...scrapedLead, id: "google:jack-hot", score: 92 }, "Jack");
+    const tylerWarmNoPhone = createPipelineLead(
+      { ...scrapedLead, id: "google:tyler-warm", score: 70, phone: undefined, website: undefined },
+      "Tyler"
+    );
+
+    expect(
+      filterPipelineLeads([tylerWarmNoPhone, jackHotWithWebsite, tylerHotNoWebsite], {
+        owner: "Tyler",
+        stage: "new_lead",
+        noWebsiteOnly: true,
+        hasPhoneOnly: true,
+        hotScoreOnly: true,
+      }).map((lead) => lead.id)
+    ).toEqual([tylerHotNoWebsite.id]);
   });
 });
