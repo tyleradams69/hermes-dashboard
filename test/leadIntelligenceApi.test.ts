@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { POST } from "../src/app/api/lead-intelligence/route";
+import { GET, PATCH, POST } from "../src/app/api/lead-intelligence/route";
 import type { LeadRecord } from "../src/lib/leadScraper";
 
 const lead: LeadRecord = {
@@ -27,13 +27,15 @@ function request(body: unknown) {
 }
 
 describe("lead intelligence API", () => {
-  it("creates a deterministic draft packet without calling external services", async () => {
+  it("creates and persists a deterministic draft packet without calling external services", async () => {
+    process.env.LEAD_INTELLIGENCE_PACKET_STORE_PATH = `api-create-${Date.now()}`;
     const response = await POST(request({ lead }));
     const data = await response.json();
 
     expect(response.status).toBe(200);
     expect(data.ok).toBe(true);
     expect(data.packet).toMatchObject({
+      id: expect.stringContaining("packet-austin-smile-studio"),
       leadId: "google:no-site",
       company: "Austin Smile Studio",
       status: "draft",
@@ -41,6 +43,31 @@ describe("lead intelligence API", () => {
     });
     expect(data.packet.approvalNote).toContain("Review before using externally");
     expect(JSON.stringify(data)).not.toContain("GOOGLE_PLACES_API_KEY");
+  });
+
+  it("lists saved lead intelligence packets", async () => {
+    process.env.LEAD_INTELLIGENCE_PACKET_STORE_PATH = `api-list-${Date.now()}`;
+    await POST(request({ lead }));
+
+    const response = await GET();
+    const data = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(data.ok).toBe(true);
+    expect(data.packets).toHaveLength(1);
+    expect(data.packets[0].leadId).toBe("google:no-site");
+  });
+
+  it("updates packet status after review", async () => {
+    process.env.LEAD_INTELLIGENCE_PACKET_STORE_PATH = `api-status-${Date.now()}`;
+    await POST(request({ lead }));
+
+    const response = await PATCH(request({ leadId: lead.id, status: "approved" }));
+    const data = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(data.ok).toBe(true);
+    expect(data.packet.status).toBe("approved");
   });
 
   it("rejects missing lead payloads", async () => {

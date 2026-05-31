@@ -3,6 +3,7 @@ import { isWeakWebsiteCandidate, type LeadRecord } from "./leadScraper";
 export type LeadIntelligenceStatus = "draft" | "approved" | "used";
 
 export type LeadIntelligencePacket = {
+  id: string;
   leadId: string;
   company: string;
   status: LeadIntelligenceStatus;
@@ -69,8 +70,19 @@ function outreachHookForLead(lead: LeadRecord) {
   return `Offer ${lead.company} a concise conversion-path review for ${market}: phone handling, form response, booking friction, and follow-up gaps.`;
 }
 
+function createLeadIntelligencePacketId(lead: LeadRecord) {
+  const slug = [lead.company, lead.location]
+    .join("-")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 80);
+  return `packet-${slug || "lead"}-${lead.id.replace(/[^a-zA-Z0-9_-]+/g, "-").slice(0, 48)}`;
+}
+
 export function buildLeadIntelligencePacket(lead: LeadRecord, generatedAt = new Date()): LeadIntelligencePacket {
   return {
+    id: createLeadIntelligencePacketId(lead),
     leadId: lead.id,
     company: lead.company,
     status: "draft",

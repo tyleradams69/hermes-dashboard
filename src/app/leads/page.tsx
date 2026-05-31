@@ -50,6 +50,7 @@ type PipelineResponse = {
 type LeadIntelligenceResponse = {
   ok: boolean;
   packet?: LeadIntelligencePacket;
+  packets?: LeadIntelligencePacket[];
   error?: string;
 };
 
@@ -205,6 +206,23 @@ function buildOutreachDraft(lead: LeadRecord) {
   return `Hey ${lead.company} team — I came across your business while looking at ${lead.niche} opportunities around ${leadMarketLabel(lead.location)}. ${websiteAngle}. Liminull AI helps local businesses capture more calls, form fills, and follow-ups with simple AI intake/booking workflows. Would it be useful if I sent over a short audit with 2-3 places you may be losing leads?`;
 }
 
+function pipelineLeadToLeadRecord(lead: PipelineLead): LeadRecord {
+  return {
+    id: lead.id,
+    company: lead.company,
+    source: lead.source,
+    location: lead.location,
+    niche: lead.niche,
+    size: "local",
+    aiIntent: lead.aiIntent,
+    evidence: lead.evidence,
+    score: lead.score,
+    phone: lead.phone,
+    localPhone: lead.localPhone,
+    website: lead.website,
+  };
+}
+
 export default function LeadsPage() {
   const [form, setForm] = useState(defaultForm);
   const [employee, setEmployee] = useState("Tyler");
@@ -216,6 +234,7 @@ export default function LeadsPage() {
   const [recentRuns, setRecentRuns] = useState<LeadSearchForm[]>([]);
   const [outreachDraft, setOutreachDraft] = useState<OutreachDraft | null>(null);
   const [intelligencePacket, setIntelligencePacket] = useState<LeadIntelligencePacket | null>(null);
+  const [savedIntelligencePackets, setSavedIntelligencePackets] = useState<Record<string, LeadIntelligencePacket>>({});
   const [error, setError] = useState("");
   const [pipelineMessage, setPipelineMessage] = useState("");
 
@@ -313,6 +332,22 @@ export default function LeadsPage() {
     }
   }
 
+  const loadLeadIntelligencePackets = useCallback(async () => {
+    try {
+      const response = await fetch("/api/lead-intelligence", { cache: "no-store" });
+      const data = (await response.json()) as LeadIntelligenceResponse;
+
+      if (!response.ok || !data.ok) {
+        throw new Error(data.error || "Lead intelligence packets could not load");
+      }
+
+      const packetMap = Object.fromEntries((data.packets || []).map((packet) => [packet.leadId, packet]));
+      setSavedIntelligencePackets(packetMap);
+    } catch {
+      // Saved intelligence is an operator convenience; leave the pipeline usable if this fails.
+    }
+  }, []);
+
   const loadPipeline = useCallback(async () => {
     setPipelineLoading(true);
     setPipelineMessage("");
@@ -336,8 +371,9 @@ export default function LeadsPage() {
   useEffect(() => {
     queueMicrotask(() => {
       void loadPipeline();
+      void loadLeadIntelligencePackets();
     });
-  }, [loadPipeline]);
+  }, [loadPipeline, loadLeadIntelligencePackets]);
 
   async function importLead(lead: LeadRecord) {
     setPipelineMessage("");
@@ -425,9 +461,31 @@ export default function LeadsPage() {
       }
 
       setIntelligencePacket(data.packet);
-      setPipelineMessage(`Lead intelligence packet prepared for ${lead.company}. Review before using externally.`);
+      setSavedIntelligencePackets((current) => ({ ...current, [data.packet!.leadId]: data.packet! }));
+      setPipelineMessage(`Lead intelligence packet saved for ${lead.company}. Review before using externally.`);
     } catch (caught) {
       setPipelineMessage(caught instanceof Error ? caught.message : "Lead intelligence failed");
+    }
+  }
+
+  async function updateIntelligenceStatus(packet: LeadIntelligencePacket, status: LeadIntelligencePacket["status"]) {
+    try {
+      const response = await fetch("/api/lead-intelligence", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ leadId: packet.leadId, status }),
+      });
+      const data = (await response.json()) as LeadIntelligenceResponse;
+
+      if (!response.ok || !data.ok || !data.packet) {
+        throw new Error(data.error || "Lead intelligence status update failed");
+      }
+
+      setIntelligencePacket(data.packet);
+      setSavedIntelligencePackets((current) => ({ ...current, [data.packet!.leadId]: data.packet! }));
+      setPipelineMessage(`${data.packet.company} intelligence marked ${status.replaceAll("_", " ")}.`);
+    } catch (caught) {
+      setPipelineMessage(caught instanceof Error ? caught.message : "Lead intelligence status update failed");
     }
   }
 
@@ -817,7 +875,9 @@ export default function LeadsPage() {
                   <div>
                     <p className="text-xs font-black uppercase tracking-[0.16em] text-emerald-100/70">Lead intelligence / review required</p>
                     <h3 className="mt-1 text-sm font-black text-white">{intelligencePacket.company}</h3>
-                    <p className="mt-1 text-xs text-white/45">{intelligencePacket.recommendedOffer}</p>
+                    <p className="mt-1 text-xs text-white/45">
+                      {intelligencePacket.recommendedOffer} · {intelligencePacket.status}
+                    </p>
                   </div>
                   <div className="flex shrink-0 flex-wrap justify-end gap-2">
                     <button
@@ -827,6 +887,24 @@ export default function LeadsPage() {
                     >
                       Copy packet
                     </button>
+                    {intelligencePacket.status !== "approved" && intelligencePacket.status !== "used" && (
+                      <button
+                        type="button"
+                        onClick={() => updateIntelligenceStatus(intelligencePacket, "approved")}
+                        className="rounded-full border border-cyan-300/20 bg-cyan-300/10 px-3 py-1 text-xs font-bold text-cyan-50 hover:border-cyan-300/40"
+                      >
+                        Approve
+                      </button>
+                    )}
+                    {intelligencePacket.status !== "used" && (
+                      <button
+                        type="button"
+                        onClick={() => updateIntelligenceStatus(intelligencePacket, "used")}
+                        className="rounded-full border border-amber-300/20 bg-amber-300/10 px-3 py-1 text-xs font-bold text-amber-50 hover:border-amber-300/40"
+                      >
+                        Mark used
+                      </button>
+                    )}
                     <button
                       type="button"
                       onClick={() => setIntelligencePacket(null)}
@@ -1008,6 +1086,7 @@ export default function LeadsPage() {
 
           {filteredPipelineLeads.map((lead) => {
             const priority = deriveLeadPriority(lead);
+            const savedPacket = savedIntelligencePackets[lead.id];
             return (
               <article key={lead.id} className="rounded-2xl border border-white/5 bg-black/20 p-4">
                 <div className="flex items-start justify-between gap-4">
@@ -1066,6 +1145,36 @@ export default function LeadsPage() {
                     className="min-h-20 rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm normal-case tracking-normal text-white outline-none placeholder:text-white/25"
                   />
                 </label>
+
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => createIntelligencePacket(pipelineLeadToLeadRecord(lead))}
+                    className="rounded-full border border-cyan-300/20 bg-cyan-300/10 px-4 py-2 text-sm font-bold text-cyan-50 transition hover:border-cyan-300/40 hover:bg-cyan-300/15"
+                  >
+                    {savedPacket ? "Regenerate intelligence" : "Save intelligence packet"}
+                  </button>
+                  {savedPacket && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => setIntelligencePacket(savedPacket)}
+                        className="rounded-full border border-white/10 bg-white/[0.03] px-4 py-2 text-sm font-bold text-white/70 transition hover:border-cyan-300/25 hover:text-cyan-50"
+                      >
+                        Open {savedPacket.status}
+                      </button>
+                      {savedPacket.status === "draft" && (
+                        <button
+                          type="button"
+                          onClick={() => updateIntelligenceStatus(savedPacket, "approved")}
+                          className="rounded-full border border-emerald-300/20 bg-emerald-300/10 px-4 py-2 text-sm font-bold text-emerald-50 transition hover:border-emerald-300/40"
+                        >
+                          Approve packet
+                        </button>
+                      )}
+                    </>
+                  )}
+                </div>
 
                 {lead.stage === "closed_won" && (
                   <button

@@ -17,7 +17,8 @@ Data paths:
   - Falls back to in-memory API storage when Supabase is not configured.
   - Browser localStorage remains only as a degraded UI cache if the API history cannot load/save.
 - Pipeline records: `/leads` -> `/api/lead-pipeline` -> `src/lib/leadPipelineSupabase.ts` / `src/lib/leadPipeline.ts`.
-- Lead intelligence packets: `/leads` -> `/api/lead-intelligence` -> `src/lib/leadIntelligence.ts`.
+- Lead intelligence packets: `/leads` -> `/api/lead-intelligence` -> `src/lib/leadIntelligence.ts` / `src/lib/leadIntelligencePacketStore.ts`.
+  - Deterministic packets are saved server-side, shown on pipeline cards, and can be marked `draft`, `approved`, or `used`.
 - Closed-won conversion: `/leads` -> `/api/client-workspaces` -> `src/lib/clientWorkspaceStore.ts`.
 
 ### `/businesses` — client delivery workspace surface
@@ -45,8 +46,9 @@ Optional SQL files live in `docs/supabase/`:
 
 - `client_workspaces.sql` for first-class client delivery workspaces.
 - `lead_search_runs.sql` for durable lead scraper run history.
+- `lead_intelligence_packets.sql` for durable internal lead intelligence packets and review status.
 
-Both tables enable RLS and are accessed by server-side Next.js routes using `SUPABASE_SERVICE_ROLE_KEY`. Do not expose service-role credentials to browser/client code. Add direct user-scoped RLS policies later only if these tables become client-readable outside server routes.
+These tables enable RLS and are accessed by server-side Next.js routes using `SUPABASE_SERVICE_ROLE_KEY`. Do not expose service-role credentials to browser/client code. Add direct user-scoped RLS policies later only if these tables become client-readable outside server routes.
 
 ## Build rules
 
