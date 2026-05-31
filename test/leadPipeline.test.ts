@@ -5,7 +5,9 @@ import {
   deriveLeadPriority,
   filterPipelineLeads,
   importLeadIntoPipeline,
+  isLeadStale,
   normalizeLeadDedupeKey,
+  selectStaleLeadNudges,
   selectTodayFocusLeads,
   updatePipelineLead,
   type LeadPipelineState,
@@ -68,6 +70,10 @@ describe("lead pipeline helpers", () => {
       stage: "contacted",
       notes: "Called owner, asked for demo next week",
       nextAction: "Send demo times",
+      lastTouchedAt: "2026-05-03T12:00:00.000Z",
+      nextFollowUpAt: "2026-05-07T12:00:00.000Z",
+      salesPrepStatus: "ready",
+      prepWorkspaceNotes: "Proposal angle saved",
     });
 
     expect(updated).toMatchObject({
@@ -75,6 +81,8 @@ describe("lead pipeline helpers", () => {
       notes: "Called owner, asked for demo next week",
       nextAction: "Send demo times",
       dedupeKey: "google:place-1",
+      salesPrepStatus: "ready",
+      prepWorkspaceNotes: "Proposal angle saved",
     });
     expect(updated.updatedAt).not.toBe(lead.updatedAt);
   });
@@ -93,6 +101,26 @@ describe("lead pipeline helpers", () => {
       expect.arrayContaining(["high score", "no website", "stale next action"])
     );
     expect(priority.signals).not.toContain("phone available");
+  });
+
+  it("selects stale follow-up nudges from due dates and untouched open leads", () => {
+    const now = new Date("2026-05-10T12:00:00.000Z");
+    const due = {
+      ...createPipelineLead({ ...scrapedLead, id: "google:due" }, "Tyler"),
+      nextFollowUpAt: "2026-05-09T12:00:00.000Z",
+    };
+    const stale = {
+      ...createPipelineLead({ ...scrapedLead, id: "google:stale" }, "Tyler"),
+      lastTouchedAt: "2026-05-01T12:00:00.000Z",
+    };
+    const fresh = {
+      ...createPipelineLead({ ...scrapedLead, id: "google:fresh" }, "Tyler"),
+      lastTouchedAt: "2026-05-10T10:00:00.000Z",
+    };
+
+    expect(isLeadStale(due, now)).toBe(true);
+    expect(isLeadStale(fresh, now)).toBe(false);
+    expect(selectStaleLeadNudges([fresh, stale, due], now).map((lead) => lead.id)).toEqual([stale.id, due.id]);
   });
 
   it("selects today's focus leads sorted by priority and excludes closed leads", () => {

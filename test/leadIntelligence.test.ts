@@ -84,11 +84,15 @@ describe("lead intelligence packets", () => {
     expect(brief.discoveryAgenda).toContain("Confirm current lead sources, response times, and missed-call/form-fill handling.");
     expect(brief.miniAuditOutline.join(" ")).toContain("Google profile is doing too much");
     expect(brief.proposalOutline).toContain("Recommended offer: AI intake automation sprint");
+    expect(brief.recommendedOffer.name).toBe("Website Conversion Audit");
+    expect(brief.recommendedOffer.exclusions).toContain("Full brand identity");
     expect(brief.nextStep).toContain("prep the discovery call");
     expect(copy).toContain("Sales Action Brief: Austin Smile Studio");
     expect(copy).toContain("Discovery agenda:");
     expect(copy).toContain("Mini audit outline:");
     expect(copy).toContain("Proposal outline:");
+    expect(copy).toContain("Recommended package:");
+    expect(copy).toContain("Website Conversion Audit");
     expect(copy).toContain("Internal Liminull prep only");
   });
 

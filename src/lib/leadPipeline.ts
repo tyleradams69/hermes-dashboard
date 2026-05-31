@@ -26,6 +26,10 @@ export type PipelineLead = {
   evidence: string[];
   notes: string;
   nextAction: string;
+  lastTouchedAt?: string;
+  nextFollowUpAt?: string;
+  salesPrepStatus?: "none" | "ready" | "used";
+  prepWorkspaceNotes?: string;
   createdAt: string;
   updatedAt: string;
 };
@@ -112,9 +116,11 @@ export function importLeadIntoPipeline(
   };
 }
 
+export type PipelineLeadMutation = Partial<Pick<PipelineLead, "stage" | "notes" | "nextAction" | "owner" | "lastTouchedAt" | "nextFollowUpAt" | "salesPrepStatus" | "prepWorkspaceNotes">>;
+
 export function updatePipelineLead(
   lead: PipelineLead,
-  patch: Partial<Pick<PipelineLead, "stage" | "notes" | "nextAction" | "owner">>
+  patch: PipelineLeadMutation
 ): PipelineLead {
   const now = new Date().toISOString();
   const updatedAt = now === lead.updatedAt
@@ -127,6 +133,10 @@ export function updatePipelineLead(
     notes: patch.notes ?? lead.notes,
     nextAction: patch.nextAction ?? lead.nextAction,
     owner: patch.owner?.trim() || lead.owner,
+    lastTouchedAt: patch.lastTouchedAt ?? lead.lastTouchedAt,
+    nextFollowUpAt: patch.nextFollowUpAt ?? lead.nextFollowUpAt,
+    salesPrepStatus: patch.salesPrepStatus ?? lead.salesPrepStatus,
+    prepWorkspaceNotes: patch.prepWorkspaceNotes ?? lead.prepWorkspaceNotes,
     updatedAt,
   };
 }
@@ -159,6 +169,14 @@ function isOpenPipelineStage(stage: LeadPipelineStage) {
   return stage !== "closed_won" && stage !== "closed_lost";
 }
 
+export function isLeadStale(lead: PipelineLead, now = new Date(), staleAfterDays = 3) {
+  if (!isOpenPipelineStage(lead.stage)) return false;
+  const dueAt = lead.nextFollowUpAt ? Date.parse(lead.nextFollowUpAt) : NaN;
+  if (!Number.isNaN(dueAt) && dueAt <= now.getTime()) return true;
+  const touchedAt = lead.lastTouchedAt || lead.updatedAt;
+  return daysSince(touchedAt, now) >= staleAfterDays;
+}
+
 export function deriveLeadPriority(lead: PipelineLead, now = new Date()): PipelineLeadPriority {
   const signals: string[] = [];
   let priorityScore = lead.score;
@@ -178,7 +196,7 @@ export function deriveLeadPriority(lead: PipelineLead, now = new Date()): Pipeli
     signals.push("phone available");
   }
 
-  if (daysSince(lead.updatedAt, now) >= 3 && isOpenPipelineStage(lead.stage)) {
+  if (isLeadStale(lead, now)) {
     priorityScore += 12;
     signals.push("stale next action");
   }
@@ -200,6 +218,13 @@ export function selectTodayFocusLeads(leads: PipelineLead[], now = new Date(), l
     .sort((a, b) => b.priority.score - a.priority.score || Date.parse(b.lead.updatedAt) - Date.parse(a.lead.updatedAt))
     .slice(0, limit)
     .map(({ lead }) => lead);
+}
+
+export function selectStaleLeadNudges(leads: PipelineLead[], now = new Date(), limit = 6) {
+  return leads
+    .filter((lead) => isLeadStale(lead, now))
+    .sort((a, b) => Date.parse(a.nextFollowUpAt || a.lastTouchedAt || a.updatedAt) - Date.parse(b.nextFollowUpAt || b.lastTouchedAt || b.updatedAt))
+    .slice(0, limit);
 }
 
 export function filterPipelineLeads(leads: PipelineLead[], filters: PipelineLeadFilters) {

@@ -5,6 +5,7 @@ import {
   type ImportPipelineResult,
   type LeadPipelineStage,
   type PipelineLead,
+  type PipelineLeadMutation,
 } from "./leadPipeline";
 import type { LeadRecord } from "./leadScraper";
 import { readServerEnv } from "./env";
@@ -58,6 +59,20 @@ function normalizeSupabaseUrl(url: string) {
   return url.replace(/\/+$/, "");
 }
 
+function leadMetadata(lead: PipelineLead) {
+  return {
+    lastTouchedAt: lead.lastTouchedAt,
+    nextFollowUpAt: lead.nextFollowUpAt,
+    salesPrepStatus: lead.salesPrepStatus,
+    prepWorkspaceNotes: lead.prepWorkspaceNotes,
+  };
+}
+
+function metadataString(metadata: Record<string, unknown> | null | undefined, key: string) {
+  const value = metadata?.[key];
+  return typeof value === "string" && value.trim() ? value : undefined;
+}
+
 function sourceExternalIdFromDedupeKey(dedupeKey: string) {
   return dedupeKey.startsWith("google:") ? dedupeKey.slice("google:".length) : null;
 }
@@ -80,7 +95,7 @@ export function mapPipelineLeadToSupabaseRow(lead: PipelineLead): Omit<SupabaseL
     notes: lead.notes,
     next_action: lead.nextAction,
     evidence: lead.evidence,
-    metadata: {},
+    metadata: leadMetadata(lead),
   };
 }
 
@@ -102,6 +117,10 @@ export function mapSupabaseRowToPipelineLead(row: SupabaseLeadPipelineRow): Pipe
     evidence: Array.isArray(row.evidence) ? row.evidence : [],
     notes: row.notes || "",
     nextAction: row.next_action || "Qualify and contact decision maker",
+    lastTouchedAt: metadataString(row.metadata, "lastTouchedAt"),
+    nextFollowUpAt: metadataString(row.metadata, "nextFollowUpAt"),
+    salesPrepStatus: metadataString(row.metadata, "salesPrepStatus") as PipelineLead["salesPrepStatus"],
+    prepWorkspaceNotes: metadataString(row.metadata, "prepWorkspaceNotes"),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -164,7 +183,7 @@ export class SupabaseLeadPipelineStore {
 
   async updateLead(
     id: string,
-    patch: Partial<Pick<PipelineLead, "stage" | "notes" | "nextAction" | "owner">>
+    patch: PipelineLeadMutation
   ): Promise<PipelineLead | null> {
     const current = await this.findById(id);
 
@@ -181,6 +200,7 @@ export class SupabaseLeadPipelineStore {
         stage: updated.stage,
         notes: updated.notes,
         next_action: updated.nextAction,
+        metadata: leadMetadata(updated),
       }),
     });
 

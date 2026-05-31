@@ -6,6 +6,7 @@ import {
   type LeadPipelineState,
   type LeadPipelineStage,
   type PipelineLead,
+  type PipelineLeadMutation,
 } from "../../../lib/leadPipeline";
 import {
   getSupabaseLeadPipelineConfig,
@@ -15,12 +16,9 @@ import type { LeadRecord } from "../../../lib/leadScraper";
 
 export const dynamic = "force-dynamic";
 
-type PatchBody = {
+type PatchBody = PipelineLeadMutation & {
   id?: string;
   stage?: LeadPipelineStage;
-  notes?: string;
-  nextAction?: string;
-  owner?: string;
 };
 
 const memoryStores = new Map<string, LeadPipelineState>();
@@ -59,7 +57,7 @@ class FileLeadPipelineStore {
 
   async updateLead(
     id: string,
-    patch: Partial<Pick<PipelineLead, "stage" | "notes" | "nextAction" | "owner">>
+    patch: PipelineLeadMutation
   ): Promise<PipelineLead | null> {
     const state = await readState();
     const index = state.leads.findIndex((lead) => lead.id === id);

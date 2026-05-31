@@ -16,6 +16,15 @@ export type LeadIntelligencePacket = {
   approvalNote: string;
 };
 
+export type LeadRecommendedOffer = {
+  name: string;
+  why: string;
+  included: string[];
+  exclusions: string[];
+  upsell: string;
+  tylerDecision: string;
+};
+
 export type LeadSalesActionBrief = {
   company: string;
   packetStatus: LeadIntelligenceStatus;
@@ -23,6 +32,7 @@ export type LeadSalesActionBrief = {
   discoveryAgenda: string[];
   miniAuditOutline: string[];
   proposalOutline: string[];
+  recommendedOffer: LeadRecommendedOffer;
   nextStep: string;
   reviewNote: string;
 };
@@ -135,6 +145,52 @@ export function formatLeadIntelligencePacketForCopy(packet: LeadIntelligencePack
   ].join("\n");
 }
 
+export function buildLeadRecommendedOffer(packet: LeadIntelligencePacket): LeadRecommendedOffer {
+  const offer = packet.recommendedOffer.toLowerCase();
+
+  if (offer.includes("booking")) {
+    return {
+      name: "Booking Flow Cleanup",
+      why: "The lead likely needs fewer steps between interest and a booked appointment.",
+      included: ["Booking CTA review", "Calendar/intake friction notes", "Reminder and confirmation flow recommendations"],
+      exclusions: ["Paid ads", "Unlimited copy rewrites", "Custom calendar platform rebuilds"],
+      upsell: "Monthly booking optimization and review-response care",
+      tylerDecision: "Decide whether to lead with an audit or a fixed booking sprint.",
+    };
+  }
+
+  if (offer.includes("missed-call") || offer.includes("phone")) {
+    return {
+      name: "Missed Lead / AI Receptionist Setup",
+      why: "The lead likely loses value when calls, forms, or after-hours inquiries wait too long.",
+      included: ["First-response script", "Qualification questions", "Human handoff rules", "Simple logging/reporting plan"],
+      exclusions: ["Autonomous client communication without review", "Deep CRM mutation", "Guaranteed revenue lift"],
+      upsell: "Managed lead response monitoring after setup",
+      tylerDecision: "Pick the safest initial channel: calls, forms, SMS, or booking requests.",
+    };
+  }
+
+  if (packet.websiteNotes.toLowerCase().includes("no full website") || packet.websiteNotes.toLowerCase().includes("profile-style")) {
+    return {
+      name: "Website Conversion Audit",
+      why: "The business may have demand but lacks a controlled, trust-building conversion path.",
+      included: ["Homepage/CTA review", "Mobile trust and intake notes", "Prioritized conversion fixes"],
+      exclusions: ["Full brand identity", "Large content migration", "Ongoing SEO content"],
+      upsell: "Landing Page Sprint or Website Refresh + Monthly Care",
+      tylerDecision: "Decide whether the first offer is audit-only or audit plus selected fixes.",
+    };
+  }
+
+  return {
+    name: "AI Intake Automation Sprint",
+    why: "The strongest next angle is making inquiry capture, qualification, and follow-up more consistent.",
+    included: ["Workflow map", "Intake script", "Follow-up templates", "Human approval gates"],
+    exclusions: ["Fully autonomous sales conversations", "Complex integrations without scoping", "Unlimited revisions"],
+    upsell: "Managed workflow monitoring and monthly improvement pass",
+    tylerDecision: "Confirm the one workflow that would produce the clearest before/after proof.",
+  };
+}
+
 export function buildLeadSalesActionBrief(packet: LeadIntelligencePacket): LeadSalesActionBrief {
   const readyForExternalUse = packet.status === "approved" || packet.status === "used";
 
@@ -160,6 +216,7 @@ export function buildLeadSalesActionBrief(packet: LeadIntelligencePacket): LeadS
       "Sprint: install a focused intake, booking, or missed-call capture workflow with simple reporting.",
       "Proof: compare new inquiry capture, response speed, and booked conversations before/after launch.",
     ],
+    recommendedOffer: buildLeadRecommendedOffer(packet),
     nextStep: readyForExternalUse
       ? "Use this to prep the discovery call, mini audit, or lightweight proposal. Mark the packet used after the asset is sent or the call is complete."
       : "Approve the intelligence packet before sending any client-facing audit, discovery agenda, or proposal language.",
@@ -181,6 +238,16 @@ export function formatLeadSalesActionBriefForCopy(brief: LeadSalesActionBrief) {
     "",
     "Proposal outline:",
     ...brief.proposalOutline.map((item, index) => `${index + 1}. ${item}`),
+    "",
+    "Recommended package:",
+    `Name: ${brief.recommendedOffer.name}`,
+    `Why: ${brief.recommendedOffer.why}`,
+    "Included:",
+    ...brief.recommendedOffer.included.map((item, index) => `${index + 1}. ${item}`),
+    "Exclusions:",
+    ...brief.recommendedOffer.exclusions.map((item, index) => `${index + 1}. ${item}`),
+    `Upsell: ${brief.recommendedOffer.upsell}`,
+    `Tyler decision: ${brief.recommendedOffer.tylerDecision}`,
     "",
     `Next step: ${brief.nextStep}`,
     brief.reviewNote,

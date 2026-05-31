@@ -20,6 +20,7 @@ Data paths:
 - Lead intelligence packets: `/leads` -> `/api/lead-intelligence` -> `src/lib/leadIntelligence.ts` / `src/lib/leadIntelligencePacketStore.ts`.
   - Deterministic packets are saved server-side, shown on pipeline cards, and can be marked `draft`, `approved`, or `used`.
   - Approved packets can generate copy-ready internal sales action briefs: discovery agenda, mini audit outline, and lightweight proposal outline.
+  - `/leads` now surfaces an operator briefing, Sales Prep Queue for approved-but-unused packets, stale follow-up nudges, next follow-up dates, and package recommendations from the Liminull service catalog pattern.
 - Closed-won conversion: `/leads` -> `/api/client-workspaces` -> `src/lib/clientWorkspaceStore.ts`.
 
 ### `/businesses` — client delivery workspace surface

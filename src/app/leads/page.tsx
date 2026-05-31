@@ -6,6 +6,7 @@ import { buildClientWorkspaceFromPipelineLead } from "@/lib/clientWorkspace";
 import {
   deriveLeadPriority,
   filterPipelineLeads,
+  selectStaleLeadNudges,
   selectTodayFocusLeads,
   type PipelineLead,
   type LeadPipelineStage,
@@ -52,6 +53,8 @@ type PipelineResponse = {
   reason?: string;
   error?: string;
 };
+
+type PipelineLeadPatch = Partial<Pick<PipelineLead, "stage" | "notes" | "nextAction" | "owner" | "lastTouchedAt" | "nextFollowUpAt" | "salesPrepStatus" | "prepWorkspaceNotes">>;
 
 type LeadIntelligenceResponse = {
   ok: boolean;
@@ -418,7 +421,7 @@ export default function LeadsPage() {
     }
   }
 
-  async function updatePipelineLead(id: string, patch: Partial<Pick<PipelineLead, "stage" | "notes" | "nextAction">>) {
+  async function updatePipelineLead(id: string, patch: PipelineLeadPatch) {
     setPipelineMessage("");
 
     try {
@@ -491,6 +494,13 @@ export default function LeadsPage() {
       setIntelligencePacket(data.packet);
       setSalesActionBrief((current) => current?.company === data.packet!.company ? buildLeadSalesActionBrief(data.packet!) : current);
       setSavedIntelligencePackets((current) => ({ ...current, [data.packet!.leadId]: data.packet! }));
+      const matchingLead = pipelineLeads.find((lead) => lead.id === data.packet!.leadId);
+      if (matchingLead) {
+        void updatePipelineLead(matchingLead.id, {
+          salesPrepStatus: status === "used" ? "used" : matchingLead.salesPrepStatus,
+          lastTouchedAt: status === "used" ? new Date().toISOString() : matchingLead.lastTouchedAt,
+        });
+      }
       setPipelineMessage(`${data.packet.company} intelligence marked ${status.replaceAll("_", " ")}.`);
     } catch (caught) {
       setPipelineMessage(caught instanceof Error ? caught.message : "Lead intelligence status update failed");
@@ -517,6 +527,14 @@ export default function LeadsPage() {
         ? `${packet.company} sales prep is drafted. Approve the packet before using client-facing copy.`
         : `${packet.company} discovery, audit, and proposal prep is ready.`
     );
+
+    const lead = pipelineLeads.find((item) => item.id === packet.leadId);
+    if (lead) {
+      void updatePipelineLead(lead.id, {
+        salesPrepStatus: packet.status === "used" ? "used" : "ready",
+        prepWorkspaceNotes: brief.proposalOutline.join("\n"),
+      });
+    }
   }
 
   async function copySalesActionBrief(brief: LeadSalesActionBrief) {
@@ -530,13 +548,38 @@ export default function LeadsPage() {
     }
   }
 
+  function followUpDate(days: number) {
+    const date = new Date();
+    date.setDate(date.getDate() + days);
+    return date.toISOString();
+  }
+
+  function markLeadTouched(lead: PipelineLead, nextAction: string, daysUntilFollowUp = 3) {
+    void updatePipelineLead(lead.id, {
+      nextAction,
+      lastTouchedAt: new Date().toISOString(),
+      nextFollowUpAt: followUpDate(daysUntilFollowUp),
+    });
+  }
+
   async function convertLeadToClientWorkspace(lead: PipelineLead) {
     if (lead.stage !== "closed_won") {
       setPipelineMessage("Move the lead to Closed Won before creating a client workspace.");
       return;
     }
 
-    const workspace = buildClientWorkspaceFromPipelineLead(lead);
+    const savedPacket = savedIntelligencePackets[lead.id];
+    const salesBrief = savedPacket ? buildLeadSalesActionBrief(savedPacket) : null;
+    const workspace = buildClientWorkspaceFromPipelineLead({
+      ...lead,
+      niche: salesBrief?.recommendedOffer.name || lead.niche,
+      notes: [
+        lead.notes,
+        savedPacket ? `Approved packet: ${savedPacket.painHypothesis}` : "",
+        salesBrief ? `Proposal outline: ${salesBrief.proposalOutline.join(" | ")}` : "",
+      ].filter(Boolean).join("\n"),
+      nextAction: salesBrief?.nextStep || lead.nextAction,
+    });
 
     try {
       const response = await fetch("/api/client-workspaces", {
@@ -568,6 +611,14 @@ export default function LeadsPage() {
     hotScoreOnly: pipelineFilters.hotScoreOnly,
   });
   const todayFocusLeads = selectTodayFocusLeads(filteredPipelineLeads, new Date(), 3);
+  const salesPrepQueue = Object.values(savedIntelligencePackets)
+    .filter((packet) => packet.status === "approved")
+    .map((packet) => ({ packet, lead: pipelineLeads.find((lead) => lead.id === packet.leadId) }))
+    .filter((item): item is { packet: LeadIntelligencePacket; lead: PipelineLead } => Boolean(item.lead) && item.lead?.salesPrepStatus !== "used")
+    .sort((a, b) => deriveLeadPriority(b.lead).score - deriveLeadPriority(a.lead).score || Date.parse(b.packet.generatedAt) - Date.parse(a.packet.generatedAt))
+    .slice(0, 6);
+  const staleLeadNudges = selectStaleLeadNudges(filteredPipelineLeads, new Date(), 6);
+  const activeClientReadyLeads = pipelineLeads.filter((lead) => lead.stage === "closed_won").length;
 
   return (
     <AppShell
@@ -577,6 +628,31 @@ export default function LeadsPage() {
       description="Find local companies, enrich phone numbers through Google Places, and import unique leads into employee-owned Liminull pipelines."
       businessId="liminull"
     >
+      <div className="mb-5 grid gap-3 lg:grid-cols-4">
+        <div className="liminull-card-soft p-4">
+          <p className="liminull-eyebrow">Operator briefing</p>
+          <h2 className="mt-2 text-xl font-black tracking-[-0.05em] text-white">Today’s revenue cockpit</h2>
+          <p className="mt-2 text-xs leading-5 liminull-muted">
+            Work approved packets first, then stale follow-ups, then new high-fit discovery.
+          </p>
+        </div>
+        <div className="liminull-card-soft p-4">
+          <p className="text-xs font-black uppercase tracking-[0.16em] text-violet-100/60">Sales prep ready</p>
+          <p className="mt-2 text-3xl font-black tracking-[-0.08em] text-white">{salesPrepQueue.length}</p>
+          <p className="mt-1 text-xs liminull-muted">Approved packets not marked used</p>
+        </div>
+        <div className="liminull-card-soft p-4">
+          <p className="text-xs font-black uppercase tracking-[0.16em] text-amber-100/60">Stale nudges</p>
+          <p className="mt-2 text-3xl font-black tracking-[-0.08em] text-white">{staleLeadNudges.length}</p>
+          <p className="mt-1 text-xs liminull-muted">Due or untouched open leads</p>
+        </div>
+        <div className="liminull-card-soft p-4">
+          <p className="text-xs font-black uppercase tracking-[0.16em] text-emerald-100/60">Client handoffs</p>
+          <p className="mt-2 text-3xl font-black tracking-[-0.08em] text-white">{activeClientReadyLeads}</p>
+          <p className="mt-1 text-xs liminull-muted">Closed-won leads ready for delivery OS</p>
+        </div>
+      </div>
+
       <div className="grid items-start gap-5 lg:grid-cols-[0.85fr_1.15fr]">
         <form onSubmit={runSearch} className="liminull-card-soft self-start p-5">
           <div className="flex items-start justify-between gap-4">
@@ -1006,7 +1082,12 @@ export default function LeadsPage() {
                   </div>
                 </div>
 
-                <div className="mt-4 grid gap-3 md:grid-cols-3">
+                <div className="mt-4 grid gap-3 md:grid-cols-4">
+                  <div className="rounded-2xl border border-white/5 bg-black/20 p-3">
+                    <p className="text-[10px] font-black uppercase tracking-[0.16em] text-violet-100/60">Recommended package</p>
+                    <p className="mt-2 text-sm font-black text-white">{salesActionBrief.recommendedOffer.name}</p>
+                    <p className="mt-2 text-xs leading-5 text-violet-50/80">{salesActionBrief.recommendedOffer.why}</p>
+                  </div>
                   <div className="rounded-2xl border border-white/5 bg-black/20 p-3">
                     <p className="text-[10px] font-black uppercase tracking-[0.16em] text-violet-100/60">Discovery agenda</p>
                     <ol className="mt-2 list-decimal space-y-1 pl-4 text-xs leading-5 text-violet-50/85">
@@ -1029,10 +1110,81 @@ export default function LeadsPage() {
 
                 <div className="mt-3 grid gap-2 rounded-2xl border border-white/5 bg-black/20 p-3 text-xs leading-5 text-white/60">
                   <p>{salesActionBrief.nextStep}</p>
+                  <p>{salesActionBrief.recommendedOffer.tylerDecision}</p>
                   <p>{salesActionBrief.reviewNote}</p>
                 </div>
               </div>
             )}
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-5 grid gap-5 lg:grid-cols-[1fr_0.9fr]">
+        <div className="liminull-card-soft p-5">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="liminull-eyebrow">Sales Prep Queue</p>
+              <h2 className="mt-2 text-2xl font-black tracking-[-0.05em] text-white">Approved packets ready to work</h2>
+              <p className="mt-2 text-sm liminull-muted">Copy a sales brief, mark the packet used, or jump back into the source packet.</p>
+            </div>
+            <span className="rounded-full bg-violet-300/10 px-3 py-1 text-xs font-black text-violet-100">{salesPrepQueue.length} ready</span>
+          </div>
+          <div className="mt-4 grid gap-3">
+            {salesPrepQueue.length === 0 ? (
+              <div className="rounded-2xl border border-white/5 bg-black/20 p-4 text-sm liminull-muted">No approved unused packets yet. Approve a lead intelligence packet to queue sales prep here.</div>
+            ) : salesPrepQueue.map(({ packet, lead }) => {
+              const brief = buildLeadSalesActionBrief(packet);
+              return (
+                <article key={packet.id} className="rounded-2xl border border-violet-300/10 bg-violet-300/[0.05] p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <h3 className="truncate text-base font-black text-white">{packet.company}</h3>
+                      <p className="mt-1 text-xs text-white/45">{brief.recommendedOffer.name} · {deriveLeadPriority(lead).tier}</p>
+                    </div>
+                    <span className="rounded-full bg-violet-300/10 px-2.5 py-1 text-[10px] font-black uppercase text-violet-100">approved</span>
+                  </div>
+                  <p className="mt-3 text-xs leading-5 text-violet-50/80">{brief.nextStep}</p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <button type="button" onClick={() => prepareSalesActionBrief(packet)} className="rounded-full border border-violet-300/20 bg-violet-300/10 px-3 py-1.5 text-xs font-bold text-violet-50">Open prep</button>
+                    <button type="button" onClick={() => copySalesActionBrief(brief)} className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5 text-xs font-bold text-white/70">Copy brief</button>
+                    <button type="button" onClick={() => updateIntelligenceStatus(packet, "used")} className="rounded-full border border-amber-300/20 bg-amber-300/10 px-3 py-1.5 text-xs font-bold text-amber-50">Mark used</button>
+                    <button type="button" onClick={() => setIntelligencePacket(packet)} className="rounded-full border border-white/10 px-3 py-1.5 text-xs font-bold text-white/60">Open packet</button>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="liminull-card-soft p-5">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="liminull-eyebrow">Follow-up nudges</p>
+              <h2 className="mt-2 text-2xl font-black tracking-[-0.05em] text-white">Stale lead rescue</h2>
+              <p className="mt-2 text-sm liminull-muted">Keep good leads from becoming database clutter.</p>
+            </div>
+            <span className="rounded-full bg-amber-300/10 px-3 py-1 text-xs font-black text-amber-100">{staleLeadNudges.length} due</span>
+          </div>
+          <div className="mt-4 grid gap-3">
+            {staleLeadNudges.length === 0 ? (
+              <div className="rounded-2xl border border-white/5 bg-black/20 p-4 text-sm liminull-muted">No stale leads under the current filters.</div>
+            ) : staleLeadNudges.map((lead) => (
+              <article key={lead.id} className="rounded-2xl border border-amber-300/10 bg-amber-300/[0.05] p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <h3 className="truncate text-sm font-black text-white">{lead.company}</h3>
+                    <p className="mt-1 text-xs text-white/45">{lead.owner} · {stageLabel(lead.stage)}</p>
+                  </div>
+                  <span className="rounded-full bg-amber-300/10 px-2.5 py-1 text-[10px] font-black uppercase text-amber-100">follow up</span>
+                </div>
+                <p className="mt-2 text-xs leading-5 text-amber-50/80">{lead.nextAction}</p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <button type="button" onClick={() => markLeadTouched(lead, "Follow up sent — wait for response", 4)} className="rounded-full border border-amber-300/20 bg-amber-300/10 px-3 py-1.5 text-xs font-bold text-amber-50">Followed up</button>
+                  <button type="button" onClick={() => updatePipelineLead(lead.id, { stage: "meeting_requested", nextAction: "Prep discovery call agenda", lastTouchedAt: new Date().toISOString(), nextFollowUpAt: followUpDate(1) })} className="rounded-full border border-cyan-300/20 bg-cyan-300/10 px-3 py-1.5 text-xs font-bold text-cyan-50">Discovery booked</button>
+                  <button type="button" onClick={() => updatePipelineLead(lead.id, { stage: "closed_lost", nextAction: "Moved to no-fit/nurture", lastTouchedAt: new Date().toISOString() })} className="rounded-full border border-white/10 px-3 py-1.5 text-xs font-bold text-white/60">No fit</button>
+                </div>
+              </article>
+            ))}
           </div>
         </div>
       </div>
@@ -1203,7 +1355,7 @@ export default function LeadsPage() {
                   )) : <span className="rounded-full bg-white/5 px-2 py-1">watch list</span>}
                 </div>
 
-                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                <div className="mt-4 grid gap-3 sm:grid-cols-3">
                   <label className="grid gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-white/45">
                     Stage
                     <select
@@ -1222,6 +1374,16 @@ export default function LeadsPage() {
                     <input
                       value={lead.nextAction}
                       onChange={(event) => updatePipelineLead(lead.id, { nextAction: event.target.value })}
+                      className="rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm normal-case tracking-normal text-white outline-none"
+                    />
+                  </label>
+
+                  <label className="grid gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-white/45">
+                    Next follow-up
+                    <input
+                      type="date"
+                      value={lead.nextFollowUpAt ? lead.nextFollowUpAt.slice(0, 10) : ""}
+                      onChange={(event) => updatePipelineLead(lead.id, { nextFollowUpAt: event.target.value ? new Date(`${event.target.value}T12:00:00.000Z`).toISOString() : undefined })}
                       className="rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm normal-case tracking-normal text-white outline-none"
                     />
                   </label>
