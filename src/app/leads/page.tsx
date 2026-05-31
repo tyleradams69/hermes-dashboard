@@ -11,7 +11,8 @@ import {
   type LeadPipelineStage,
 } from "@/lib/leadPipeline";
 import { formatLeadIntelligencePacketForCopy, type LeadIntelligencePacket } from "@/lib/leadIntelligence";
-import type { LeadRecord, LeadSourceLink } from "@/lib/leadScraper";
+import type { LeadSearchRun } from "@/lib/leadSearchRunStore";
+import type { LeadRecord, LeadSearchInput, LeadSourceLink } from "@/lib/leadScraper";
 
 type LeadScraperResponse = {
   ok: boolean;
@@ -58,6 +59,13 @@ type ClientWorkspaceResponse = {
   error?: string;
 };
 
+type LeadSearchRunsResponse = {
+  ok: boolean;
+  runs?: LeadSearchRun[];
+  run?: LeadSearchRun;
+  error?: string;
+};
+
 const defaultForm = {
   business: "dentists",
   location: "Austin, TX",
@@ -94,6 +102,45 @@ const leadSearchPresets: LeadSearchPreset[] = [
 ];
 
 const recentRunsStorageKey = "liminull:lead-scraper:recent-runs";
+
+function formToLeadSearchInput(run: LeadSearchForm): LeadSearchInput {
+  return {
+    ...run,
+    distanceMiles: Number(run.distanceMiles) || 15,
+    minRating: Number(run.minRating) || 0,
+    minReviews: Number(run.minReviews) || 0,
+  };
+}
+
+function leadSearchInputToForm(input: LeadSearchInput): LeadSearchForm {
+  return {
+    business: input.business || "businesses",
+    location: input.location || "local",
+    distanceMiles: String(input.distanceMiles || 15),
+    niche: input.niche || "AI automation",
+    onlyWithoutWebsite: Boolean(input.onlyWithoutWebsite),
+    hasPhoneOnly: Boolean(input.hasPhoneOnly),
+    minRating: input.minRating ? String(input.minRating) : "",
+    minReviews: input.minReviews ? String(input.minReviews) : "",
+    weakWebsiteCandidate: Boolean(input.weakWebsiteCandidate),
+  };
+}
+
+function recentRunKey(run: LeadSearchForm) {
+  return [
+    run.business,
+    run.location,
+    run.distanceMiles,
+    run.niche,
+    run.onlyWithoutWebsite ? "no-site" : "all-sites",
+    run.hasPhoneOnly ? "phone" : "any-phone",
+    run.minRating || "0",
+    run.minReviews || "0",
+    run.weakWebsiteCandidate ? "weak" : "any-web",
+  ]
+    .join("::")
+    .toLowerCase();
+}
 
 const pipelineStages: LeadPipelineStage[] = [
   "new_lead",
@@ -173,24 +220,66 @@ export default function LeadsPage() {
   const [pipelineMessage, setPipelineMessage] = useState("");
 
   useEffect(() => {
-    const saved = window.localStorage.getItem(recentRunsStorageKey);
-    if (!saved) return;
+    const loadRecentRuns = async () => {
+      try {
+        const response = await fetch("/api/lead-search-runs", { cache: "no-store" });
+        const data = (await response.json()) as LeadSearchRunsResponse;
 
-    try {
-      const parsed = JSON.parse(saved) as LeadSearchForm[];
-      queueMicrotask(() => setRecentRuns(parsed.slice(0, 5)));
-    } catch {
-      window.localStorage.removeItem(recentRunsStorageKey);
-    }
+        if (!response.ok || !data.ok) {
+          throw new Error(data.error || "Lead search history could not load");
+        }
+
+        const runs = (data.runs || []).map((run) => leadSearchInputToForm(run.input)).slice(0, 5);
+        setRecentRuns(runs);
+        window.localStorage.setItem(recentRunsStorageKey, JSON.stringify(runs));
+      } catch {
+        const saved = window.localStorage.getItem(recentRunsStorageKey);
+        if (!saved) return;
+
+        try {
+          const parsed = JSON.parse(saved) as LeadSearchForm[];
+          setRecentRuns(parsed.slice(0, 5));
+        } catch {
+          window.localStorage.removeItem(recentRunsStorageKey);
+        }
+      }
+    };
+
+    queueMicrotask(() => {
+      void loadRecentRuns();
+    });
   }, []);
 
-  function saveRecentRun(nextRun: LeadSearchForm) {
+  function cacheRecentRun(nextRun: LeadSearchForm) {
     setRecentRuns((current) => {
-      const normalizedKey = (run: LeadSearchForm) => [run.business, run.location, run.niche].join("::").toLowerCase();
-      const next = [nextRun, ...current.filter((run) => normalizedKey(run) !== normalizedKey(nextRun))].slice(0, 5);
+      const next = [nextRun, ...current.filter((run) => recentRunKey(run) !== recentRunKey(nextRun))].slice(0, 5);
       window.localStorage.setItem(recentRunsStorageKey, JSON.stringify(next));
       return next;
     });
+  }
+
+  async function saveRecentRun(nextRun: LeadSearchForm, data: LeadScraperResponse) {
+    cacheRecentRun(nextRun);
+
+    try {
+      const response = await fetch("/api/lead-search-runs", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          input: formToLeadSearchInput(nextRun),
+          resultCount: data.leads?.length || 0,
+          topLeadCompany: data.leads?.[0]?.company,
+          warnings: data.warnings || [],
+        }),
+      });
+      const saved = (await response.json()) as LeadSearchRunsResponse;
+
+      if (response.ok && saved.ok && saved.run) {
+        cacheRecentRun(leadSearchInputToForm(saved.run.input));
+      }
+    } catch {
+      // Local history is already cached; server history is best-effort for degraded local/dev environments.
+    }
   }
 
   function applyPreset(preset: LeadSearchPreset) {
@@ -206,12 +295,7 @@ export default function LeadsPage() {
       const response = await fetch("/api/lead-scraper", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          ...form,
-          distanceMiles: Number(form.distanceMiles),
-          minRating: Number(form.minRating) || 0,
-          minReviews: Number(form.minReviews) || 0,
-        }),
+        body: JSON.stringify(formToLeadSearchInput(form)),
       });
       const data = (await response.json()) as LeadScraperResponse;
 
@@ -220,7 +304,7 @@ export default function LeadsPage() {
       }
 
       setResult(data);
-      saveRecentRun(form);
+      await saveRecentRun(form, data);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Lead scraper request failed");
       setResult(null);

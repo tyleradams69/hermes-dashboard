@@ -3,7 +3,16 @@
 Created: 2026-05-30 19:09 local
 Repo: `/Users/tyler/hermes-dashboard`
 Branch inspected: `main`
-Latest commit inspected: `6fdbd50 Add no-website lead scraper filter`
+Latest commit inspected at plan creation: `6fdbd50 Add no-website lead scraper filter`
+
+## Progress Notes
+
+- Sprint 1 and 2 core work has since shipped: advanced lead scraper filters, richer result cards, lead intelligence packets, and the Pipeline Command Center are present on `/leads`.
+- Client Delivery OS bridge has shipped: closed-won leads can be converted into client workspaces through `/api/client-workspaces` and displayed on `/businesses`.
+- Current Supabase notes are situated in `docs/supabase/`:
+  - `client_workspaces.sql` for first-class client delivery workspace storage.
+  - `lead_search_runs.sql` for durable lead scraper run history.
+- Current module/data-path map lives at `docs/dashboard-map.md`.
 
 ## Goal
 
