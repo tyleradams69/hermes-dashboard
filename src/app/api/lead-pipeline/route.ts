@@ -126,7 +126,6 @@ export async function POST(request: Request) {
       );
     }
 
-    await writeState(result.state);
     return NextResponse.json({ ok: true, lead: result.lead }, { status: 201 });
   } catch (error) {
     console.error("Lead pipeline import failed", error);

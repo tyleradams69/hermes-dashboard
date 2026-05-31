@@ -7,10 +7,22 @@ import {
   buildPlacesTextSearchUrl,
   enrichLeadWithPlaceDetails,
   mapGooglePlaceToLead,
+  normalizeLeadSearchInput,
   rankLead,
 } from "../src/lib/leadScraper";
 
 describe("lead scraper helpers", () => {
+  it("normalizes the no-website search filter", () => {
+    expect(normalizeLeadSearchInput({ business: "clinics", location: "Austin" })).toMatchObject({
+      onlyWithoutWebsite: false,
+    });
+    expect(
+      normalizeLeadSearchInput({ business: "clinics", location: "Austin", onlyWithoutWebsite: true })
+    ).toMatchObject({
+      onlyWithoutWebsite: true,
+    });
+  });
+
   it("builds reusable AI-intent search queries for local business discovery", () => {
     expect(
       buildAiIntentQueries({

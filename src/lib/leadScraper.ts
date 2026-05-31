@@ -5,6 +5,7 @@ export type LeadSearchInput = {
   location: string;
   distanceMiles?: number;
   niche?: string;
+  onlyWithoutWebsite?: boolean;
 };
 
 export type LeadSourceLink = {
@@ -225,5 +226,6 @@ export function normalizeLeadSearchInput(input: Partial<LeadSearchInput>): LeadS
     location: cleanPart(input.location) || "local",
     distanceMiles: Math.max(1, Math.min(100, Number(input.distanceMiles) || 15)),
     niche: cleanPart(input.niche) || "AI automation",
+    onlyWithoutWebsite: Boolean(input.onlyWithoutWebsite),
   };
 }

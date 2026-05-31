@@ -12,6 +12,7 @@ type LeadScraperResponse = {
     location: string;
     distanceMiles: number;
     niche: string;
+    onlyWithoutWebsite?: boolean;
   };
   setup?: {
     googlePlacesConfigured: boolean;
@@ -38,6 +39,7 @@ const defaultForm = {
   location: "Austin, TX",
   distanceMiles: "25",
   niche: "AI intake automation",
+  onlyWithoutWebsite: false,
 };
 
 const pipelineStages: LeadPipelineStage[] = [
@@ -259,6 +261,27 @@ export default function LeadsPage() {
                 />
               </label>
             </div>
+
+            <label className="flex cursor-pointer items-start justify-between gap-4 rounded-2xl border border-white/10 bg-black/20 p-4 text-sm text-white/80 transition hover:border-cyan-300/25 hover:bg-cyan-300/[0.03]">
+              <span>
+                <span className="block font-black text-white">Only scrape businesses without a website</span>
+                <span className="mt-1 block text-xs leading-5 liminull-muted">
+                  Filters enriched Google profiles so businesses with a website attached are hidden.
+                </span>
+              </span>
+              <input
+                type="checkbox"
+                role="switch"
+                aria-label="Only scrape businesses without a website attached to their Google profile"
+                checked={form.onlyWithoutWebsite}
+                onChange={(event) => setForm((current) => ({ ...current, onlyWithoutWebsite: event.target.checked }))}
+                className="peer sr-only"
+              />
+              <span
+                aria-hidden="true"
+                className="relative mt-0.5 h-7 w-12 shrink-0 rounded-full border border-white/10 bg-white/10 transition after:absolute after:left-1 after:top-1 after:h-5 after:w-5 after:rounded-full after:bg-white/80 after:shadow-lg after:shadow-black/30 after:transition peer-checked:border-cyan-300/30 peer-checked:bg-cyan-300/30 peer-checked:after:translate-x-5 peer-checked:after:bg-cyan-100"
+              />
+            </label>
           </div>
 
           {error && (
@@ -312,7 +335,9 @@ export default function LeadsPage() {
                       <h3 className="truncate text-base font-black text-white">{lead.company}</h3>
                       <p className="mt-1 truncate text-xs liminull-muted">{lead.location}</p>
                       <p className="mt-2 text-sm text-cyan-100">{lead.phone || "No phone found"}</p>
-                      {lead.website && <p className="mt-1 truncate text-xs text-white/45">{lead.website}</p>}
+                      <p className="mt-1 truncate text-xs text-white/45">
+                        {lead.website || "No website attached to Google profile"}
+                      </p>
                     </div>
                     <span className="shrink-0 rounded-full bg-cyan-300/10 px-3 py-1 text-sm font-black text-cyan-100">
                       {lead.score}

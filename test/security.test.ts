@@ -127,6 +127,29 @@ describe("dashboard login security", () => {
     expect(response.headers.get("set-cookie") || "").toContain("hermes_dashboard_auth=");
   });
 
+  it("uses the server-only Supabase service role key for login even when anon key is also configured", async () => {
+    process.env.SUPABASE_SERVICE_ROLE_KEY = "server-only-service-role-key";
+
+    const response = await loginPost(
+      jsonRequest(
+        "https://dashboard.example.com/api/login",
+        { email: "employee@liminull.com", password: "correct-password" },
+        { "x-forwarded-for": "203.0.113.15" }
+      )
+    );
+
+    expect(response.status).toBe(200);
+    expect(fetch).toHaveBeenCalledWith(
+      "https://project.supabase.co/auth/v1/token?grant_type=password",
+      expect.objectContaining({ method: "POST" })
+    );
+    const [, options] = vi.mocked(fetch).mock.calls[0];
+    const headers = options?.headers as Headers;
+    expect(headers.get("apikey")).toBe("server-only-service-role-key");
+    expect(headers.get("authorization")).toBe("Bearer server-only-service-role-key");
+    expect(response.headers.get("set-cookie") || "").toContain("hermes_dashboard_auth=");
+  });
+
   it("falls back to configured employee passwords when Supabase Auth is unreachable", async () => {
     process.env.TYLER_DASHBOARD_PASSWORD = "local-tyler-password";
     vi.mocked(fetch).mockRejectedValueOnce(new TypeError("fetch failed"));

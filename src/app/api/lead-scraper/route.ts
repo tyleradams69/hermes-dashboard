@@ -64,7 +64,7 @@ async function fetchGooglePlacesLeads(input: ReturnType<typeof normalizeLeadSear
     };
   }
 
-  const leads = await Promise.all(
+  const enrichedLeads = await Promise.all(
     (data.results || []).slice(0, 12).map(async (place) => {
       const baseLead = mapGooglePlaceToLead(place, input);
       if (!place.place_id) {
@@ -75,6 +75,10 @@ async function fetchGooglePlacesLeads(input: ReturnType<typeof normalizeLeadSear
       return details ? enrichLeadWithPlaceDetails(baseLead, details) : baseLead;
     })
   );
+
+  const leads = input.onlyWithoutWebsite
+    ? enrichedLeads.filter((lead) => !lead.website)
+    : enrichedLeads;
 
   return {
     leads: leads.sort((a, b) => b.score - a.score),

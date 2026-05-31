@@ -33,6 +33,9 @@ describe("lead pipeline API", () => {
   let dir = "";
 
   beforeEach(async () => {
+    delete process.env.SUPABASE_URL;
+    delete process.env.NEXT_PUBLIC_SUPABASE_URL;
+    delete process.env.SUPABASE_SERVICE_ROLE_KEY;
     dir = await mkdtemp(join(tmpdir(), "lead-pipeline-test-"));
     process.env.LEAD_PIPELINE_STORE_PATH = join(dir, "pipeline.json");
   });
@@ -125,6 +128,54 @@ describe("lead pipeline API", () => {
           authorization: "Bearer server-only-service-role-key",
         }),
       })
+    );
+  });
+
+  it("imports through Supabase without writing a local JSON fallback file", async () => {
+    process.env.SUPABASE_URL = "https://liminull.supabase.co";
+    process.env.SUPABASE_SERVICE_ROLE_KEY = "server-only-service-role-key";
+    process.env.LEAD_PIPELINE_STORE_PATH = "/proc/hermes-dashboard-lead-pipeline.json";
+
+    const row = {
+      id: "3bb6cc7f-9f03-4f6f-994d-8a5b2ed3d4ab",
+      dedupe_key: "google:place-1",
+      source: "google_places",
+      company: "Austin Automation Clinic",
+      location: "Austin, TX",
+      niche: "AI intake",
+      ai_intent: "High",
+      phone: "+1 512-555-0110",
+      website: "https://clinic.example.com",
+      score: 94,
+      owner: "Tyler",
+      stage: "new_lead",
+      notes: "",
+      next_action: "Qualify and contact decision maker",
+      evidence: ["4.9 stars from 145 Google reviews"],
+      created_at: "2026-05-20T22:42:51.880Z",
+      updated_at: "2026-05-20T22:42:51.880Z",
+    };
+
+    const fetchMock = vi.fn(async () => {
+      return new Response(JSON.stringify([row]), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const imported = await POST(jsonRequest("POST", { lead, owner: "Tyler" }));
+    const importedJson = await imported.json();
+
+    expect(imported.status).toBe(201);
+    expect(importedJson).toMatchObject({ ok: true, lead: { owner: "Tyler", company: "Austin Automation Clinic" } });
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://liminull.supabase.co/rest/v1/lead_pipeline",
+      expect.objectContaining({ method: "POST" })
+    );
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://liminull.supabase.co/rest/v1/lead_pipeline?select=*&order=created_at.desc",
+      expect.objectContaining({ method: "GET" })
     );
   });
 });

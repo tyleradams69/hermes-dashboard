@@ -31,15 +31,18 @@ type SupabaseTokenResponse = {
 
 function getSupabaseAuthConfig() {
   const url = readServerEnv("SUPABASE_URL") || readServerEnv("NEXT_PUBLIC_SUPABASE_URL");
-  const anonKey = readServerEnv("SUPABASE_ANON_KEY") || readServerEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY");
+  const apiKey =
+    readServerEnv("SUPABASE_SERVICE_ROLE_KEY") ||
+    readServerEnv("SUPABASE_ANON_KEY") ||
+    readServerEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY");
 
-  if (!url || !anonKey) {
+  if (!url || !apiKey) {
     throw new Error("Supabase auth is not configured");
   }
 
   return {
     url: url.replace(/\/+$/, ""),
-    anonKey,
+    apiKey,
   };
 }
 
@@ -77,13 +80,13 @@ function mapSupabaseUser(data: SupabaseTokenResponse["user"]): SupabaseAuthUser 
 }
 
 export async function authenticateSupabaseEmployee(email: string, password: string) {
-  const { url, anonKey } = getSupabaseAuthConfig();
+  const { url, apiKey } = getSupabaseAuthConfig();
   const response = await fetch(`${url}/auth/v1/token?grant_type=password`, {
     method: "POST",
     cache: "no-store",
     headers: new Headers({
-      apikey: anonKey,
-      authorization: `Bearer ${anonKey}`,
+      apikey: apiKey,
+      authorization: `Bearer ${apiKey}`,
       "content-type": "application/json",
     }),
     body: JSON.stringify({ email, password }),
