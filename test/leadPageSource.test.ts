@@ -95,6 +95,17 @@ describe("lead scraper page wiring", () => {
     expect(source).toContain("formatPipelineDate");
   });
 
+  it("keeps lead dashboard pastel surfaces readable with darker text overrides", async () => {
+    const pageSource = await readFile("src/app/leads/page.tsx", "utf8");
+    const cssSource = await readFile("src/app/globals.css", "utf8");
+
+    expect(pageSource).toContain("lead-dashboard-readable");
+    expect(cssSource).toContain(".lead-dashboard-readable [class*=\"text-white\"]");
+    expect(cssSource).toContain("color: #1d1d1f !important;");
+    expect(cssSource).toContain(".lead-dashboard-readable [class*=\"text-cyan-50\"]");
+    expect(cssSource).toContain("background-color: rgba(255,255,255,0.72) !important;");
+  });
+
   it("keeps the admin needs-attention queue and saved views wired to pipeline filters", async () => {
     const source = await readFile("src/app/leads/page.tsx", "utf8");
 

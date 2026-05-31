@@ -397,7 +397,7 @@ function BulkPipelineActions({
         <div className="rounded-2xl border border-white/5 bg-black/20 p-3">
           <p className="text-[10px] font-black uppercase tracking-[0.16em] text-white/40">Selected</p>
           <p className="mt-1 text-2xl font-black tracking-[-0.06em] text-white">{selectedLeadCount}</p>
-          <p className="mt-1 text-xs text-white/45">{selectedHotLeadCount} hot leads eligible for prep generation</p>
+          <p className="mt-1 text-xs text-slate-600">{selectedHotLeadCount} hot leads eligible for prep generation</p>
         </div>
 
         <label className="grid gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-white/45">
@@ -541,7 +541,7 @@ function NeedsAttentionPanel({ items, onCopyQueue, onSelectLead, onMarkWorked, o
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <h3 className="truncate text-sm font-black text-white">{item.lead.company}</h3>
-                <p className="mt-1 text-xs text-white/45">{item.lead.owner} · {stageLabel(item.lead.stage)} · follow-up {formatPipelineDate(item.lead.nextFollowUpAt)}</p>
+                <p className="mt-1 text-xs text-slate-600">{item.lead.owner} · {stageLabel(item.lead.stage)} · follow-up {formatPipelineDate(item.lead.nextFollowUpAt)}</p>
               </div>
               <span className={`rounded-full px-2.5 py-1 text-[10px] font-black uppercase ${item.severity === "critical" ? "bg-rose-300/10 text-rose-100" : item.severity === "warning" ? "bg-amber-300/10 text-amber-100" : "bg-cyan-300/10 text-cyan-100"}`}>
                 {item.severity} · {item.score}
@@ -1321,6 +1321,7 @@ export default function LeadsPage() {
       description="Find local companies, enrich phone numbers through Google Places, and import unique leads into employee-owned Liminull pipelines."
       businessId="liminull"
     >
+      <div className="lead-dashboard-readable">
       <div className="mb-5 grid gap-3 lg:grid-cols-4">
         <div className="liminull-card-soft p-4">
           <p className="liminull-eyebrow">Operator briefing</p>
@@ -1664,31 +1665,31 @@ export default function LeadsPage() {
             </div>
 
             {outreachDraft && (
-              <div className="mt-5 rounded-2xl border border-cyan-300/15 bg-cyan-300/10 p-4">
+              <div className="mt-5 rounded-2xl border border-cyan-300/35 bg-cyan-50/95 p-4 shadow-[0_18px_45px_rgba(14,116,144,0.10)]">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <p className="text-xs font-black uppercase tracking-[0.16em] text-cyan-100/70">Draft copied / review required</p>
-                    <h3 className="mt-1 text-sm font-black text-white">{outreachDraft.company}</h3>
+                    <p className="text-xs font-black uppercase tracking-[0.16em] text-cyan-700">Draft copied / review required</p>
+                    <h3 className="mt-1 text-sm font-black text-slate-950">{outreachDraft.company}</h3>
                   </div>
                   <button
                     type="button"
                     onClick={() => setOutreachDraft(null)}
-                    className="rounded-full border border-white/10 px-3 py-1 text-xs font-bold text-white/60 hover:text-white"
+                    className="rounded-full border border-slate-300/70 bg-white/65 px-3 py-1 text-xs font-bold text-slate-600 hover:text-slate-950"
                   >
                     Clear
                   </button>
                 </div>
-                <p className="mt-3 text-sm leading-6 text-cyan-50">{outreachDraft.text}</p>
+                <p className="mt-3 text-sm leading-6 text-slate-700">{outreachDraft.text}</p>
               </div>
             )}
 
             {intelligencePacket && (
-              <div className="mt-5 rounded-2xl border border-emerald-300/15 bg-emerald-300/10 p-4">
+              <div className="mt-5 rounded-2xl border border-emerald-300/40 bg-emerald-50/95 p-4 shadow-[0_18px_45px_rgba(5,150,105,0.10)]">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <p className="text-xs font-black uppercase tracking-[0.16em] text-emerald-100/70">Lead intelligence / review required</p>
-                    <h3 className="mt-1 text-sm font-black text-white">{intelligencePacket.company}</h3>
-                    <p className="mt-1 text-xs text-white/45">
+                    <p className="text-xs font-black uppercase tracking-[0.16em] text-emerald-700">Lead intelligence / review required</p>
+                    <h3 className="mt-1 text-sm font-black text-slate-950">{intelligencePacket.company}</h3>
+                    <p className="mt-1 text-xs text-slate-600">
                       {intelligencePacket.recommendedOffer} · {intelligencePacket.status}
                     </p>
                   </div>
@@ -1696,7 +1697,7 @@ export default function LeadsPage() {
                     <button
                       type="button"
                       onClick={() => copyIntelligencePacket(intelligencePacket)}
-                      className="rounded-full border border-emerald-300/20 bg-emerald-300/10 px-3 py-1 text-xs font-bold text-emerald-50 hover:border-emerald-300/40"
+                      className="rounded-full border border-emerald-300/55 bg-emerald-100/90 px-3 py-1 text-xs font-bold text-emerald-800 shadow-sm hover:border-emerald-400/70 hover:bg-emerald-200/70"
                     >
                       Copy packet
                     </button>
@@ -1704,7 +1705,7 @@ export default function LeadsPage() {
                       <button
                         type="button"
                         onClick={() => updateIntelligenceStatus(intelligencePacket, "approved")}
-                        className="rounded-full border border-cyan-300/20 bg-cyan-300/10 px-3 py-1 text-xs font-bold text-cyan-50 hover:border-cyan-300/40"
+                        className="rounded-full border border-cyan-300/55 bg-cyan-100/90 px-3 py-1 text-xs font-bold text-cyan-800 shadow-sm hover:border-cyan-400/70 hover:bg-cyan-200/70"
                       >
                         Approve
                       </button>
@@ -1713,7 +1714,7 @@ export default function LeadsPage() {
                       <button
                         type="button"
                         onClick={() => updateIntelligenceStatus(intelligencePacket, "used")}
-                        className="rounded-full border border-amber-300/20 bg-amber-300/10 px-3 py-1 text-xs font-bold text-amber-50 hover:border-amber-300/40"
+                        className="rounded-full border border-amber-300/60 bg-amber-100/90 px-3 py-1 text-xs font-bold text-amber-800 shadow-sm hover:border-amber-400/75 hover:bg-amber-200/70"
                       >
                         Mark used
                       </button>
@@ -1721,42 +1722,42 @@ export default function LeadsPage() {
                     <button
                       type="button"
                       onClick={() => prepareSalesActionBrief(intelligencePacket)}
-                      className="rounded-full border border-violet-300/20 bg-violet-300/10 px-3 py-1 text-xs font-bold text-violet-50 hover:border-violet-300/40"
+                      className="rounded-full border border-violet-300/55 bg-violet-100/90 px-3 py-1 text-xs font-bold text-violet-800 shadow-sm hover:border-violet-400/70 hover:bg-violet-200/70"
                     >
                       Prep sales action
                     </button>
                     <button
                       type="button"
                       onClick={() => setIntelligencePacket(null)}
-                      className="rounded-full border border-white/10 px-3 py-1 text-xs font-bold text-white/60 hover:text-white"
+                      className="rounded-full border border-slate-300/70 bg-white/65 px-3 py-1 text-xs font-bold text-slate-600 hover:text-slate-950"
                     >
                       Clear
                     </button>
                   </div>
                 </div>
 
-                <div className="mt-4 grid gap-3 text-sm leading-6 text-emerald-50/90">
+                <div className="mt-4 grid gap-3 text-sm leading-6 text-slate-700">
                   <div>
-                    <p className="text-[10px] font-black uppercase tracking-[0.16em] text-emerald-100/60">Pain hypothesis</p>
+                    <p className="text-[10px] font-black uppercase tracking-[0.16em] text-emerald-700/80">Pain hypothesis</p>
                     <p className="mt-1">{intelligencePacket.painHypothesis}</p>
                   </div>
                   <div>
-                    <p className="text-[10px] font-black uppercase tracking-[0.16em] text-emerald-100/60">Website notes</p>
+                    <p className="text-[10px] font-black uppercase tracking-[0.16em] text-emerald-700/80">Website notes</p>
                     <p className="mt-1">{intelligencePacket.websiteNotes}</p>
                   </div>
                   <div>
-                    <p className="text-[10px] font-black uppercase tracking-[0.16em] text-emerald-100/60">Outreach hook</p>
+                    <p className="text-[10px] font-black uppercase tracking-[0.16em] text-emerald-700/80">Outreach hook</p>
                     <p className="mt-1">{intelligencePacket.outreachHook}</p>
                   </div>
                   <div>
-                    <p className="text-[10px] font-black uppercase tracking-[0.16em] text-emerald-100/60">Discovery questions</p>
+                    <p className="text-[10px] font-black uppercase tracking-[0.16em] text-emerald-700/80">Discovery questions</p>
                     <ul className="mt-1 list-disc space-y-1 pl-5">
                       {intelligencePacket.discoveryQuestions.map((question) => (
                         <li key={question}>{question}</li>
                       ))}
                     </ul>
                   </div>
-                  <p className="rounded-2xl border border-white/5 bg-black/20 p-3 text-xs text-white/55">
+                  <p className="rounded-2xl border border-emerald-200/70 bg-white/70 p-3 text-xs text-slate-600">
                     {intelligencePacket.approvalNote}
                   </p>
                 </div>
@@ -1769,20 +1770,20 @@ export default function LeadsPage() {
                   <div>
                     <p className="text-xs font-black uppercase tracking-[0.16em] text-violet-100/70">Sales action brief / internal prep</p>
                     <h3 className="mt-1 text-sm font-black text-white">{salesActionBrief.company}</h3>
-                    <p className="mt-1 text-xs text-white/45">{salesActionBrief.readinessLabel}</p>
+                    <p className="mt-1 text-xs text-slate-600">{salesActionBrief.readinessLabel}</p>
                   </div>
                   <div className="flex shrink-0 flex-wrap justify-end gap-2">
                     <button
                       type="button"
                       onClick={() => copySalesActionBrief(salesActionBrief)}
-                      className="rounded-full border border-violet-300/20 bg-violet-300/10 px-3 py-1 text-xs font-bold text-violet-50 hover:border-violet-300/40"
+                      className="rounded-full border border-violet-300/55 bg-violet-100/90 px-3 py-1 text-xs font-bold text-violet-800 shadow-sm hover:border-violet-400/70 hover:bg-violet-200/70"
                     >
                       Copy sales brief
                     </button>
                     <button
                       type="button"
                       onClick={() => setSalesActionBrief(null)}
-                      className="rounded-full border border-white/10 px-3 py-1 text-xs font-bold text-white/60 hover:text-white"
+                      className="rounded-full border border-slate-300/70 bg-white/65 px-3 py-1 text-xs font-bold text-slate-600 hover:text-slate-950"
                     >
                       Clear
                     </button>
@@ -1846,7 +1847,7 @@ export default function LeadsPage() {
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <h3 className="truncate text-base font-black text-white">{packet.company}</h3>
-                      <p className="mt-1 text-xs text-white/45">{brief.recommendedOffer.name} · {deriveLeadPriority(lead).tier}</p>
+                      <p className="mt-1 text-xs text-slate-600">{brief.recommendedOffer.name} · {deriveLeadPriority(lead).tier}</p>
                     </div>
                     <span className="rounded-full bg-violet-300/10 px-2.5 py-1 text-[10px] font-black uppercase text-violet-100">approved</span>
                   </div>
@@ -1880,7 +1881,7 @@ export default function LeadsPage() {
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <h3 className="truncate text-sm font-black text-white">{lead.company}</h3>
-                    <p className="mt-1 text-xs text-white/45">{lead.owner} · {stageLabel(lead.stage)}</p>
+                    <p className="mt-1 text-xs text-slate-600">{lead.owner} · {stageLabel(lead.stage)}</p>
                   </div>
                   <span className="rounded-full bg-amber-300/10 px-2.5 py-1 text-[10px] font-black uppercase text-amber-100">follow up</span>
                 </div>
@@ -1913,7 +1914,7 @@ export default function LeadsPage() {
         </div>
 
         {pipelineMessage && (
-          <div className="mt-4 rounded-2xl border border-cyan-300/15 bg-cyan-300/10 p-4 text-sm text-cyan-50">
+          <div className="mt-4 rounded-2xl border border-cyan-300/35 bg-cyan-50/95 p-4 shadow-[0_18px_45px_rgba(14,116,144,0.10)] text-sm text-cyan-50">
             {pipelineMessage}
           </div>
         )}
@@ -2263,7 +2264,7 @@ export default function LeadsPage() {
                   <button
                     type="button"
                     onClick={() => createIntelligencePacket(pipelineLeadToLeadRecord(lead))}
-                    className="rounded-full border border-cyan-300/20 bg-cyan-300/10 px-4 py-2 text-sm font-bold text-cyan-50 transition hover:border-cyan-300/40 hover:bg-cyan-300/15"
+                    className="rounded-full border border-cyan-300/55 bg-cyan-100/80 px-4 py-2 text-sm font-bold text-cyan-800 transition hover:border-cyan-400/75 hover:bg-cyan-200/70"
                   >
                     {savedPacket ? "Regenerate intelligence" : "Save intelligence packet"}
                   </button>
@@ -2280,7 +2281,7 @@ export default function LeadsPage() {
                         <button
                           type="button"
                           onClick={() => updateIntelligenceStatus(savedPacket, "approved")}
-                          className="rounded-full border border-emerald-300/20 bg-emerald-300/10 px-4 py-2 text-sm font-bold text-emerald-50 transition hover:border-emerald-300/40"
+                          className="rounded-full border border-emerald-300/55 bg-emerald-100/80 px-4 py-2 text-sm font-bold text-emerald-800 transition hover:border-emerald-400/75 hover:bg-emerald-200/70"
                         >
                           Approve packet
                         </button>
@@ -2288,7 +2289,7 @@ export default function LeadsPage() {
                       <button
                         type="button"
                         onClick={() => prepareSalesActionBrief(savedPacket)}
-                        className="rounded-full border border-violet-300/20 bg-violet-300/10 px-4 py-2 text-sm font-bold text-violet-50 transition hover:border-violet-300/40"
+                        className="rounded-full border border-violet-300/55 bg-violet-100/80 px-4 py-2 text-sm font-bold text-violet-800 transition hover:border-violet-400/75 hover:bg-violet-200/70"
                       >
                         Prep sales action
                       </button>
@@ -2300,7 +2301,7 @@ export default function LeadsPage() {
                   <button
                     type="button"
                     onClick={() => convertLeadToClientWorkspace(lead)}
-                    className="mt-3 rounded-full border border-emerald-300/20 bg-emerald-300/10 px-4 py-2 text-sm font-bold text-emerald-50 transition hover:border-emerald-300/40 hover:bg-emerald-300/15"
+                    className="mt-3 rounded-full border border-emerald-300/55 bg-emerald-100/80 px-4 py-2 text-sm font-bold text-emerald-800 transition hover:border-emerald-400/75 hover:bg-emerald-200/70"
                   >
                     Convert to client workspace
                   </button>
@@ -2346,6 +2347,7 @@ export default function LeadsPage() {
           </div>
         </div>
       )}
+      </div>
     </AppShell>
   );
 }
