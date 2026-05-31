@@ -14,10 +14,19 @@ create table if not exists public.client_workspaces (
   location text not null,
   next_deliverable text not null,
   asset_checklist text[] not null default '{}',
+  asset_checklist_completed text[] not null default '{}',
+  launch_status text not null default 'not_started' check (launch_status in ('not_started', 'access_needed', 'in_progress', 'ready_to_launch', 'launched')),
   internal_notes text not null default '',
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table public.client_workspaces
+  add column if not exists asset_checklist_completed text[] not null default '{}';
+
+alter table public.client_workspaces
+  add column if not exists launch_status text not null default 'not_started'
+  check (launch_status in ('not_started', 'access_needed', 'in_progress', 'ready_to_launch', 'launched'));
 
 create index if not exists client_workspaces_updated_at_idx
   on public.client_workspaces (updated_at desc);

@@ -64,6 +64,39 @@ describe("client workspaces API", () => {
     });
   });
 
+  it("updates editable delivery workspace fields through the same API", async () => {
+    const workspace = buildClientWorkspaceFromPipelineLead(
+      { ...createPipelineLead(scrapedLead, "Tyler"), stage: "closed_won" },
+      new Date("2026-05-20T22:42:51.880Z")
+    );
+
+    await POST(jsonRequest("POST", { workspace }));
+    const updated = await POST(
+      jsonRequest("POST", {
+        workspace: {
+          ...workspace,
+          phase: "build",
+          launchStatus: "in_progress",
+          assetChecklistCompleted: [workspace.assetChecklist[0]],
+          nextDeliverable: "Build intake automation draft",
+          internalNotes: "Kickoff complete, waiting on booking access.",
+        },
+      })
+    );
+
+    expect(updated.status).toBe(201);
+    expect(await updated.json()).toMatchObject({
+      ok: true,
+      workspace: {
+        sourceLeadId: "google:place-1:tyler",
+        phase: "build",
+        launchStatus: "in_progress",
+        assetChecklistCompleted: [workspace.assetChecklist[0]],
+        nextDeliverable: "Build intake automation draft",
+      },
+    });
+  });
+
   it("rejects invalid workspace payloads", async () => {
     const response = await POST(jsonRequest("POST", { workspace: { name: "Missing fields" } }));
     expect(response.status).toBe(400);

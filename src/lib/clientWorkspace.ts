@@ -3,6 +3,7 @@ import type { PipelineLead } from "./leadPipeline";
 export const clientWorkspacesStorageKey = "liminull:client-delivery:workspaces";
 
 export type ClientWorkspacePhase = "handoff" | "build" | "review" | "launched";
+export type ClientWorkspaceLaunchStatus = "not_started" | "access_needed" | "in_progress" | "ready_to_launch" | "launched";
 
 export type ClientWorkspace = {
   id: string;
@@ -16,6 +17,8 @@ export type ClientWorkspace = {
   location: string;
   nextDeliverable: string;
   assetChecklist: string[];
+  assetChecklistCompleted?: string[];
+  launchStatus?: ClientWorkspaceLaunchStatus;
   internalNotes: string;
   createdAt: string;
   updatedAt: string;
@@ -72,6 +75,8 @@ export function buildClientWorkspaceFromPipelineLead(lead: PipelineLead, created
     location: lead.location,
     nextDeliverable: defaultNextDeliverable(lead),
     assetChecklist: assetChecklistForLead(lead),
+    assetChecklistCompleted: [],
+    launchStatus: "not_started",
     internalNotes: lead.notes || `Converted from ${lead.stage} pipeline lead.`,
     createdAt: timestamp,
     updatedAt: timestamp,
@@ -88,9 +93,13 @@ export function formatClientHandoffSummary(workspace: ClientWorkspace) {
     workspace.website ? `Website: ${workspace.website}` : "Website: needs setup/review",
     workspace.phone ? `Phone: ${workspace.phone}` : "Phone: not captured yet",
     `Next deliverable: ${workspace.nextDeliverable}`,
+    `Launch status: ${workspace.launchStatus || "not_started"}`,
     "",
     "Asset checklist:",
-    ...workspace.assetChecklist.map((item, index) => `${index + 1}. ${item}`),
+    ...workspace.assetChecklist.map((item, index) => {
+      const checked = workspace.assetChecklistCompleted?.includes(item) ? "x" : " ";
+      return `${index + 1}. [${checked}] ${item}`;
+    }),
     "",
     "Internal notes:",
     workspace.internalNotes,

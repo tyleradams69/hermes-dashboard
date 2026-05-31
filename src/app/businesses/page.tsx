@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import AppShell from "@/components/AppShell";
-import { formatClientHandoffSummary, type ClientWorkspace } from "@/lib/clientWorkspace";
+import { formatClientHandoffSummary, type ClientWorkspace, type ClientWorkspaceLaunchStatus, type ClientWorkspacePhase } from "@/lib/clientWorkspace";
 import { getClientNotesKey } from "@/lib/pilotWorkspace";
 
 const API_URL = "/api/hermes";
@@ -18,14 +18,32 @@ type BusinessWorkspace = {
 type ClientWorkspaceResponse = {
   ok: boolean;
   workspaces?: ClientWorkspace[];
+  workspace?: ClientWorkspace;
   error?: string;
 };
+
+const clientWorkspacePhases: ClientWorkspacePhase[] = ["handoff", "build", "review", "launched"];
+const launchStatuses: ClientWorkspaceLaunchStatus[] = ["not_started", "access_needed", "in_progress", "ready_to_launch", "launched"];
+
+function labelize(value: string) {
+  return value.replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function normalizeClientWorkspace(workspace: ClientWorkspace): ClientWorkspace {
+  return {
+    ...workspace,
+    assetChecklistCompleted: workspace.assetChecklistCompleted || [],
+    launchStatus: workspace.launchStatus || "not_started",
+  };
+}
 
 export default function BusinessesPage() {
   const [businesses, setBusinesses] = useState<BusinessWorkspace[]>([]);
   const [clientWorkspaces, setClientWorkspaces] = useState<ClientWorkspace[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
+  const [workspaceMessage, setWorkspaceMessage] = useState("");
+  const [savingWorkspaceId, setSavingWorkspaceId] = useState("");
   const [clientNotes, setClientNotes] = useState<Record<string, string>>({});
 
   async function load() {
@@ -37,7 +55,7 @@ export default function BusinessesPage() {
         throw new Error(workspaceData.error || "Delivery workspaces could not load");
       }
 
-      setClientWorkspaces(workspaceData.workspaces || []);
+      setClientWorkspaces((workspaceData.workspaces || []).map(normalizeClientWorkspace));
     } catch {
       setClientWorkspaces([]);
     }
@@ -75,6 +93,49 @@ export default function BusinessesPage() {
       void load();
     });
   }, []);
+
+  function updateClientWorkspaceDraft(workspaceId: string, patch: Partial<ClientWorkspace>) {
+    setClientWorkspaces((current) =>
+      current.map((workspace) => (workspace.id === workspaceId ? normalizeClientWorkspace({ ...workspace, ...patch }) : workspace))
+    );
+  }
+
+  async function saveClientWorkspace(workspace: ClientWorkspace) {
+    setSavingWorkspaceId(workspace.id);
+    setWorkspaceMessage("");
+
+    try {
+      const response = await fetch("/api/client-workspaces", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ workspace: normalizeClientWorkspace(workspace) }),
+      });
+      const data = (await response.json()) as ClientWorkspaceResponse;
+
+      if (!response.ok || !data.ok || !data.workspace) {
+        throw new Error(data.error || "Client workspace could not be saved");
+      }
+
+      setClientWorkspaces((current) =>
+        current.map((item) => (item.id === workspace.id ? normalizeClientWorkspace(data.workspace as ClientWorkspace) : item))
+      );
+      setWorkspaceMessage(`${workspace.name} delivery workspace saved.`);
+    } catch (error) {
+      setWorkspaceMessage(error instanceof Error ? error.message : "Client workspace could not be saved");
+    } finally {
+      setSavingWorkspaceId("");
+    }
+  }
+
+  function toggleChecklistItem(workspace: ClientWorkspace, item: string) {
+    const completed = new Set(workspace.assetChecklistCompleted || []);
+    if (completed.has(item)) {
+      completed.delete(item);
+    } else {
+      completed.add(item);
+    }
+    updateClientWorkspaceDraft(workspace.id, { assetChecklistCompleted: Array.from(completed) });
+  }
 
   function saveClientNote(businessId: string, note: string) {
     setClientNotes((current) => ({ ...current, [businessId]: note }));
@@ -135,10 +196,10 @@ export default function BusinessesPage() {
         <div className="mb-8 liminull-card-soft p-5">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <p className="liminull-eyebrow">Lead-to-client handoff</p>
+              <p className="liminull-eyebrow">Client Delivery OS</p>
               <h2 className="mt-2 text-2xl font-black tracking-[-0.05em] text-white">Delivery workspaces</h2>
               <p className="mt-2 text-sm liminull-muted">
-                Closed-won pipeline leads converted into internal delivery handoff workspaces. Saved through the client workspace API with Supabase durability when configured.
+                Closed-won pipeline leads converted into editable internal delivery workspaces. Update phase, launch status, assets, notes, and next deliverables here.
               </p>
             </div>
             <span className="rounded-full bg-emerald-300/10 px-3 py-1 text-xs font-black text-emerald-100">
@@ -146,38 +207,126 @@ export default function BusinessesPage() {
             </span>
           </div>
 
-          <div className="mt-5 grid gap-3 lg:grid-cols-2">
-            {clientWorkspaces.map((workspace) => (
-              <article key={workspace.id} className="rounded-2xl border border-emerald-300/10 bg-emerald-300/[0.04] p-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <h3 className="truncate text-lg font-black text-white">{workspace.name}</h3>
-                    <p className="mt-1 text-xs liminull-muted">{workspace.owner} · {workspace.location}</p>
-                  </div>
-                  <span className="rounded-full bg-emerald-300/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-emerald-100">
-                    {workspace.phase}
-                  </span>
-                </div>
+          {workspaceMessage && (
+            <div className="mt-4 rounded-2xl border border-emerald-300/10 bg-emerald-300/[0.06] p-3 text-sm text-emerald-50">
+              {workspaceMessage}
+            </div>
+          )}
 
-                <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                  <div className="rounded-xl border border-white/5 bg-black/20 p-3">
+          <div className="mt-5 grid gap-3 lg:grid-cols-2">
+            {clientWorkspaces.map((workspace) => {
+              const completedCount = workspace.assetChecklistCompleted?.length || 0;
+              return (
+                <article key={workspace.id} className="rounded-2xl border border-emerald-300/10 bg-emerald-300/[0.04] p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <h3 className="truncate text-lg font-black text-white">{workspace.name}</h3>
+                      <p className="mt-1 text-xs liminull-muted">{workspace.owner} · {workspace.location}</p>
+                    </div>
+                    <span className="rounded-full bg-emerald-300/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-emerald-100">
+                      {labelize(workspace.phase)}
+                    </span>
+                  </div>
+
+                  <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                    <label className="grid gap-2 text-xs font-black uppercase tracking-[0.14em] text-white/45">
+                      Phase
+                      <select
+                        value={workspace.phase}
+                        onChange={(event) => updateClientWorkspaceDraft(workspace.id, { phase: event.target.value as ClientWorkspacePhase })}
+                        className="rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm normal-case tracking-normal text-white outline-none focus:border-emerald-300/40"
+                      >
+                        {clientWorkspacePhases.map((phase) => (
+                          <option key={phase} value={phase}>{labelize(phase)}</option>
+                        ))}
+                      </select>
+                    </label>
+
+                    <label className="grid gap-2 text-xs font-black uppercase tracking-[0.14em] text-white/45">
+                      Launch status
+                      <select
+                        value={workspace.launchStatus || "not_started"}
+                        onChange={(event) => updateClientWorkspaceDraft(workspace.id, { launchStatus: event.target.value as ClientWorkspaceLaunchStatus })}
+                        className="rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm normal-case tracking-normal text-white outline-none focus:border-emerald-300/40"
+                      >
+                        {launchStatuses.map((status) => (
+                          <option key={status} value={status}>{labelize(status)}</option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
+
+                  <div className="mt-4 rounded-xl border border-white/5 bg-black/20 p-3">
                     <p className="text-[10px] uppercase tracking-[0.18em] text-white/30">Package</p>
                     <p className="mt-2 text-sm font-black text-emerald-50">{workspace.packageFit}</p>
                   </div>
-                  <div className="rounded-xl border border-white/5 bg-black/20 p-3">
-                    <p className="text-[10px] uppercase tracking-[0.18em] text-white/30">Next deliverable</p>
-                    <p className="mt-2 text-sm font-black text-emerald-50">{workspace.nextDeliverable}</p>
-                  </div>
-                </div>
 
-                <details className="mt-4 rounded-xl border border-white/5 bg-black/20 p-3 text-sm text-white/70">
-                  <summary className="cursor-pointer text-xs font-black uppercase tracking-[0.16em] text-emerald-100/70">
-                    Handoff summary
-                  </summary>
-                  <pre className="mt-3 whitespace-pre-wrap text-xs leading-5 text-white/60">{formatClientHandoffSummary(workspace)}</pre>
-                </details>
-              </article>
-            ))}
+                  <label className="mt-4 grid gap-2 text-xs font-black uppercase tracking-[0.14em] text-white/45">
+                    Next deliverable
+                    <input
+                      value={workspace.nextDeliverable}
+                      onChange={(event) => updateClientWorkspaceDraft(workspace.id, { nextDeliverable: event.target.value })}
+                      className="rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm normal-case tracking-normal text-white outline-none placeholder:text-white/25 focus:border-emerald-300/40"
+                    />
+                  </label>
+
+                  <div className="mt-4 rounded-xl border border-white/5 bg-black/20 p-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-[10px] uppercase tracking-[0.18em] text-white/30">Asset checklist</p>
+                      <span className="text-[10px] font-black uppercase tracking-[0.14em] text-emerald-100/60">
+                        {completedCount}/{workspace.assetChecklist.length} complete
+                      </span>
+                    </div>
+                    <div className="mt-3 grid gap-2">
+                      {workspace.assetChecklist.map((item) => (
+                        <label key={item} className="flex cursor-pointer items-start gap-3 rounded-lg border border-white/5 bg-white/[0.02] p-2 text-xs text-white/70">
+                          <input
+                            type="checkbox"
+                            checked={workspace.assetChecklistCompleted?.includes(item) || false}
+                            onChange={() => toggleChecklistItem(workspace, item)}
+                            className="mt-0.5 h-4 w-4 accent-emerald-300"
+                          />
+                          <span>{item}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  <label className="mt-4 grid gap-2 text-xs font-black uppercase tracking-[0.14em] text-white/45">
+                    Internal delivery notes
+                    <textarea
+                      value={workspace.internalNotes}
+                      onChange={(event) => updateClientWorkspaceDraft(workspace.id, { internalNotes: event.target.value })}
+                      placeholder="Delivery blockers, access status, kickoff notes, launch details..."
+                      className="min-h-24 rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm normal-case leading-5 tracking-normal text-white outline-none placeholder:text-white/25 focus:border-emerald-300/40"
+                    />
+                  </label>
+
+                  <div className="mt-4 flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => saveClientWorkspace(workspace)}
+                      disabled={savingWorkspaceId === workspace.id}
+                      className="liminull-button px-4 py-2 text-sm disabled:opacity-60"
+                    >
+                      {savingWorkspaceId === workspace.id ? "Saving..." : "Save delivery workspace"}
+                    </button>
+                    {workspace.website && (
+                      <a href={workspace.website} target="_blank" rel="noreferrer" className="rounded-full border border-white/10 bg-white/[0.03] px-4 py-2 text-sm font-bold text-white/70 transition hover:border-emerald-300/25 hover:text-emerald-50">
+                        Open website
+                      </a>
+                    )}
+                  </div>
+
+                  <details className="mt-4 rounded-xl border border-white/5 bg-black/20 p-3 text-sm text-white/70">
+                    <summary className="cursor-pointer text-xs font-black uppercase tracking-[0.16em] text-emerald-100/70">
+                      Client-safe handoff summary
+                    </summary>
+                    <pre className="mt-3 whitespace-pre-wrap text-xs leading-5 text-white/60">{formatClientHandoffSummary(workspace)}</pre>
+                  </details>
+                </article>
+              );
+            })}
           </div>
         </div>
       )}

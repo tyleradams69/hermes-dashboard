@@ -48,6 +48,8 @@ describe("client workspace store", () => {
       location: "10 Congress Ave, Austin, TX",
       next_deliverable: "Collect brand, access, intake, and workflow assets for delivery kickoff",
       asset_checklist: expect.arrayContaining(["Current intake/contact form details"]),
+      asset_checklist_completed: [],
+      launch_status: "not_started",
     });
   });
 
@@ -65,6 +67,8 @@ describe("client workspace store", () => {
         location: "Austin, TX",
         next_deliverable: "Kickoff",
         asset_checklist: ["Domain access"],
+        asset_checklist_completed: ["Domain access"],
+        launch_status: "in_progress",
         internal_notes: "Converted from pipeline",
         created_at: "2026-05-20T22:42:51.880Z",
         updated_at: "2026-05-20T22:45:51.880Z",
@@ -75,6 +79,8 @@ describe("client workspace store", () => {
       packageFit: "AI intake",
       nextDeliverable: "Kickoff",
       assetChecklist: ["Domain access"],
+      assetChecklistCompleted: ["Domain access"],
+      launchStatus: "in_progress",
       updatedAt: "2026-05-20T22:45:51.880Z",
     });
   });

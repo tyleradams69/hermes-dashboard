@@ -27,6 +27,7 @@ Purpose: show closed-won pipeline leads after they become internal delivery hand
 Data paths:
 
 - Client delivery workspaces: `/businesses` -> `/api/client-workspaces` -> `src/lib/clientWorkspaceStore.ts`.
+- Editable delivery fields on `/businesses`: phase, launch status, next deliverable, internal notes, and completed asset checklist items.
 - Dedicated table option: `docs/supabase/client_workspaces.sql`.
 - Fallback when the dedicated table is absent: `lead_pipeline.metadata.clientWorkspace`.
 

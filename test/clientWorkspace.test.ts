@@ -35,6 +35,8 @@ describe("client workspace conversion", () => {
       sourceLeadId: pipelineLead.id,
       name: "Austin Smile Studio",
       phase: "handoff",
+      launchStatus: "not_started",
+      assetChecklistCompleted: [],
       packageFit: "AI intake automation",
       owner: "Tyler",
       nextDeliverable: "Collect intake form and booking workflow assets",
@@ -59,6 +61,7 @@ describe("client workspace conversion", () => {
     expect(summary).toContain("Phase: handoff");
     expect(summary).toContain("Package/offer: AI intake automation");
     expect(summary).toContain("Next deliverable: Collect intake form and booking workflow assets");
+    expect(summary).toContain("Launch status: not_started");
     expect(summary).toContain("Asset checklist:");
   });
 });

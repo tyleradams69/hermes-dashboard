@@ -18,6 +18,8 @@ export type ClientWorkspaceRow = {
   location: string;
   next_deliverable: string;
   asset_checklist: string[];
+  asset_checklist_completed?: string[] | null;
+  launch_status?: ClientWorkspace["launchStatus"] | null;
   internal_notes: string;
   created_at: string;
   updated_at: string;
@@ -42,7 +44,11 @@ function normalizeSupabaseUrl(url: string) {
 }
 
 function cloneWorkspace(workspace: ClientWorkspace): ClientWorkspace {
-  return { ...workspace, assetChecklist: [...workspace.assetChecklist] };
+  return {
+    ...workspace,
+    assetChecklist: [...workspace.assetChecklist],
+    assetChecklistCompleted: [...(workspace.assetChecklistCompleted || [])],
+  };
 }
 
 function cloneWorkspaces(workspaces: ClientWorkspace[]) {
@@ -77,6 +83,8 @@ export function mapClientWorkspaceToRow(workspace: ClientWorkspace): Omit<Client
     location: workspace.location,
     next_deliverable: workspace.nextDeliverable,
     asset_checklist: workspace.assetChecklist,
+    asset_checklist_completed: workspace.assetChecklistCompleted || [],
+    launch_status: workspace.launchStatus || "not_started",
     internal_notes: workspace.internalNotes,
   };
 }
@@ -94,6 +102,8 @@ export function mapRowToClientWorkspace(row: ClientWorkspaceRow): ClientWorkspac
     location: row.location,
     nextDeliverable: row.next_deliverable,
     assetChecklist: Array.isArray(row.asset_checklist) ? row.asset_checklist : [],
+    assetChecklistCompleted: Array.isArray(row.asset_checklist_completed) ? row.asset_checklist_completed : [],
+    launchStatus: row.launch_status || "not_started",
     internalNotes: row.internal_notes || "",
     createdAt: row.created_at,
     updatedAt: row.updated_at,
