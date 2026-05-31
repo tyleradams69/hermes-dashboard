@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import AppShell from "@/components/AppShell";
-import { clientWorkspacesStorageKey, formatClientHandoffSummary, type ClientWorkspace } from "@/lib/clientWorkspace";
+import { formatClientHandoffSummary, type ClientWorkspace } from "@/lib/clientWorkspace";
 import { getClientNotesKey } from "@/lib/pilotWorkspace";
 
 const API_URL = "/api/hermes";
@@ -15,6 +15,12 @@ type BusinessWorkspace = {
   status?: string;
 };
 
+type ClientWorkspaceResponse = {
+  ok: boolean;
+  workspaces?: ClientWorkspace[];
+  error?: string;
+};
+
 export default function BusinessesPage() {
   const [businesses, setBusinesses] = useState<BusinessWorkspace[]>([]);
   const [clientWorkspaces, setClientWorkspaces] = useState<ClientWorkspace[]>([]);
@@ -24,11 +30,15 @@ export default function BusinessesPage() {
 
   async function load() {
     try {
-      const savedWorkspaces = window.localStorage.getItem(clientWorkspacesStorageKey);
-      const localWorkspaces = savedWorkspaces ? (JSON.parse(savedWorkspaces) as ClientWorkspace[]) : [];
-      setClientWorkspaces(localWorkspaces);
+      const workspaceRes = await fetch("/api/client-workspaces", { cache: "no-store" });
+      const workspaceData = (await workspaceRes.json()) as ClientWorkspaceResponse;
+
+      if (!workspaceRes.ok || !workspaceData.ok) {
+        throw new Error(workspaceData.error || "Delivery workspaces could not load");
+      }
+
+      setClientWorkspaces(workspaceData.workspaces || []);
     } catch {
-      window.localStorage.removeItem(clientWorkspacesStorageKey);
       setClientWorkspaces([]);
     }
 
@@ -128,7 +138,7 @@ export default function BusinessesPage() {
               <p className="liminull-eyebrow">Lead-to-client handoff</p>
               <h2 className="mt-2 text-2xl font-black tracking-[-0.05em] text-white">Delivery workspaces</h2>
               <p className="mt-2 text-sm liminull-muted">
-                Closed-won pipeline leads converted into internal delivery handoff seeds. Saved locally until durable client storage is added.
+                Closed-won pipeline leads converted into internal delivery handoff workspaces. Saved through the client workspace API with Supabase durability when configured.
               </p>
             </div>
             <span className="rounded-full bg-emerald-300/10 px-3 py-1 text-xs font-black text-emerald-100">

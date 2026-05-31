@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import AppShell from "@/components/AppShell";
-import { buildClientWorkspaceFromPipelineLead, clientWorkspacesStorageKey, type ClientWorkspace } from "@/lib/clientWorkspace";
+import { buildClientWorkspaceFromPipelineLead } from "@/lib/clientWorkspace";
 import {
   deriveLeadPriority,
   filterPipelineLeads,
@@ -49,6 +49,12 @@ type PipelineResponse = {
 type LeadIntelligenceResponse = {
   ok: boolean;
   packet?: LeadIntelligencePacket;
+  error?: string;
+};
+
+type ClientWorkspaceResponse = {
+  ok: boolean;
+  workspace?: ReturnType<typeof buildClientWorkspaceFromPipelineLead>;
   error?: string;
 };
 
@@ -352,26 +358,30 @@ export default function LeadsPage() {
     }
   }
 
-  function convertLeadToClientWorkspace(lead: PipelineLead) {
+  async function convertLeadToClientWorkspace(lead: PipelineLead) {
     if (lead.stage !== "closed_won") {
       setPipelineMessage("Move the lead to Closed Won before creating a client workspace.");
       return;
     }
 
     const workspace = buildClientWorkspaceFromPipelineLead(lead);
-    let existing: ClientWorkspace[] = [];
 
     try {
-      const saved = window.localStorage.getItem(clientWorkspacesStorageKey);
-      existing = saved ? (JSON.parse(saved) as ClientWorkspace[]) : [];
-    } catch {
-      window.localStorage.removeItem(clientWorkspacesStorageKey);
+      const response = await fetch("/api/client-workspaces", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ workspace }),
+      });
+      const data = (await response.json()) as ClientWorkspaceResponse;
+
+      if (!response.ok || !data.ok) {
+        throw new Error(data.error || "Client workspace could not be saved");
+      }
+
+      setPipelineMessage(`${lead.company} converted into a durable client delivery workspace. Open Clients to continue handoff.`);
+    } catch (caught) {
+      setPipelineMessage(caught instanceof Error ? caught.message : "Client workspace could not be saved");
     }
-
-    const next = [workspace, ...existing.filter((item) => item.sourceLeadId !== lead.id)];
-
-    window.localStorage.setItem(clientWorkspacesStorageKey, JSON.stringify(next));
-    setPipelineMessage(`${lead.company} converted into a client delivery workspace. Open Clients to continue handoff.`);
   }
 
   const leads = result?.leads || [];
