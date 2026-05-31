@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
 import AppShell from "@/components/AppShell";
 import { buildClientWorkspaceFromPipelineLead } from "@/lib/clientWorkspace";
 import {
@@ -247,6 +247,31 @@ export default function LeadsPage() {
   const [savedIntelligencePackets, setSavedIntelligencePackets] = useState<Record<string, LeadIntelligencePacket>>({});
   const [error, setError] = useState("");
   const [pipelineMessage, setPipelineMessage] = useState("");
+  const discoveryPanelRef = useRef<HTMLFormElement>(null);
+  const [discoveryPanelHeight, setDiscoveryPanelHeight] = useState<number | null>(null);
+  const discoveryPanelHeightStyle = discoveryPanelHeight
+    ? ({ "--lead-discovery-panel-height": `${discoveryPanelHeight}px` } as CSSProperties)
+    : undefined;
+
+  useEffect(() => {
+    const panel = discoveryPanelRef.current;
+    if (!panel) return;
+
+    const syncPanelHeight = () => {
+      setDiscoveryPanelHeight(Math.ceil(panel.getBoundingClientRect().height));
+    };
+
+    syncPanelHeight();
+
+    const resizeObserver = new ResizeObserver(syncPanelHeight);
+    resizeObserver.observe(panel);
+    window.addEventListener("resize", syncPanelHeight);
+
+    return () => {
+      resizeObserver.disconnect();
+      window.removeEventListener("resize", syncPanelHeight);
+    };
+  }, []);
 
   useEffect(() => {
     const loadRecentRuns = async () => {
@@ -653,8 +678,8 @@ export default function LeadsPage() {
         </div>
       </div>
 
-      <div className="grid items-start gap-5 lg:grid-cols-[0.85fr_1.15fr]">
-        <form onSubmit={runSearch} className="liminull-card-soft self-start p-5">
+      <div className="grid items-start gap-5 lg:grid-cols-[0.85fr_1.15fr] lg:items-stretch">
+        <form ref={discoveryPanelRef} onSubmit={runSearch} className="liminull-card-soft self-start p-5">
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="liminull-eyebrow">Search inputs</p>
@@ -850,8 +875,11 @@ export default function LeadsPage() {
           </button>
         </form>
 
-        <div className="grid min-w-0 gap-5 self-start">
-          <div className="liminull-card-soft self-start p-5">
+        <div
+          className="grid min-w-0 gap-5 self-start lg:h-[var(--lead-discovery-panel-height)] lg:max-h-[var(--lead-discovery-panel-height)] lg:min-h-0 lg:self-stretch"
+          style={discoveryPanelHeightStyle}
+        >
+          <div className="liminull-card-soft self-start p-5 lg:flex lg:h-full lg:min-h-0 lg:flex-col lg:self-stretch lg:overflow-hidden">
             <div className="flex items-center justify-between gap-4">
               <div>
                 <p className="liminull-eyebrow">Google Places leads</p>
@@ -870,7 +898,7 @@ export default function LeadsPage() {
               </div>
             ))}
 
-            <div className="mt-5 grid max-h-[620px] gap-3 overflow-y-auto pr-1">
+            <div className="mt-5 grid max-h-[620px] gap-3 overflow-y-auto pr-1 lg:h-0 lg:max-h-none lg:min-h-0 lg:flex-1">
               {!result && (
                 <div className="rounded-2xl border border-white/5 bg-black/20 p-5 text-sm liminull-muted">
                   Run a search to populate scored Google Places leads and platform discovery links.

@@ -2,7 +2,15 @@
 
 import { useEffect, useState } from "react";
 import AppShell from "@/components/AppShell";
-import { formatClientHandoffSummary, type ClientWorkspace, type ClientWorkspaceLaunchStatus, type ClientWorkspacePhase } from "@/lib/clientWorkspace";
+import {
+  deriveClientWorkspaceReadiness,
+  formatClientDeliveryActionPlan,
+  formatClientHandoffSummary,
+  selectDeliveryFocusWorkspaces,
+  type ClientWorkspace,
+  type ClientWorkspaceLaunchStatus,
+  type ClientWorkspacePhase,
+} from "@/lib/clientWorkspace";
 import { getClientNotesKey } from "@/lib/pilotWorkspace";
 
 const API_URL = "/api/hermes";
@@ -44,6 +52,7 @@ export default function BusinessesPage() {
   const [loadError, setLoadError] = useState("");
   const [workspaceMessage, setWorkspaceMessage] = useState("");
   const [savingWorkspaceId, setSavingWorkspaceId] = useState("");
+  const [copiedWorkspaceId, setCopiedWorkspaceId] = useState("");
   const [clientNotes, setClientNotes] = useState<Record<string, string>>({});
 
   async function load() {
@@ -142,6 +151,18 @@ export default function BusinessesPage() {
     window.localStorage.setItem(getClientNotesKey(businessId), note);
   }
 
+  async function copyWorkspaceText(workspace: ClientWorkspace, text: string, label: string) {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedWorkspaceId(`${workspace.id}:${label}`);
+      setWorkspaceMessage(`${workspace.name} ${label} copied.`);
+    } catch {
+      setWorkspaceMessage("Copy failed. Open the summary and copy the text manually.");
+    }
+  }
+
+  const deliveryFocusWorkspaces = selectDeliveryFocusWorkspaces(clientWorkspaces);
+
   return (
     <AppShell
       active="clients"
@@ -196,6 +217,51 @@ export default function BusinessesPage() {
         <div className="mb-8 liminull-card-soft p-5">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
+              <p className="liminull-eyebrow">Delivery Focus Queue</p>
+              <h2 className="mt-2 text-2xl font-black tracking-[-0.05em] text-white">What needs delivery attention next</h2>
+              <p className="mt-2 text-sm liminull-muted">
+                Prioritized from launch blockers, asset readiness, current phase, and final QA status so client work does not stall after close-won conversion.
+              </p>
+            </div>
+            <span className="rounded-full bg-cyan-300/10 px-3 py-1 text-xs font-black text-cyan-100">
+              {deliveryFocusWorkspaces.length} active focus items
+            </span>
+          </div>
+
+          <div className="mt-5 grid gap-3 lg:grid-cols-2">
+            {deliveryFocusWorkspaces.map(({ workspace, readiness }) => (
+              <article key={workspace.id} className="rounded-2xl border border-cyan-300/10 bg-cyan-300/[0.04] p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-black text-white">{workspace.name}</p>
+                    <p className="mt-1 text-xs liminull-muted">{workspace.owner} · {labelize(workspace.phase)} · {labelize(readiness.tier)}</p>
+                  </div>
+                  <span className="rounded-full bg-cyan-300/10 px-3 py-1 text-xs font-black text-cyan-100">
+                    {readiness.score}% ready
+                  </span>
+                </div>
+
+                <p className="mt-3 text-sm leading-6 text-white/70">{readiness.nextStep}</p>
+
+                {readiness.blockers.length > 0 && (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {readiness.blockers.map((blocker) => (
+                      <span key={blocker} className="rounded-full border border-amber-300/10 bg-amber-300/[0.08] px-3 py-1 text-[10px] font-black uppercase tracking-[0.12em] text-amber-100/80">
+                        {blocker}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </article>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {clientWorkspaces.length > 0 && (
+        <div className="mb-8 liminull-card-soft p-5">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
               <p className="liminull-eyebrow">Client Delivery OS</p>
               <h2 className="mt-2 text-2xl font-black tracking-[-0.05em] text-white">Delivery workspaces</h2>
               <p className="mt-2 text-sm liminull-muted">
@@ -216,6 +282,9 @@ export default function BusinessesPage() {
           <div className="mt-5 grid gap-3 lg:grid-cols-2">
             {clientWorkspaces.map((workspace) => {
               const completedCount = workspace.assetChecklistCompleted?.length || 0;
+              const readiness = deriveClientWorkspaceReadiness(workspace);
+              const handoffSummary = formatClientHandoffSummary(workspace);
+              const actionPlan = formatClientDeliveryActionPlan(workspace);
               return (
                 <article key={workspace.id} className="rounded-2xl border border-emerald-300/10 bg-emerald-300/[0.04] p-4">
                   <div className="flex items-start justify-between gap-3">
@@ -259,6 +328,37 @@ export default function BusinessesPage() {
                   <div className="mt-4 rounded-xl border border-white/5 bg-black/20 p-3">
                     <p className="text-[10px] uppercase tracking-[0.18em] text-white/30">Package</p>
                     <p className="mt-2 text-sm font-black text-emerald-50">{workspace.packageFit}</p>
+                  </div>
+
+                  <div className="mt-4 rounded-xl border border-white/5 bg-black/20 p-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-[10px] uppercase tracking-[0.18em] text-white/30">Delivery readiness</p>
+                      <span className="rounded-full bg-emerald-300/10 px-2 py-1 text-[10px] font-black uppercase tracking-[0.12em] text-emerald-100/70">
+                        {labelize(readiness.tier)}
+                      </span>
+                    </div>
+                    <p className="mt-2 text-2xl font-black text-emerald-50">{readiness.score}%</p>
+                    <p className="mt-2 text-xs leading-5 text-white/55">{readiness.nextStep}</p>
+                  </div>
+
+                  <div className="mt-4 rounded-xl border border-white/5 bg-black/20 p-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-[10px] uppercase tracking-[0.18em] text-white/30">Delivery action plan</p>
+                      <button
+                        type="button"
+                        onClick={() => copyWorkspaceText(workspace, actionPlan, "action plan")}
+                        className="rounded-full border border-emerald-300/10 bg-emerald-300/[0.06] px-3 py-1 text-[10px] font-black uppercase tracking-[0.12em] text-emerald-100 transition hover:border-emerald-300/30"
+                      >
+                        {copiedWorkspaceId === `${workspace.id}:action plan` ? "Copied" : "Copy plan"}
+                      </button>
+                    </div>
+                    <div className="mt-3 grid gap-2 text-xs leading-5 text-white/60">
+                      <p><span className="font-black text-white/75">Next:</span> {readiness.nextStep}</p>
+                      <p><span className="font-black text-white/75">Deliverable:</span> {workspace.nextDeliverable || "Set the next delivery milestone"}</p>
+                      {readiness.blockers.length > 0 && (
+                        <p><span className="font-black text-amber-100/80">Blocked by:</span> {readiness.blockers.join(", ")}</p>
+                      )}
+                    </div>
                   </div>
 
                   <label className="mt-4 grid gap-2 text-xs font-black uppercase tracking-[0.14em] text-white/45">
@@ -322,7 +422,23 @@ export default function BusinessesPage() {
                     <summary className="cursor-pointer text-xs font-black uppercase tracking-[0.16em] text-emerald-100/70">
                       Client-safe handoff summary
                     </summary>
-                    <pre className="mt-3 whitespace-pre-wrap text-xs leading-5 text-white/60">{formatClientHandoffSummary(workspace)}</pre>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={() => copyWorkspaceText(workspace, handoffSummary, "handoff summary")}
+                        className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5 text-xs font-bold text-white/70 transition hover:border-emerald-300/25 hover:text-emerald-50"
+                      >
+                        {copiedWorkspaceId === `${workspace.id}:handoff summary` ? "Copied handoff" : "Copy handoff"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => copyWorkspaceText(workspace, actionPlan, "action plan")}
+                        className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5 text-xs font-bold text-white/70 transition hover:border-emerald-300/25 hover:text-emerald-50"
+                      >
+                        {copiedWorkspaceId === `${workspace.id}:action plan` ? "Copied plan" : "Copy action plan"}
+                      </button>
+                    </div>
+                    <pre className="mt-3 whitespace-pre-wrap text-xs leading-5 text-white/60">{handoffSummary}</pre>
                   </details>
                 </article>
               );
