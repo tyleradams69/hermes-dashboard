@@ -6,6 +6,10 @@ export type LeadSearchInput = {
   distanceMiles?: number;
   niche?: string;
   onlyWithoutWebsite?: boolean;
+  hasPhoneOnly?: boolean;
+  minRating?: number;
+  minReviews?: number;
+  weakWebsiteCandidate?: boolean;
 };
 
 export type LeadSourceLink = {
@@ -176,6 +180,34 @@ export function rankLead(lead: Omit<LeadRecord, "score"> | LeadRecord) {
   return Math.min(100, score);
 }
 
+export function isWeakWebsiteCandidate(lead: Pick<LeadRecord, "website">) {
+  if (!lead.website) return true;
+
+  try {
+    const host = new URL(lead.website).hostname.toLowerCase();
+    return [
+      "business.site",
+      "facebook.com",
+      "instagram.com",
+      "godaddysites.com",
+      "wixsite.com",
+      "weebly.com",
+      "sites.google.com",
+    ].some((weakHost) => host === weakHost || host.endsWith(`.${weakHost}`));
+  } catch {
+    return false;
+  }
+}
+
+export function leadMatchesSearchFilters(lead: LeadRecord, input: LeadSearchInput) {
+  if (input.onlyWithoutWebsite && lead.website) return false;
+  if (input.hasPhoneOnly && !lead.phone) return false;
+  if (input.minRating && (!lead.rating || lead.rating < input.minRating)) return false;
+  if (input.minReviews && (!lead.reviewCount || lead.reviewCount < input.minReviews)) return false;
+  if (input.weakWebsiteCandidate && !isWeakWebsiteCandidate(lead)) return false;
+  return true;
+}
+
 export function mapGooglePlaceToLead(
   place: GooglePlace,
   context: Pick<LeadSearchInput, "niche" | "location">
@@ -227,5 +259,9 @@ export function normalizeLeadSearchInput(input: Partial<LeadSearchInput>): LeadS
     distanceMiles: Math.max(1, Math.min(100, Number(input.distanceMiles) || 15)),
     niche: cleanPart(input.niche) || "AI automation",
     onlyWithoutWebsite: Boolean(input.onlyWithoutWebsite),
+    hasPhoneOnly: Boolean(input.hasPhoneOnly),
+    minRating: Math.max(0, Math.min(5, Number(input.minRating) || 0)),
+    minReviews: Math.max(0, Math.min(10000, Math.round(Number(input.minReviews) || 0))),
+    weakWebsiteCandidate: Boolean(input.weakWebsiteCandidate),
   };
 }

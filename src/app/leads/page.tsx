@@ -2,7 +2,15 @@
 
 import { useCallback, useEffect, useState } from "react";
 import AppShell from "@/components/AppShell";
-import type { PipelineLead, LeadPipelineStage } from "@/lib/leadPipeline";
+import { buildClientWorkspaceFromPipelineLead, clientWorkspacesStorageKey, type ClientWorkspace } from "@/lib/clientWorkspace";
+import {
+  deriveLeadPriority,
+  filterPipelineLeads,
+  selectTodayFocusLeads,
+  type PipelineLead,
+  type LeadPipelineStage,
+} from "@/lib/leadPipeline";
+import { formatLeadIntelligencePacketForCopy, type LeadIntelligencePacket } from "@/lib/leadIntelligence";
 import type { LeadRecord, LeadSourceLink } from "@/lib/leadScraper";
 
 type LeadScraperResponse = {
@@ -13,6 +21,10 @@ type LeadScraperResponse = {
     distanceMiles: number;
     niche: string;
     onlyWithoutWebsite?: boolean;
+    hasPhoneOnly?: boolean;
+    minRating?: number;
+    minReviews?: number;
+    weakWebsiteCandidate?: boolean;
   };
   setup?: {
     googlePlacesConfigured: boolean;
@@ -34,13 +46,48 @@ type PipelineResponse = {
   error?: string;
 };
 
+type LeadIntelligenceResponse = {
+  ok: boolean;
+  packet?: LeadIntelligencePacket;
+  error?: string;
+};
+
 const defaultForm = {
   business: "dentists",
   location: "Austin, TX",
   distanceMiles: "25",
   niche: "AI intake automation",
   onlyWithoutWebsite: false,
+  hasPhoneOnly: false,
+  minRating: "",
+  minReviews: "",
+  weakWebsiteCandidate: false,
 };
+
+type LeadSearchForm = typeof defaultForm;
+
+type LeadSearchPreset = {
+  label: string;
+  business: string;
+  niche: string;
+};
+
+type OutreachDraft = {
+  company: string;
+  text: string;
+};
+
+const leadSearchPresets: LeadSearchPreset[] = [
+  { label: "Dentists", business: "dentists", niche: "AI intake automation" },
+  { label: "Med spas", business: "med spas", niche: "AI booking and follow-up" },
+  { label: "HVAC", business: "HVAC companies", niche: "AI missed-call capture" },
+  { label: "Law firms", business: "law firms", niche: "AI intake automation" },
+  { label: "Auto detailers", business: "auto detailers", niche: "AI booking automation" },
+  { label: "Local gyms", business: "local gyms", niche: "AI lead follow-up" },
+  { label: "Cafes", business: "restaurants and cafes", niche: "AI phone ordering" },
+];
+
+const recentRunsStorageKey = "liminull:lead-scraper:recent-runs";
 
 const pipelineStages: LeadPipelineStage[] = [
   "new_lead",
@@ -52,8 +99,57 @@ const pipelineStages: LeadPipelineStage[] = [
   "closed_lost",
 ];
 
+const defaultPipelineFilters = {
+  owner: "all",
+  stage: "all" as LeadPipelineStage | "all",
+  noWebsiteOnly: false,
+  hasPhoneOnly: false,
+  hotScoreOnly: false,
+};
+
+type PipelineFilters = typeof defaultPipelineFilters;
+
 function stageLabel(stage: string) {
   return stage.replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function isWeakWebsiteLead(lead: LeadRecord) {
+  if (!lead.website) return true;
+
+  try {
+    const host = new URL(lead.website).hostname.toLowerCase();
+    return ["business.site", "facebook.com", "instagram.com", "godaddysites.com", "wixsite.com", "weebly.com", "sites.google.com"].some(
+      (weakHost) => host === weakHost || host.endsWith(`.${weakHost}`)
+    );
+  } catch {
+    return false;
+  }
+}
+
+function buildLeadFitSummary(lead: LeadRecord) {
+  const signals = [
+    lead.phone ? "phone available" : "phone missing",
+    lead.website ? (isWeakWebsiteLead(lead) ? "weak website signal" : "website present") : "no website attached",
+    lead.rating ? `${lead.rating}★` : "no rating",
+    `${lead.reviewCount || 0} reviews`,
+  ];
+
+  return signals.join(" · ");
+}
+
+function leadMarketLabel(location: string) {
+  const cityStateMatch = location.match(/,\s*([^,]+,\s*[A-Z]{2})(?:\s+\d{5})?/);
+  return cityStateMatch?.[1] || location;
+}
+
+function buildOutreachDraft(lead: LeadRecord) {
+  const websiteAngle = lead.website
+    ? isWeakWebsiteLead(lead)
+      ? "It looks like your current web presence may be limited by a platform/profile page"
+      : "It looks like your site and intake flow may still have room to capture more inquiries"
+    : "I couldn't find a full website attached to your Google profile";
+
+  return `Hey ${lead.company} team — I came across your business while looking at ${lead.niche} opportunities around ${leadMarketLabel(lead.location)}. ${websiteAngle}. Liminull AI helps local businesses capture more calls, form fills, and follow-ups with simple AI intake/booking workflows. Would it be useful if I sent over a short audit with 2-3 places you may be losing leads?`;
 }
 
 export default function LeadsPage() {
@@ -63,8 +159,37 @@ export default function LeadsPage() {
   const [pipelineLoading, setPipelineLoading] = useState(false);
   const [result, setResult] = useState<LeadScraperResponse | null>(null);
   const [pipelineLeads, setPipelineLeads] = useState<PipelineLead[]>([]);
+  const [pipelineFilters, setPipelineFilters] = useState<PipelineFilters>(defaultPipelineFilters);
+  const [recentRuns, setRecentRuns] = useState<LeadSearchForm[]>([]);
+  const [outreachDraft, setOutreachDraft] = useState<OutreachDraft | null>(null);
+  const [intelligencePacket, setIntelligencePacket] = useState<LeadIntelligencePacket | null>(null);
   const [error, setError] = useState("");
   const [pipelineMessage, setPipelineMessage] = useState("");
+
+  useEffect(() => {
+    const saved = window.localStorage.getItem(recentRunsStorageKey);
+    if (!saved) return;
+
+    try {
+      const parsed = JSON.parse(saved) as LeadSearchForm[];
+      queueMicrotask(() => setRecentRuns(parsed.slice(0, 5)));
+    } catch {
+      window.localStorage.removeItem(recentRunsStorageKey);
+    }
+  }, []);
+
+  function saveRecentRun(nextRun: LeadSearchForm) {
+    setRecentRuns((current) => {
+      const normalizedKey = (run: LeadSearchForm) => [run.business, run.location, run.niche].join("::").toLowerCase();
+      const next = [nextRun, ...current.filter((run) => normalizedKey(run) !== normalizedKey(nextRun))].slice(0, 5);
+      window.localStorage.setItem(recentRunsStorageKey, JSON.stringify(next));
+      return next;
+    });
+  }
+
+  function applyPreset(preset: LeadSearchPreset) {
+    setForm((current) => ({ ...current, business: preset.business, niche: preset.niche }));
+  }
 
   async function runSearch(event: React.FormEvent) {
     event.preventDefault();
@@ -78,6 +203,8 @@ export default function LeadsPage() {
         body: JSON.stringify({
           ...form,
           distanceMiles: Number(form.distanceMiles),
+          minRating: Number(form.minRating) || 0,
+          minReviews: Number(form.minReviews) || 0,
         }),
       });
       const data = (await response.json()) as LeadScraperResponse;
@@ -87,6 +214,7 @@ export default function LeadsPage() {
       }
 
       setResult(data);
+      saveRecentRun(form);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Lead scraper request failed");
       setResult(null);
@@ -178,9 +306,86 @@ export default function LeadsPage() {
     }
   }
 
+  async function createOutreachDraft(lead: LeadRecord) {
+    const text = buildOutreachDraft(lead);
+    setOutreachDraft({ company: lead.company, text });
+    setPipelineMessage(`Outreach draft prepared for ${lead.company}. Review before using it externally.`);
+
+    try {
+      await navigator.clipboard.writeText(text);
+      setPipelineMessage(`Outreach draft copied for ${lead.company}. Review before sending.`);
+    } catch {
+      // Clipboard access can be blocked outside secure browser contexts; the visible draft still gives Tyler the copy.
+    }
+  }
+
+  async function createIntelligencePacket(lead: LeadRecord) {
+    setPipelineMessage("");
+
+    try {
+      const response = await fetch("/api/lead-intelligence", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ lead }),
+      });
+      const data = (await response.json()) as LeadIntelligenceResponse;
+
+      if (!response.ok || !data.ok || !data.packet) {
+        throw new Error(data.error || "Lead intelligence failed");
+      }
+
+      setIntelligencePacket(data.packet);
+      setPipelineMessage(`Lead intelligence packet prepared for ${lead.company}. Review before using externally.`);
+    } catch (caught) {
+      setPipelineMessage(caught instanceof Error ? caught.message : "Lead intelligence failed");
+    }
+  }
+
+  async function copyIntelligencePacket(packet: LeadIntelligencePacket) {
+    const text = formatLeadIntelligencePacketForCopy(packet);
+
+    try {
+      await navigator.clipboard.writeText(text);
+      setPipelineMessage(`Lead intelligence packet copied for ${packet.company}. Review before using externally.`);
+    } catch {
+      setPipelineMessage("Clipboard access was blocked. The packet is still visible for manual copy/review.");
+    }
+  }
+
+  function convertLeadToClientWorkspace(lead: PipelineLead) {
+    if (lead.stage !== "closed_won") {
+      setPipelineMessage("Move the lead to Closed Won before creating a client workspace.");
+      return;
+    }
+
+    const workspace = buildClientWorkspaceFromPipelineLead(lead);
+    let existing: ClientWorkspace[] = [];
+
+    try {
+      const saved = window.localStorage.getItem(clientWorkspacesStorageKey);
+      existing = saved ? (JSON.parse(saved) as ClientWorkspace[]) : [];
+    } catch {
+      window.localStorage.removeItem(clientWorkspacesStorageKey);
+    }
+
+    const next = [workspace, ...existing.filter((item) => item.sourceLeadId !== lead.id)];
+
+    window.localStorage.setItem(clientWorkspacesStorageKey, JSON.stringify(next));
+    setPipelineMessage(`${lead.company} converted into a client delivery workspace. Open Clients to continue handoff.`);
+  }
+
   const leads = result?.leads || [];
   const sourceLinks = result?.sourceLinks || [];
   const queries = result?.queries || [];
+  const pipelineOwners = Array.from(new Set(pipelineLeads.map((lead) => lead.owner))).sort((a, b) => a.localeCompare(b));
+  const filteredPipelineLeads = filterPipelineLeads(pipelineLeads, {
+    owner: pipelineFilters.owner === "all" ? undefined : pipelineFilters.owner,
+    stage: pipelineFilters.stage,
+    noWebsiteOnly: pipelineFilters.noWebsiteOnly,
+    hasPhoneOnly: pipelineFilters.hasPhoneOnly,
+    hotScoreOnly: pipelineFilters.hotScoreOnly,
+  });
+  const todayFocusLeads = selectTodayFocusLeads(filteredPipelineLeads, new Date(), 3);
 
   return (
     <AppShell
@@ -208,6 +413,41 @@ export default function LeadsPage() {
           </div>
 
           <div className="mt-6 grid gap-4">
+            <div className="grid gap-2">
+              <p className="text-xs font-black uppercase tracking-[0.16em] text-white/45">Niche presets</p>
+              <div className="flex flex-wrap gap-2">
+                {leadSearchPresets.map((preset) => (
+                  <button
+                    key={preset.label}
+                    type="button"
+                    onClick={() => applyPreset(preset)}
+                    className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5 text-xs font-bold text-white/70 transition hover:border-cyan-300/25 hover:bg-cyan-300/10 hover:text-cyan-50"
+                  >
+                    {preset.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {recentRuns.length > 0 && (
+              <div className="grid gap-2">
+                <p className="text-xs font-black uppercase tracking-[0.16em] text-white/45">Recent runs</p>
+                <div className="grid gap-2">
+                  {recentRuns.map((run) => (
+                    <button
+                      key={`${run.business}-${run.location}-${run.niche}`}
+                      type="button"
+                      onClick={() => setForm(run)}
+                      className="rounded-2xl border border-white/5 bg-black/20 px-3 py-2 text-left text-xs text-white/65 transition hover:border-cyan-300/20 hover:bg-cyan-300/10"
+                    >
+                      <span className="font-black text-white">{run.business}</span>
+                      <span className="text-white/40"> in {run.location} · {run.niche}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <label className="grid gap-2 text-sm font-semibold text-white/80">
               Employee importing leads
               <input
@@ -282,6 +522,63 @@ export default function LeadsPage() {
                 className="relative mt-0.5 h-7 w-12 shrink-0 rounded-full border border-white/10 bg-white/10 transition after:absolute after:left-1 after:top-1 after:h-5 after:w-5 after:rounded-full after:bg-white/80 after:shadow-lg after:shadow-black/30 after:transition peer-checked:border-cyan-300/30 peer-checked:bg-cyan-300/30 peer-checked:after:translate-x-5 peer-checked:after:bg-cyan-100"
               />
             </label>
+
+            <div className="grid gap-3 rounded-2xl border border-white/10 bg-black/20 p-4">
+              <div>
+                <p className="text-sm font-black text-white">Advanced lead filters</p>
+                <p className="mt-1 text-xs leading-5 liminull-muted">
+                  Filter after Place Details enrichment so phone and website fields are real, not just search-result guesses.
+                </p>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="grid gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-white/45">
+                  Min rating
+                  <input
+                    type="number"
+                    min="0"
+                    max="5"
+                    step="0.1"
+                    value={form.minRating}
+                    onChange={(event) => setForm((current) => ({ ...current, minRating: event.target.value }))}
+                    placeholder="4.2"
+                    className="rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm normal-case tracking-normal text-white outline-none placeholder:text-white/25 focus:border-cyan-300/40"
+                  />
+                </label>
+
+                <label className="grid gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-white/45">
+                  Min reviews
+                  <input
+                    type="number"
+                    min="0"
+                    value={form.minReviews}
+                    onChange={(event) => setForm((current) => ({ ...current, minReviews: event.target.value }))}
+                    placeholder="25"
+                    className="rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm normal-case tracking-normal text-white outline-none placeholder:text-white/25 focus:border-cyan-300/40"
+                  />
+                </label>
+              </div>
+
+              <label className="flex cursor-pointer items-center justify-between gap-4 rounded-xl border border-white/5 bg-white/[0.02] px-3 py-2 text-sm text-white/75">
+                <span>Require phone number</span>
+                <input
+                  type="checkbox"
+                  checked={form.hasPhoneOnly}
+                  onChange={(event) => setForm((current) => ({ ...current, hasPhoneOnly: event.target.checked }))}
+                  className="h-4 w-4 accent-cyan-300"
+                />
+              </label>
+
+              <label className="flex cursor-pointer items-center justify-between gap-4 rounded-xl border border-white/5 bg-white/[0.02] px-3 py-2 text-sm text-white/75">
+                <span>Website looks weak or missing</span>
+                <input
+                  type="checkbox"
+                  checked={form.weakWebsiteCandidate}
+                  onChange={(event) => setForm((current) => ({ ...current, weakWebsiteCandidate: event.target.checked }))}
+                  className="h-4 w-4 accent-cyan-300"
+                />
+              </label>
+            </div>
           </div>
 
           {error && (
@@ -324,7 +621,7 @@ export default function LeadsPage() {
 
               {result && leads.length === 0 && (
                 <div className="rounded-2xl border border-white/5 bg-black/20 p-5 text-sm liminull-muted">
-                  No Google Places leads returned yet. Broaden the search or verify the Places API key restrictions.
+                  No Google Places leads matched these filters. Broaden rating/review thresholds, turn off phone/website filters, or verify the Places API key restrictions.
                 </div>
               )}
 
@@ -338,6 +635,7 @@ export default function LeadsPage() {
                       <p className="mt-1 truncate text-xs text-white/45">
                         {lead.website || "No website attached to Google profile"}
                       </p>
+                      <p className="mt-2 text-xs text-white/55">{buildLeadFitSummary(lead)}</p>
                     </div>
                     <span className="shrink-0 rounded-full bg-cyan-300/10 px-3 py-1 text-sm font-black text-cyan-100">
                       {lead.score}
@@ -346,6 +644,10 @@ export default function LeadsPage() {
                   <div className="mt-3 flex flex-wrap gap-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-white/50">
                     <span className="rounded-full bg-white/5 px-3 py-1">{lead.size}</span>
                     <span className="rounded-full bg-white/5 px-3 py-1">{lead.aiIntent} intent</span>
+                    <span className="rounded-full bg-white/5 px-3 py-1">{lead.rating ? `${lead.rating}★` : "No rating"}</span>
+                    <span className="rounded-full bg-white/5 px-3 py-1">{lead.reviewCount || 0} reviews</span>
+                    <span className="rounded-full bg-white/5 px-3 py-1">{lead.website ? "Website attached" : "No website"}</span>
+                    {isWeakWebsiteLead(lead) && <span className="rounded-full bg-amber-300/10 px-3 py-1 text-amber-100">Weak web signal</span>}
                     <span className="rounded-full bg-white/5 px-3 py-1">{lead.niche}</span>
                   </div>
                   <ul className="mt-3 line-clamp-2 list-disc space-y-1 pl-5 text-xs text-white/60">
@@ -353,16 +655,121 @@ export default function LeadsPage() {
                       <li key={item}>{item}</li>
                     ))}
                   </ul>
-                  <button
-                    type="button"
-                    onClick={() => importLead(lead)}
-                    className="liminull-button mt-3 inline-flex px-4 py-2 text-sm"
-                  >
-                    Import to {employee || "employee"} pipeline
-                  </button>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => importLead(lead)}
+                      className="liminull-button inline-flex px-4 py-2 text-sm"
+                    >
+                      Import
+                    </button>
+                    <a
+                      href={`https://www.google.com/search?q=${encodeURIComponent(`${lead.company} ${lead.location} business owner`)}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="rounded-full border border-white/10 bg-white/[0.03] px-4 py-2 text-sm font-bold text-white/70 transition hover:border-cyan-300/25 hover:text-cyan-50"
+                    >
+                      Research
+                    </a>
+                    <a
+                      href={`https://www.google.com/search?q=${encodeURIComponent(`${lead.company} ${lead.location} website`)}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="rounded-full border border-white/10 bg-white/[0.03] px-4 py-2 text-sm font-bold text-white/70 transition hover:border-cyan-300/25 hover:text-cyan-50"
+                    >
+                      Website audit
+                    </a>
+                    <button
+                      type="button"
+                      onClick={() => createOutreachDraft(lead)}
+                      className="rounded-full border border-white/10 bg-white/[0.03] px-4 py-2 text-sm font-bold text-white/70 transition hover:border-cyan-300/25 hover:text-cyan-50"
+                    >
+                      Outreach draft
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => createIntelligencePacket(lead)}
+                      className="rounded-full border border-cyan-300/15 bg-cyan-300/10 px-4 py-2 text-sm font-bold text-cyan-50 transition hover:border-cyan-300/30 hover:bg-cyan-300/15"
+                    >
+                      Intelligence packet
+                    </button>
+                  </div>
                 </article>
               ))}
             </div>
+
+            {outreachDraft && (
+              <div className="mt-5 rounded-2xl border border-cyan-300/15 bg-cyan-300/10 p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-black uppercase tracking-[0.16em] text-cyan-100/70">Draft copied / review required</p>
+                    <h3 className="mt-1 text-sm font-black text-white">{outreachDraft.company}</h3>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setOutreachDraft(null)}
+                    className="rounded-full border border-white/10 px-3 py-1 text-xs font-bold text-white/60 hover:text-white"
+                  >
+                    Clear
+                  </button>
+                </div>
+                <p className="mt-3 text-sm leading-6 text-cyan-50">{outreachDraft.text}</p>
+              </div>
+            )}
+
+            {intelligencePacket && (
+              <div className="mt-5 rounded-2xl border border-emerald-300/15 bg-emerald-300/10 p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-black uppercase tracking-[0.16em] text-emerald-100/70">Lead intelligence / review required</p>
+                    <h3 className="mt-1 text-sm font-black text-white">{intelligencePacket.company}</h3>
+                    <p className="mt-1 text-xs text-white/45">{intelligencePacket.recommendedOffer}</p>
+                  </div>
+                  <div className="flex shrink-0 flex-wrap justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={() => copyIntelligencePacket(intelligencePacket)}
+                      className="rounded-full border border-emerald-300/20 bg-emerald-300/10 px-3 py-1 text-xs font-bold text-emerald-50 hover:border-emerald-300/40"
+                    >
+                      Copy packet
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setIntelligencePacket(null)}
+                      className="rounded-full border border-white/10 px-3 py-1 text-xs font-bold text-white/60 hover:text-white"
+                    >
+                      Clear
+                    </button>
+                  </div>
+                </div>
+
+                <div className="mt-4 grid gap-3 text-sm leading-6 text-emerald-50/90">
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-[0.16em] text-emerald-100/60">Pain hypothesis</p>
+                    <p className="mt-1">{intelligencePacket.painHypothesis}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-[0.16em] text-emerald-100/60">Website notes</p>
+                    <p className="mt-1">{intelligencePacket.websiteNotes}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-[0.16em] text-emerald-100/60">Outreach hook</p>
+                    <p className="mt-1">{intelligencePacket.outreachHook}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-[0.16em] text-emerald-100/60">Discovery questions</p>
+                    <ul className="mt-1 list-disc space-y-1 pl-5">
+                      {intelligencePacket.discoveryQuestions.map((question) => (
+                        <li key={question}>{question}</li>
+                      ))}
+                    </ul>
+                  </div>
+                  <p className="rounded-2xl border border-white/5 bg-black/20 p-3 text-xs text-white/55">
+                    {intelligencePacket.approvalNote}
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -372,10 +779,10 @@ export default function LeadsPage() {
           <div>
             <p className="liminull-eyebrow">Employee lead pipeline</p>
             <h2 className="mt-2 text-2xl font-black tracking-[-0.05em] text-white">
-              Imported leads
+              Pipeline command center
             </h2>
             <p className="mt-2 text-sm liminull-muted">
-              Duplicate lock is global: once imported by one Liminull employee, another employee cannot import that same lead.
+              Duplicate lock is global. Filter by owner/stage, then work the highest-priority follow-ups first.
             </p>
           </div>
           <button type="button" onClick={loadPipeline} disabled={pipelineLoading} className="liminull-button disabled:opacity-60">
@@ -389,6 +796,109 @@ export default function LeadsPage() {
           </div>
         )}
 
+        <div className="mt-5 grid gap-4 rounded-2xl border border-white/5 bg-black/20 p-4">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm font-black text-white">Today’s focus</p>
+              <p className="mt-1 text-xs liminull-muted">Top open leads by score, contactability, weak web presence, and stale next action.</p>
+            </div>
+            <span className="rounded-full bg-cyan-300/10 px-3 py-1 text-xs font-black text-cyan-100">
+              {todayFocusLeads.length} queued
+            </span>
+          </div>
+
+          {todayFocusLeads.length === 0 ? (
+            <div className="rounded-2xl border border-white/5 bg-white/[0.02] p-4 text-sm liminull-muted">
+              No open focus leads match the current filters.
+            </div>
+          ) : (
+            <div className="grid gap-3 lg:grid-cols-3">
+              {todayFocusLeads.map((lead) => {
+                const priority = deriveLeadPriority(lead);
+                return (
+                  <article key={lead.id} className="rounded-2xl border border-cyan-300/10 bg-cyan-300/[0.04] p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <h3 className="truncate text-sm font-black text-white">{lead.company}</h3>
+                        <p className="mt-1 truncate text-xs text-white/45">{lead.owner} · {stageLabel(lead.stage)}</p>
+                      </div>
+                      <span className="rounded-full bg-cyan-300/10 px-2.5 py-1 text-xs font-black uppercase text-cyan-100">
+                        {priority.tier}
+                      </span>
+                    </div>
+                    <p className="mt-3 text-xs leading-5 text-cyan-50/80">{lead.nextAction}</p>
+                    <div className="mt-3 flex flex-wrap gap-1.5 text-[10px] font-bold uppercase tracking-[0.12em] text-white/45">
+                      {priority.signals.slice(0, 3).map((signal) => (
+                        <span key={signal} className="rounded-full bg-white/5 px-2 py-1">{signal}</span>
+                      ))}
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        <div className="mt-5 grid gap-3 rounded-2xl border border-white/5 bg-black/20 p-4 lg:grid-cols-[1fr_1fr_auto]">
+          <label className="grid gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-white/45">
+            Owner
+            <select
+              value={pipelineFilters.owner}
+              onChange={(event) => setPipelineFilters((current) => ({ ...current, owner: event.target.value }))}
+              className="rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm normal-case tracking-normal text-white outline-none"
+            >
+              <option value="all">All owners</option>
+              {pipelineOwners.map((owner) => (
+                <option key={owner} value={owner}>{owner}</option>
+              ))}
+            </select>
+          </label>
+
+          <label className="grid gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-white/45">
+            Stage
+            <select
+              value={pipelineFilters.stage}
+              onChange={(event) => setPipelineFilters((current) => ({ ...current, stage: event.target.value as LeadPipelineStage | "all" }))}
+              className="rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm normal-case tracking-normal text-white outline-none"
+            >
+              <option value="all">All stages</option>
+              {pipelineStages.map((stage) => (
+                <option key={stage} value={stage}>{stageLabel(stage)}</option>
+              ))}
+            </select>
+          </label>
+
+          <div className="flex flex-wrap items-end gap-2">
+            <label className="flex items-center gap-2 rounded-xl border border-white/5 bg-white/[0.02] px-3 py-2 text-xs font-bold text-white/65">
+              <input
+                type="checkbox"
+                checked={pipelineFilters.hotScoreOnly}
+                onChange={(event) => setPipelineFilters((current) => ({ ...current, hotScoreOnly: event.target.checked }))}
+                className="h-4 w-4 accent-cyan-300"
+              />
+              Hot only
+            </label>
+            <label className="flex items-center gap-2 rounded-xl border border-white/5 bg-white/[0.02] px-3 py-2 text-xs font-bold text-white/65">
+              <input
+                type="checkbox"
+                checked={pipelineFilters.noWebsiteOnly}
+                onChange={(event) => setPipelineFilters((current) => ({ ...current, noWebsiteOnly: event.target.checked }))}
+                className="h-4 w-4 accent-cyan-300"
+              />
+              No website
+            </label>
+            <label className="flex items-center gap-2 rounded-xl border border-white/5 bg-white/[0.02] px-3 py-2 text-xs font-bold text-white/65">
+              <input
+                type="checkbox"
+                checked={pipelineFilters.hasPhoneOnly}
+                onChange={(event) => setPipelineFilters((current) => ({ ...current, hasPhoneOnly: event.target.checked }))}
+                className="h-4 w-4 accent-cyan-300"
+              />
+              Has phone
+            </label>
+          </div>
+        </div>
+
         <div className="mt-5 grid gap-3 lg:grid-cols-2">
           {pipelineLeads.length === 0 && (
             <div className="rounded-2xl border border-white/5 bg-black/20 p-5 text-sm liminull-muted lg:col-span-2">
@@ -396,54 +906,85 @@ export default function LeadsPage() {
             </div>
           )}
 
-          {pipelineLeads.map((lead) => (
-            <article key={lead.id} className="rounded-2xl border border-white/5 bg-black/20 p-4">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <h3 className="text-lg font-black text-white">{lead.company}</h3>
-                  <p className="mt-1 text-xs liminull-muted">Owner: {lead.owner} · {lead.location}</p>
-                  <p className="mt-2 text-sm text-cyan-100">{lead.phone || "No phone"}</p>
+          {pipelineLeads.length > 0 && filteredPipelineLeads.length === 0 && (
+            <div className="rounded-2xl border border-white/5 bg-black/20 p-5 text-sm liminull-muted lg:col-span-2">
+              No imported leads match the current pipeline filters.
+            </div>
+          )}
+
+          {filteredPipelineLeads.map((lead) => {
+            const priority = deriveLeadPriority(lead);
+            return (
+              <article key={lead.id} className="rounded-2xl border border-white/5 bg-black/20 p-4">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="min-w-0">
+                    <h3 className="truncate text-lg font-black text-white">{lead.company}</h3>
+                    <p className="mt-1 text-xs liminull-muted">Owner: {lead.owner} · {lead.location}</p>
+                    <p className="mt-2 text-sm text-cyan-100">{lead.phone || "No phone"}</p>
+                    <p className="mt-1 truncate text-xs text-white/40">{lead.website || "No website attached"}</p>
+                  </div>
+                  <div className="grid justify-items-end gap-2">
+                    <span className="rounded-full bg-white/5 px-3 py-1 text-sm font-black text-white/70">
+                      {lead.score}
+                    </span>
+                    <span className="rounded-full bg-cyan-300/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-cyan-100">
+                      {priority.tier}
+                    </span>
+                  </div>
                 </div>
-                <span className="rounded-full bg-white/5 px-3 py-1 text-sm font-black text-white/70">
-                  {lead.score}
-                </span>
-              </div>
 
-              <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                <label className="grid gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-white/45">
-                  Stage
-                  <select
-                    value={lead.stage}
-                    onChange={(event) => updatePipelineLead(lead.id, { stage: event.target.value as LeadPipelineStage })}
-                    className="rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm normal-case tracking-normal text-white outline-none"
-                  >
-                    {pipelineStages.map((stage) => (
-                      <option key={stage} value={stage}>{stageLabel(stage)}</option>
-                    ))}
-                  </select>
-                </label>
+                <div className="mt-3 flex flex-wrap gap-1.5 text-[10px] font-bold uppercase tracking-[0.12em] text-white/45">
+                  {priority.signals.length > 0 ? priority.signals.map((signal) => (
+                    <span key={signal} className="rounded-full bg-white/5 px-2 py-1">{signal}</span>
+                  )) : <span className="rounded-full bg-white/5 px-2 py-1">watch list</span>}
+                </div>
 
-                <label className="grid gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-white/45">
-                  Next action
-                  <input
-                    value={lead.nextAction}
-                    onChange={(event) => updatePipelineLead(lead.id, { nextAction: event.target.value })}
-                    className="rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm normal-case tracking-normal text-white outline-none"
+                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                  <label className="grid gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-white/45">
+                    Stage
+                    <select
+                      value={lead.stage}
+                      onChange={(event) => updatePipelineLead(lead.id, { stage: event.target.value as LeadPipelineStage })}
+                      className="rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm normal-case tracking-normal text-white outline-none"
+                    >
+                      {pipelineStages.map((stage) => (
+                        <option key={stage} value={stage}>{stageLabel(stage)}</option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label className="grid gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-white/45">
+                    Next action
+                    <input
+                      value={lead.nextAction}
+                      onChange={(event) => updatePipelineLead(lead.id, { nextAction: event.target.value })}
+                      className="rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm normal-case tracking-normal text-white outline-none"
+                    />
+                  </label>
+                </div>
+
+                <label className="mt-3 grid gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-white/45">
+                  Notes
+                  <textarea
+                    value={lead.notes}
+                    onChange={(event) => updatePipelineLead(lead.id, { notes: event.target.value })}
+                    placeholder="Contact attempts, decision maker, objections, next meeting..."
+                    className="min-h-20 rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm normal-case tracking-normal text-white outline-none placeholder:text-white/25"
                   />
                 </label>
-              </div>
 
-              <label className="mt-3 grid gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-white/45">
-                Notes
-                <textarea
-                  value={lead.notes}
-                  onChange={(event) => updatePipelineLead(lead.id, { notes: event.target.value })}
-                  placeholder="Contact attempts, decision maker, objections, next meeting..."
-                  className="min-h-20 rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm normal-case tracking-normal text-white outline-none placeholder:text-white/25"
-                />
-              </label>
-            </article>
-          ))}
+                {lead.stage === "closed_won" && (
+                  <button
+                    type="button"
+                    onClick={() => convertLeadToClientWorkspace(lead)}
+                    className="mt-3 rounded-full border border-emerald-300/20 bg-emerald-300/10 px-4 py-2 text-sm font-bold text-emerald-50 transition hover:border-emerald-300/40 hover:bg-emerald-300/15"
+                  >
+                    Convert to client workspace
+                  </button>
+                )}
+              </article>
+            );
+          })}
         </div>
       </div>
 

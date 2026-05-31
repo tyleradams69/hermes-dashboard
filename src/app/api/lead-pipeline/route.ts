@@ -1,5 +1,3 @@
-import { mkdir, readFile, writeFile } from "fs/promises";
-import { dirname, join } from "path";
 import { NextResponse } from "next/server";
 import {
   emptyLeadPipelineState,
@@ -25,27 +23,22 @@ type PatchBody = {
   owner?: string;
 };
 
-function storePath() {
-  return process.env.LEAD_PIPELINE_STORE_PATH || join(/* turbopackIgnore: true */ process.cwd(), ".data", "lead-pipeline.json");
+const memoryStores = new Map<string, LeadPipelineState>();
+
+function storeKey() {
+  return process.env.LEAD_PIPELINE_STORE_PATH || "default";
+}
+
+function cloneState(state: LeadPipelineState): LeadPipelineState {
+  return { leads: state.leads.map((lead) => ({ ...lead, evidence: [...lead.evidence] })) };
 }
 
 async function readState(): Promise<LeadPipelineState> {
-  try {
-    const raw = await readFile(storePath(), "utf8");
-    const parsed = JSON.parse(raw) as LeadPipelineState;
-    return { leads: Array.isArray(parsed.leads) ? parsed.leads : [] };
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === "ENOENT") {
-      return emptyLeadPipelineState;
-    }
-    throw error;
-  }
+  return cloneState(memoryStores.get(storeKey()) || emptyLeadPipelineState);
 }
 
 async function writeState(state: LeadPipelineState) {
-  const path = storePath();
-  await mkdir(dirname(path), { recursive: true });
-  await writeFile(path, JSON.stringify(state, null, 2));
+  memoryStores.set(storeKey(), cloneState(state));
 }
 
 class FileLeadPipelineStore {

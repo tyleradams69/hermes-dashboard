@@ -5,6 +5,7 @@ import {
   buildPlaceDetailsUrl,
   buildPlacesTextSearchUrl,
   enrichLeadWithPlaceDetails,
+  leadMatchesSearchFilters,
   mapGooglePlaceToLead,
   normalizeLeadSearchInput,
   type GooglePlaceDetails,
@@ -76,9 +77,7 @@ async function fetchGooglePlacesLeads(input: ReturnType<typeof normalizeLeadSear
     })
   );
 
-  const leads = input.onlyWithoutWebsite
-    ? enrichedLeads.filter((lead) => !lead.website)
-    : enrichedLeads;
+  const leads = enrichedLeads.filter((lead) => leadMatchesSearchFilters(lead, input));
 
   return {
     leads: leads.sort((a, b) => b.score - a.score),

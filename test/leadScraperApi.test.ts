@@ -129,4 +129,70 @@ describe("lead scraper API", () => {
     expect(data.leads[0]).toMatchObject({ company: "Business Without Website" });
     expect(data.leads[0].website).toBeUndefined();
   });
+
+  it("applies phone, rating, review, and weak-website filters after Place Details enrichment", async () => {
+    process.env.GOOGLE_PLACES_API_KEY = "server-only-key";
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string | URL | Request) => {
+        const href = String(url);
+        if (href.includes("/place/details/")) {
+          const placeId = new URL(href).searchParams.get("place_id");
+          return new Response(
+            JSON.stringify({
+              result:
+                placeId === "good-fit"
+                  ? { formatted_phone_number: "(512) 555-0101", website: "https://goodfit.business.site" }
+                  : { website: "https://polished.example.com" },
+            }),
+            { status: 200, headers: { "content-type": "application/json" } }
+          );
+        }
+
+        return new Response(
+          JSON.stringify({
+            results: [
+              {
+                place_id: "good-fit",
+                name: "Good Fit HVAC",
+                formatted_address: "10 Congress Ave, Austin, TX",
+                rating: 4.8,
+                user_ratings_total: 180,
+              },
+              {
+                place_id: "too-polished",
+                name: "Too Polished HVAC",
+                formatted_address: "20 Congress Ave, Austin, TX",
+                rating: 4.9,
+                user_ratings_total: 220,
+              },
+            ],
+          }),
+          { status: 200, headers: { "content-type": "application/json" } }
+        );
+      })
+    );
+
+    const response = await leadScraperPost(
+      request({
+        business: "HVAC",
+        location: "Austin",
+        hasPhoneOnly: true,
+        minRating: 4.5,
+        minReviews: 100,
+        weakWebsiteCandidate: true,
+      })
+    );
+    const data = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(data.input).toMatchObject({
+      hasPhoneOnly: true,
+      minRating: 4.5,
+      minReviews: 100,
+      weakWebsiteCandidate: true,
+    });
+    expect(data.leads).toHaveLength(1);
+    expect(data.leads[0]).toMatchObject({ company: "Good Fit HVAC", phone: "(512) 555-0101" });
+  });
 });
