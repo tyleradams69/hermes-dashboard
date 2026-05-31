@@ -4,11 +4,18 @@ import { useCallback, useEffect, useRef, useState, type CSSProperties } from "re
 import AppShell from "@/components/AppShell";
 import { buildClientWorkspaceFromPipelineLead } from "@/lib/clientWorkspace";
 import {
+  buildPipelineBulkActionPatch,
   deriveLeadPriority,
   filterPipelineLeads,
+  formatPipelineDailyBriefForCopy,
+  formatPipelineLeadBriefForCopy,
+  formatPipelineOwnerSummaryForCopy,
+  getLeadQuickActions,
   selectStaleLeadNudges,
   selectTodayFocusLeads,
+  summarizePipelineByOwner,
   type PipelineLead,
+  type PipelineOwnerSummary,
   type LeadPipelineStage,
 } from "@/lib/leadPipeline";
 import {
@@ -51,6 +58,19 @@ type PipelineResponse = {
   lead?: PipelineLead;
   existingLead?: PipelineLead;
   reason?: string;
+  error?: string;
+};
+
+type DashboardAccount = {
+  id: string;
+  email: string;
+  name?: string;
+  role?: string;
+};
+
+type AccountResponse = {
+  ok: boolean;
+  user?: DashboardAccount;
   error?: string;
 };
 
@@ -165,6 +185,7 @@ const pipelineStages: LeadPipelineStage[] = [
 const defaultPipelineFilters = {
   owner: "all",
   stage: "all" as LeadPipelineStage | "all",
+  sortBy: "company" as "company" | "priority",
   noWebsiteOnly: false,
   hasPhoneOnly: false,
   hotScoreOnly: false,
@@ -174,6 +195,10 @@ type PipelineFilters = typeof defaultPipelineFilters;
 
 function stageLabel(stage: string) {
   return stage.replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function formatPipelineDate(value?: string) {
+  return value ? value.slice(0, 10) : "No date";
 }
 
 function isWeakWebsiteLead(lead: LeadRecord) {
@@ -232,9 +257,283 @@ function pipelineLeadToLeadRecord(lead: PipelineLead): LeadRecord {
   };
 }
 
+type OwnerAggregateSummary = Pick<PipelineOwnerSummary, "openLeads" | "hotLeads" | "staleLeads" | "prepReadyLeads" | "dueSoonLeads">;
+
+type EmployeePipelineSummaryProps = {
+  summaries: PipelineOwnerSummary[];
+  allSummary: OwnerAggregateSummary;
+  selectedOwner: string;
+  onSelectOwner: (owner: string) => void;
+  onCopySummary: () => void;
+};
+
+function EmployeePipelineSummary({ summaries, allSummary, selectedOwner, onSelectOwner, onCopySummary }: EmployeePipelineSummaryProps) {
+  if (summaries.length === 0) return null;
+
+  return (
+    <div className="mt-5 rounded-2xl border border-white/5 bg-black/20 p-4">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="text-sm font-black text-white">Employee pipeline summary</p>
+          <p className="mt-1 text-xs liminull-muted">Admin rollup sorted by employee name. Click a chip to narrow the pipeline owner filter.</p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={onCopySummary}
+            className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5 text-xs font-black text-white/60 transition hover:border-cyan-300/25 hover:text-cyan-50"
+          >
+            Copy employee rollup
+          </button>
+          <button
+            type="button"
+            onClick={() => onSelectOwner("all")}
+            className={`rounded-full border px-3 py-1.5 text-xs font-black transition ${selectedOwner === "all" ? "border-cyan-300/35 bg-cyan-300/15 text-cyan-50" : "border-white/10 bg-white/[0.03] text-white/60 hover:border-cyan-300/25 hover:text-cyan-50"}`}
+          >
+            All employees · {allSummary.openLeads} open · {allSummary.hotLeads} hot · {allSummary.staleLeads} stale
+          </button>
+        </div>
+      </div>
+
+      <div className="mt-4 flex gap-3 overflow-x-auto pb-1">
+        {summaries.map((summary) => (
+          <button
+            key={summary.owner}
+            type="button"
+            onClick={() => onSelectOwner(summary.owner)}
+            className={`min-w-[180px] rounded-2xl border p-4 text-left transition ${selectedOwner === summary.owner ? "border-cyan-300/35 bg-cyan-300/10" : "border-white/5 bg-white/[0.02] hover:border-cyan-300/20 hover:bg-cyan-300/[0.04]"}`}
+          >
+            <div className="flex items-center justify-between gap-3">
+              <p className="truncate text-sm font-black text-white">{summary.owner}</p>
+              <span className="rounded-full bg-white/5 px-2 py-1 text-[10px] font-black uppercase tracking-[0.12em] text-white/50">
+                {summary.openLeads} open
+              </span>
+            </div>
+            <div className="mt-3 grid grid-cols-2 gap-2 text-[11px] font-bold text-white/55">
+              <span className="rounded-xl bg-cyan-300/10 px-2 py-1 text-cyan-100">{summary.hotLeads} hot</span>
+              <span className="rounded-xl bg-amber-300/10 px-2 py-1 text-amber-100">{summary.staleLeads} stale</span>
+              <span className="rounded-xl bg-emerald-300/10 px-2 py-1 text-emerald-100">{summary.prepReadyLeads} prep</span>
+              <span className="rounded-xl bg-white/5 px-2 py-1 text-white/55">{summary.dueSoonLeads} due soon</span>
+            </div>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+type BulkPipelineActionsProps = {
+  filteredLeadCount: number;
+  selectedLeadCount: number;
+  selectedHotLeadCount: number;
+  allVisibleSelected: boolean;
+  bulkOwner: string;
+  loading: boolean;
+  onBulkOwnerChange: (owner: string) => void;
+  onToggleVisibleSelection: () => void;
+  onClearSelection: () => void;
+  onReassignSelected: () => void;
+  onMarkSelectedWorked: () => void;
+  onCloseSelectedLost: () => void;
+  onCreatePrepForSelectedHotLeads: () => void;
+};
+
+function BulkPipelineActions({
+  filteredLeadCount,
+  selectedLeadCount,
+  selectedHotLeadCount,
+  allVisibleSelected,
+  bulkOwner,
+  loading,
+  onBulkOwnerChange,
+  onToggleVisibleSelection,
+  onClearSelection,
+  onReassignSelected,
+  onMarkSelectedWorked,
+  onCloseSelectedLost,
+  onCreatePrepForSelectedHotLeads,
+}: BulkPipelineActionsProps) {
+  return (
+    <div className="mt-5 rounded-2xl border border-cyan-300/10 bg-cyan-300/[0.04] p-4">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div>
+          <p className="text-sm font-black text-white">Bulk admin actions</p>
+          <p className="mt-1 text-xs liminull-muted">
+            Select visible pipeline cards, then reassign, mark worked today, close lost, or generate prep for hot leads.
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={onToggleVisibleSelection}
+            disabled={filteredLeadCount === 0 || loading}
+            className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5 text-xs font-bold text-white/70 transition hover:border-cyan-300/25 hover:text-cyan-50 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {allVisibleSelected ? "Clear visible" : "Select visible"}
+          </button>
+          <button
+            type="button"
+            onClick={onClearSelection}
+            disabled={selectedLeadCount === 0 || loading}
+            className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5 text-xs font-bold text-white/60 transition hover:border-white/20 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Clear selection
+          </button>
+        </div>
+      </div>
+
+      <div className="mt-4 grid gap-3 xl:grid-cols-[1fr_1fr_1fr_auto]">
+        <div className="rounded-2xl border border-white/5 bg-black/20 p-3">
+          <p className="text-[10px] font-black uppercase tracking-[0.16em] text-white/40">Selected</p>
+          <p className="mt-1 text-2xl font-black tracking-[-0.06em] text-white">{selectedLeadCount}</p>
+          <p className="mt-1 text-xs text-white/45">{selectedHotLeadCount} hot leads eligible for prep generation</p>
+        </div>
+
+        <label className="grid gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-white/45">
+          Reassign to employee
+          <input
+            value={bulkOwner}
+            onChange={(event) => onBulkOwnerChange(event.target.value)}
+            placeholder="Tyler, Jack, etc."
+            className="rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm normal-case tracking-normal text-white outline-none placeholder:text-white/25 focus:border-cyan-300/40"
+          />
+          <button
+            type="button"
+            onClick={onReassignSelected}
+            disabled={loading || selectedLeadCount === 0}
+            className="rounded-full border border-cyan-300/20 bg-cyan-300/10 px-3 py-1.5 text-xs font-bold text-cyan-50 transition hover:border-cyan-300/40 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Reassign selected
+          </button>
+        </label>
+
+        <div className="grid gap-2">
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-white/45">Pipeline updates</p>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={onMarkSelectedWorked}
+              disabled={loading || selectedLeadCount === 0}
+              className="rounded-full border border-emerald-300/20 bg-emerald-300/10 px-3 py-1.5 text-xs font-bold text-emerald-50 transition hover:border-emerald-300/40 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Mark worked today
+            </button>
+            <button
+              type="button"
+              onClick={onCloseSelectedLost}
+              disabled={loading || selectedLeadCount === 0}
+              className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5 text-xs font-bold text-white/65 transition hover:border-white/20 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Close lost
+            </button>
+          </div>
+        </div>
+
+        <div className="grid content-start gap-2">
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-white/45">Sales prep</p>
+          <button
+            type="button"
+            onClick={onCreatePrepForSelectedHotLeads}
+            disabled={loading || selectedHotLeadCount === 0}
+            className="rounded-full border border-violet-300/20 bg-violet-300/10 px-3 py-1.5 text-xs font-bold text-violet-50 transition hover:border-violet-300/40 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Generate prep for hot leads
+          </button>
+          <p className="text-xs leading-5 text-white/40">Creates packets only for selected hot leads without saved prep.</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+type AdminPipelineReviewTableProps = {
+  leads: PipelineLead[];
+  selectedLeadIds: string[];
+  onToggleLeadSelection: (id: string) => void;
+  onSelectOwner: (owner: string) => void;
+};
+
+function AdminPipelineReviewTable({ leads, selectedLeadIds, onToggleLeadSelection, onSelectOwner }: AdminPipelineReviewTableProps) {
+  if (leads.length === 0) return null;
+
+  return (
+    <div className="mt-5 rounded-2xl border border-white/5 bg-black/20 p-4">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="text-sm font-black text-white">Admin pipeline review</p>
+          <p className="mt-1 text-xs liminull-muted">Fast all-employee scan sorted by the active filters before diving into full cards.</p>
+        </div>
+        <span className="rounded-full bg-white/5 px-3 py-1 text-xs font-black text-white/55">
+          {leads.length} visible
+        </span>
+      </div>
+
+      <div className="mt-4 overflow-x-auto">
+        <table className="w-full min-w-[760px] text-left text-xs">
+          <thead className="text-[10px] font-black uppercase tracking-[0.16em] text-white/35">
+            <tr className="border-b border-white/5">
+              <th className="py-2 pr-3">Select</th>
+              <th className="py-2 pr-3">Lead</th>
+              <th className="py-2 pr-3">Employee</th>
+              <th className="py-2 pr-3">Stage</th>
+              <th className="py-2 pr-3">Next follow-up</th>
+              <th className="py-2 pr-3">Signals</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-white/5">
+            {leads.map((lead) => {
+              const priority = deriveLeadPriority(lead);
+              return (
+                <tr key={lead.id} className="align-top text-white/65">
+                  <td className="py-3 pr-3">
+                    <input
+                      type="checkbox"
+                      aria-label={`Select ${lead.company} for admin review`}
+                      checked={selectedLeadIds.includes(lead.id)}
+                      onChange={() => onToggleLeadSelection(lead.id)}
+                      className="h-4 w-4 accent-cyan-300"
+                    />
+                  </td>
+                  <td className="max-w-[240px] py-3 pr-3">
+                    <p className="truncate font-black text-white">{lead.company}</p>
+                    <p className="mt-1 truncate text-white/40">{lead.location}</p>
+                  </td>
+                  <td className="py-3 pr-3">
+                    <button
+                      type="button"
+                      onClick={() => onSelectOwner(lead.owner)}
+                      className="rounded-full border border-white/10 bg-white/[0.03] px-2.5 py-1 font-bold text-white/65 transition hover:border-cyan-300/25 hover:text-cyan-50"
+                    >
+                      {lead.owner}
+                    </button>
+                  </td>
+                  <td className="py-3 pr-3">
+                    <span className="rounded-full bg-white/5 px-2.5 py-1 font-bold text-white/60">{stageLabel(lead.stage)}</span>
+                  </td>
+                  <td className="py-3 pr-3 font-bold text-white/55">{formatPipelineDate(lead.nextFollowUpAt)}</td>
+                  <td className="py-3 pr-3">
+                    <div className="flex flex-wrap gap-1.5">
+                      <span className="rounded-full bg-cyan-300/10 px-2 py-1 font-black uppercase text-cyan-100">{priority.tier}</span>
+                      {lead.salesPrepStatus === "ready" && <span className="rounded-full bg-violet-300/10 px-2 py-1 font-black uppercase text-violet-100">prep</span>}
+                      {priority.signals.slice(0, 2).map((signal) => (
+                        <span key={`${lead.id}-${signal}`} className="rounded-full bg-white/5 px-2 py-1 font-bold text-white/45">{signal}</span>
+                      ))}
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 export default function LeadsPage() {
   const [form, setForm] = useState(defaultForm);
   const [employee, setEmployee] = useState("Tyler");
+  const [account, setAccount] = useState<DashboardAccount | null>(null);
   const [loading, setLoading] = useState(false);
   const [pipelineLoading, setPipelineLoading] = useState(false);
   const [result, setResult] = useState<LeadScraperResponse | null>(null);
@@ -247,11 +546,46 @@ export default function LeadsPage() {
   const [savedIntelligencePackets, setSavedIntelligencePackets] = useState<Record<string, LeadIntelligencePacket>>({});
   const [error, setError] = useState("");
   const [pipelineMessage, setPipelineMessage] = useState("");
+  const [selectedPipelineLeadIds, setSelectedPipelineLeadIds] = useState<string[]>([]);
+  const [bulkOwner, setBulkOwner] = useState("");
+  const [bulkActionLoading, setBulkActionLoading] = useState(false);
   const discoveryPanelRef = useRef<HTMLFormElement>(null);
   const [discoveryPanelHeight, setDiscoveryPanelHeight] = useState<number | null>(null);
   const discoveryPanelHeightStyle = discoveryPanelHeight
     ? ({ "--lead-discovery-panel-height": `${discoveryPanelHeight}px` } as CSSProperties)
     : undefined;
+
+  useEffect(() => {
+    const loadAccount = async () => {
+      try {
+        const response = await fetch("/api/account", { cache: "no-store" });
+        const data = (await response.json()) as AccountResponse;
+
+        if (!response.ok || !data.ok || !data.user) {
+          throw new Error(data.error || "Account could not load");
+        }
+
+        setAccount(data.user);
+
+        const employeeName = data.user.name?.trim();
+
+        if (employeeName) {
+          setEmployee(employeeName);
+          setBulkOwner(employeeName);
+        }
+
+        if (data.user.role !== "admin" && employeeName) {
+          setPipelineFilters((current) => ({ ...current, owner: employeeName }));
+        }
+      } catch {
+        // The authenticated API still enforces pipeline access; leave the page usable if account chrome fails.
+      }
+    };
+
+    queueMicrotask(() => {
+      void loadAccount();
+    });
+  }, []);
 
   useEffect(() => {
     const panel = discoveryPanelRef.current;
@@ -446,8 +780,10 @@ export default function LeadsPage() {
     }
   }
 
-  async function updatePipelineLead(id: string, patch: PipelineLeadPatch) {
-    setPipelineMessage("");
+  async function updatePipelineLead(id: string, patch: PipelineLeadPatch, options: { quiet?: boolean } = {}) {
+    if (!options.quiet) {
+      setPipelineMessage("");
+    }
 
     try {
       const response = await fetch("/api/lead-pipeline", {
@@ -462,8 +798,12 @@ export default function LeadsPage() {
       }
 
       setPipelineLeads((current) => current.map((lead) => (lead.id === id ? data.lead! : lead)));
+      return data.lead;
     } catch (caught) {
-      setPipelineMessage(caught instanceof Error ? caught.message : "Lead update failed");
+      if (!options.quiet) {
+        setPipelineMessage(caught instanceof Error ? caught.message : "Lead update failed");
+      }
+      return null;
     }
   }
 
@@ -587,6 +927,26 @@ export default function LeadsPage() {
     });
   }
 
+  function applyLeadQuickAction(lead: PipelineLead, action: ReturnType<typeof getLeadQuickActions>[number]) {
+    void updatePipelineLead(lead.id, {
+      stage: action.stage,
+      nextAction: action.nextAction,
+      lastTouchedAt: new Date().toISOString(),
+      nextFollowUpAt: action.followUpInDays ? followUpDate(action.followUpInDays) : undefined,
+    });
+  }
+
+  async function copyPipelineLeadBrief(lead: PipelineLead) {
+    const text = formatPipelineLeadBriefForCopy(lead);
+
+    try {
+      await navigator.clipboard.writeText(text);
+      setPipelineMessage(`Lead brief copied for ${lead.company}.`);
+    } catch {
+      setPipelineMessage("Clipboard access was blocked. The lead details are still visible for manual copy.");
+    }
+  }
+
   async function convertLeadToClientWorkspace(lead: PipelineLead) {
     if (lead.stage !== "closed_won") {
       setPipelineMessage("Move the lead to Closed Won before creating a client workspace.");
@@ -624,17 +984,57 @@ export default function LeadsPage() {
     }
   }
 
+  async function copyPipelineDailyBrief() {
+    const text = formatPipelineDailyBriefForCopy(filteredPipelineLeads);
+
+    try {
+      await navigator.clipboard.writeText(text);
+      setPipelineMessage("Pipeline daily brief copied for the current filters.");
+    } catch {
+      setPipelineMessage("Clipboard access was blocked. Pipeline cards are still visible for manual review.");
+    }
+  }
+
+  async function copyEmployeePipelineRollup() {
+    const text = formatPipelineOwnerSummaryForCopy(pipelineLeads);
+
+    try {
+      await navigator.clipboard.writeText(text);
+      setPipelineMessage("Employee pipeline rollup copied for admin handoff.");
+    } catch {
+      setPipelineMessage("Clipboard access was blocked. Employee rollup is still visible for manual review.");
+    }
+  }
+
   const leads = result?.leads || [];
   const sourceLinks = result?.sourceLinks || [];
   const queries = result?.queries || [];
+  const isAdminAccount = account?.role === "admin";
+  const signedInEmployeeName = account?.name?.trim() || employee.trim();
+  const effectivePipelineOwner = isAdminAccount
+    ? (pipelineFilters.owner === "all" ? undefined : pipelineFilters.owner)
+    : signedInEmployeeName || undefined;
   const pipelineOwners = Array.from(new Set(pipelineLeads.map((lead) => lead.owner))).sort((a, b) => a.localeCompare(b));
+  const pipelineOwnerOptions = isAdminAccount ? pipelineOwners : pipelineOwners.filter((owner) => owner !== signedInEmployeeName);
   const filteredPipelineLeads = filterPipelineLeads(pipelineLeads, {
-    owner: pipelineFilters.owner === "all" ? undefined : pipelineFilters.owner,
+    owner: effectivePipelineOwner,
     stage: pipelineFilters.stage,
+    sortBy: pipelineFilters.sortBy,
     noWebsiteOnly: pipelineFilters.noWebsiteOnly,
     hasPhoneOnly: pipelineFilters.hasPhoneOnly,
     hotScoreOnly: pipelineFilters.hotScoreOnly,
   });
+  const ownerPipelineSummaries = summarizePipelineByOwner(pipelineLeads);
+  const allOwnerSummary = ownerPipelineSummaries.reduce(
+    (summary, owner) => ({
+      openLeads: summary.openLeads + owner.openLeads,
+      hotLeads: summary.hotLeads + owner.hotLeads,
+      staleLeads: summary.staleLeads + owner.staleLeads,
+      prepReadyLeads: summary.prepReadyLeads + owner.prepReadyLeads,
+      dueSoonLeads: summary.dueSoonLeads + owner.dueSoonLeads,
+    }),
+    { openLeads: 0, hotLeads: 0, staleLeads: 0, prepReadyLeads: 0, dueSoonLeads: 0 }
+  );
   const todayFocusLeads = selectTodayFocusLeads(filteredPipelineLeads, new Date(), 3);
   const salesPrepQueue = Object.values(savedIntelligencePackets)
     .filter((packet) => packet.status === "approved")
@@ -644,6 +1044,114 @@ export default function LeadsPage() {
     .slice(0, 6);
   const staleLeadNudges = selectStaleLeadNudges(filteredPipelineLeads, new Date(), 6);
   const activeClientReadyLeads = pipelineLeads.filter((lead) => lead.stage === "closed_won").length;
+  const selectedPipelineLeads = filteredPipelineLeads.filter((lead) => selectedPipelineLeadIds.includes(lead.id));
+  const selectedHotPipelineLeads = selectedPipelineLeads.filter((lead) => deriveLeadPriority(lead).tier === "hot");
+  const allFilteredPipelineLeadsSelected = filteredPipelineLeads.length > 0 && filteredPipelineLeads.every((lead) => selectedPipelineLeadIds.includes(lead.id));
+
+  function togglePipelineLeadSelection(id: string) {
+    setSelectedPipelineLeadIds((current) => current.includes(id) ? current.filter((leadId) => leadId !== id) : [...current, id]);
+  }
+
+  function selectVisiblePipelineLeads() {
+    setSelectedPipelineLeadIds((current) => {
+      const visibleIds = filteredPipelineLeads.map((lead) => lead.id);
+      if (visibleIds.length === 0) return current;
+      return allFilteredPipelineLeadsSelected ? current.filter((id) => !visibleIds.includes(id)) : Array.from(new Set([...current, ...visibleIds]));
+    });
+  }
+
+  async function applyBulkPipelinePatch(label: string, patch: PipelineLeadPatch) {
+    if (!isAdminAccount) {
+      setPipelineMessage("Bulk admin actions are only available to admin accounts.");
+      return;
+    }
+
+    if (selectedPipelineLeads.length === 0) {
+      setPipelineMessage("Select one or more pipeline leads before running a bulk action.");
+      return;
+    }
+
+    setBulkActionLoading(true);
+    setPipelineMessage("");
+
+    const updatedIds: string[] = [];
+    for (const lead of selectedPipelineLeads) {
+      const updated = await updatePipelineLead(lead.id, patch, { quiet: true });
+      if (updated) updatedIds.push(lead.id);
+    }
+
+    setSelectedPipelineLeadIds((current) => current.filter((id) => !updatedIds.includes(id)));
+    setPipelineMessage(`${label} applied to ${updatedIds.length} selected lead${updatedIds.length === 1 ? "" : "s"}.`);
+    setBulkActionLoading(false);
+  }
+
+  async function reassignSelectedPipelineLeads() {
+    const patch = buildPipelineBulkActionPatch("reassign", { owner: bulkOwner });
+    if (!patch.owner) {
+      setPipelineMessage("Enter an employee name before reassigning selected leads.");
+      return;
+    }
+
+    await applyBulkPipelinePatch(`Reassigned to ${patch.owner}`, patch);
+  }
+
+  async function markSelectedPipelineLeadsWorked() {
+    await applyBulkPipelinePatch("Worked today", buildPipelineBulkActionPatch("worked_today", { nextFollowUpInDays: 3 }));
+  }
+
+  async function closeSelectedPipelineLeadsLost() {
+    await applyBulkPipelinePatch("Closed lost", buildPipelineBulkActionPatch("closed_lost"));
+  }
+
+  async function createBulkPrepPacketsForSelectedHotLeads() {
+    if (!isAdminAccount) {
+      setPipelineMessage("Bulk admin actions are only available to admin accounts.");
+      return;
+    }
+
+    const leadsToPrep = selectedHotPipelineLeads.filter((lead) => !savedIntelligencePackets[lead.id]);
+    if (leadsToPrep.length === 0) {
+      setPipelineMessage("Select hot leads without saved prep packets before generating bulk prep.");
+      return;
+    }
+
+    setBulkActionLoading(true);
+    setPipelineMessage("");
+    const packetMap: Record<string, LeadIntelligencePacket> = {};
+    let created = 0;
+
+    for (const lead of leadsToPrep) {
+      try {
+        const response = await fetch("/api/lead-intelligence", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ lead: pipelineLeadToLeadRecord(lead) }),
+        });
+        const data = (await response.json()) as LeadIntelligenceResponse;
+
+        if (response.ok && data.ok && data.packet) {
+          packetMap[data.packet.leadId] = data.packet;
+          created += 1;
+          await updatePipelineLead(lead.id, {
+            salesPrepStatus: "ready",
+            prepWorkspaceNotes: "Bulk prep packet generated from admin selection.",
+            lastTouchedAt: new Date().toISOString(),
+          }, { quiet: true });
+        }
+      } catch {
+        // Keep the bulk run moving; the final count tells admin what succeeded.
+      }
+    }
+
+    if (created > 0) {
+      setSavedIntelligencePackets((current) => ({ ...current, ...packetMap }));
+      setIntelligencePacket(Object.values(packetMap).at(-1) || null);
+      setSelectedPipelineLeadIds((current) => current.filter((id) => !Object.keys(packetMap).includes(id)));
+    }
+
+    setPipelineMessage(`Generated ${created} prep packet${created === 1 ? "" : "s"} for selected hot leads.`);
+    setBulkActionLoading(false);
+  }
 
   return (
     <AppShell
@@ -660,6 +1168,13 @@ export default function LeadsPage() {
           <p className="mt-2 text-xs leading-5 liminull-muted">
             Work approved packets first, then stale follow-ups, then new high-fit discovery.
           </p>
+          <button
+            type="button"
+            onClick={copyPipelineDailyBrief}
+            className="mt-3 rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5 text-xs font-bold text-white/70 transition hover:border-cyan-300/25 hover:text-cyan-50"
+          >
+            Copy daily brief
+          </button>
         </div>
         <div className="liminull-card-soft p-4">
           <p className="text-xs font-black uppercase tracking-[0.16em] text-violet-100/60">Sales prep ready</p>
@@ -737,8 +1252,12 @@ export default function LeadsPage() {
                 value={employee}
                 onChange={(event) => setEmployee(event.target.value)}
                 placeholder="Tyler, Jack, etc."
-                className="rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none placeholder:text-white/25 focus:border-cyan-300/40"
+                disabled={Boolean(account && !isAdminAccount)}
+                className="rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none placeholder:text-white/25 focus:border-cyan-300/40 disabled:cursor-not-allowed disabled:opacity-70"
               />
+              {account && !isAdminAccount && (
+                <span className="text-xs font-medium text-white/45">Employee accounts import into their own pipeline only.</span>
+              )}
             </label>
 
             <label className="grid gap-2 text-sm font-semibold text-white/80">
@@ -1225,7 +1744,7 @@ export default function LeadsPage() {
               Pipeline command center
             </h2>
             <p className="mt-2 text-sm liminull-muted">
-              Duplicate lock is global. Filter by owner/stage, then work the highest-priority follow-ups first.
+              Admin view shows every employee’s leads by default. Filter by owner/stage or sort alphabetically to work the shared pipeline cleanly.
             </p>
           </div>
           <button type="button" onClick={loadPipeline} disabled={pipelineLoading} className="liminull-button disabled:opacity-60">
@@ -1237,6 +1756,16 @@ export default function LeadsPage() {
           <div className="mt-4 rounded-2xl border border-cyan-300/15 bg-cyan-300/10 p-4 text-sm text-cyan-50">
             {pipelineMessage}
           </div>
+        )}
+
+        {isAdminAccount && (
+          <EmployeePipelineSummary
+            summaries={ownerPipelineSummaries}
+            allSummary={allOwnerSummary}
+            selectedOwner={pipelineFilters.owner}
+            onSelectOwner={(owner) => setPipelineFilters((current) => ({ ...current, owner }))}
+            onCopySummary={copyEmployeePipelineRollup}
+          />
         )}
 
         <div className="mt-5 grid gap-4 rounded-2xl border border-white/5 bg-black/20 p-4">
@@ -1258,6 +1787,7 @@ export default function LeadsPage() {
             <div className="grid gap-3 lg:grid-cols-3">
               {todayFocusLeads.map((lead) => {
                 const priority = deriveLeadPriority(lead);
+                const savedPacket = savedIntelligencePackets[lead.id];
                 return (
                   <article key={lead.id} className="rounded-2xl border border-cyan-300/10 bg-cyan-300/[0.04] p-4">
                     <div className="flex items-start justify-between gap-3">
@@ -1275,6 +1805,29 @@ export default function LeadsPage() {
                         <span key={signal} className="rounded-full bg-white/5 px-2 py-1">{signal}</span>
                       ))}
                     </div>
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={() => savedPacket ? prepareSalesActionBrief(savedPacket) : createIntelligencePacket(pipelineLeadToLeadRecord(lead))}
+                        className="rounded-full border border-cyan-300/20 bg-cyan-300/10 px-3 py-1.5 text-xs font-bold text-cyan-50"
+                      >
+                        {savedPacket ? "Open prep" : "Create packet"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => createOutreachDraft(pipelineLeadToLeadRecord(lead))}
+                        className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5 text-xs font-bold text-white/70"
+                      >
+                        Copy outreach
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => markLeadTouched(lead, "Focus lead worked — follow up on response", 3)}
+                        className="rounded-full border border-emerald-300/20 bg-emerald-300/10 px-3 py-1.5 text-xs font-bold text-emerald-50"
+                      >
+                        Worked today
+                      </button>
+                    </div>
                   </article>
                 );
               })}
@@ -1282,19 +1835,26 @@ export default function LeadsPage() {
           )}
         </div>
 
-        <div className="mt-5 grid gap-3 rounded-2xl border border-white/5 bg-black/20 p-4 lg:grid-cols-[1fr_1fr_auto]">
+        <div className="mt-5 grid gap-3 rounded-2xl border border-white/5 bg-black/20 p-4 lg:grid-cols-[1fr_1fr_1fr_auto]">
           <label className="grid gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-white/45">
-            Owner
+            Employee view
             <select
-              value={pipelineFilters.owner}
+              value={isAdminAccount ? pipelineFilters.owner : signedInEmployeeName}
               onChange={(event) => setPipelineFilters((current) => ({ ...current, owner: event.target.value }))}
-              className="rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm normal-case tracking-normal text-white outline-none"
+              disabled={Boolean(account && !isAdminAccount)}
+              className="rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm normal-case tracking-normal text-white outline-none disabled:cursor-not-allowed disabled:opacity-70"
             >
-              <option value="all">All owners</option>
-              {pipelineOwners.map((owner) => (
+              {isAdminAccount && <option value="all">Admin: all employees</option>}
+              {!isAdminAccount && <option value={signedInEmployeeName}>{signedInEmployeeName || "My leads"}</option>}
+              {pipelineOwnerOptions.map((owner) => (
                 <option key={owner} value={owner}>{owner}</option>
               ))}
             </select>
+            {isAdminAccount ? (
+              <span className="normal-case tracking-normal text-white/40">Admins can inspect every employee pipeline or narrow to one owner.</span>
+            ) : (
+              <span className="normal-case tracking-normal text-white/40">Employee accounts only see their assigned pipeline.</span>
+            )}
           </label>
 
           <label className="grid gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-white/45">
@@ -1308,6 +1868,18 @@ export default function LeadsPage() {
               {pipelineStages.map((stage) => (
                 <option key={stage} value={stage}>{stageLabel(stage)}</option>
               ))}
+            </select>
+          </label>
+
+          <label className="grid gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-white/45">
+            Sort
+            <select
+              value={pipelineFilters.sortBy}
+              onChange={(event) => setPipelineFilters((current) => ({ ...current, sortBy: event.target.value as PipelineFilters["sortBy"] }))}
+              className="rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm normal-case tracking-normal text-white outline-none"
+            >
+              <option value="company">Name A-Z</option>
+              <option value="priority">Priority</option>
             </select>
           </label>
 
@@ -1342,6 +1914,32 @@ export default function LeadsPage() {
           </div>
         </div>
 
+        {isAdminAccount && (
+          <>
+            <BulkPipelineActions
+              filteredLeadCount={filteredPipelineLeads.length}
+              selectedLeadCount={selectedPipelineLeads.length}
+              selectedHotLeadCount={selectedHotPipelineLeads.length}
+              allVisibleSelected={allFilteredPipelineLeadsSelected}
+              bulkOwner={bulkOwner}
+              loading={bulkActionLoading}
+              onBulkOwnerChange={setBulkOwner}
+              onToggleVisibleSelection={selectVisiblePipelineLeads}
+              onClearSelection={() => setSelectedPipelineLeadIds([])}
+              onReassignSelected={reassignSelectedPipelineLeads}
+              onMarkSelectedWorked={markSelectedPipelineLeadsWorked}
+              onCloseSelectedLost={closeSelectedPipelineLeadsLost}
+              onCreatePrepForSelectedHotLeads={createBulkPrepPacketsForSelectedHotLeads}
+            />
+            <AdminPipelineReviewTable
+              leads={filteredPipelineLeads}
+              selectedLeadIds={selectedPipelineLeadIds}
+              onToggleLeadSelection={togglePipelineLeadSelection}
+              onSelectOwner={(owner) => setPipelineFilters((current) => ({ ...current, owner }))}
+            />
+          </>
+        )}
+
         <div className="mt-5 grid gap-3 lg:grid-cols-2">
           {pipelineLeads.length === 0 && (
             <div className="rounded-2xl border border-white/5 bg-black/20 p-5 text-sm liminull-muted lg:col-span-2">
@@ -1358,8 +1956,20 @@ export default function LeadsPage() {
           {filteredPipelineLeads.map((lead) => {
             const priority = deriveLeadPriority(lead);
             const savedPacket = savedIntelligencePackets[lead.id];
+            const quickActions = getLeadQuickActions(lead);
             return (
-              <article key={lead.id} className="rounded-2xl border border-white/5 bg-black/20 p-4">
+              <article key={lead.id} className={`rounded-2xl border bg-black/20 p-4 ${selectedPipelineLeadIds.includes(lead.id) ? "border-cyan-300/30 ring-1 ring-cyan-300/20" : "border-white/5"}`}>
+                {isAdminAccount && (
+                  <label className="mb-3 flex cursor-pointer items-center justify-between gap-3 rounded-xl border border-white/5 bg-white/[0.02] px-3 py-2 text-xs font-black uppercase tracking-[0.14em] text-white/55">
+                    <span>Select for bulk action</span>
+                    <input
+                      type="checkbox"
+                      checked={selectedPipelineLeadIds.includes(lead.id)}
+                      onChange={() => togglePipelineLeadSelection(lead.id)}
+                      className="h-4 w-4 accent-cyan-300"
+                    />
+                  </label>
+                )}
                 <div className="flex items-start justify-between gap-4">
                   <div className="min-w-0">
                     <h3 className="truncate text-lg font-black text-white">{lead.company}</h3>
@@ -1382,6 +1992,24 @@ export default function LeadsPage() {
                     <span key={signal} className="rounded-full bg-white/5 px-2 py-1">{signal}</span>
                   )) : <span className="rounded-full bg-white/5 px-2 py-1">watch list</span>}
                 </div>
+
+                {quickActions.length > 0 && (
+                  <div className="mt-4 rounded-2xl border border-white/5 bg-white/[0.02] p-3">
+                    <p className="text-[10px] font-black uppercase tracking-[0.16em] text-white/40">Next best moves</p>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {quickActions.map((action) => (
+                        <button
+                          key={`${lead.id}-${action.label}`}
+                          type="button"
+                          onClick={() => applyLeadQuickAction(lead, action)}
+                          className="rounded-full border border-white/10 bg-black/20 px-3 py-1.5 text-xs font-bold text-white/70 transition hover:border-cyan-300/25 hover:bg-cyan-300/10 hover:text-cyan-50"
+                        >
+                          {action.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 <div className="mt-4 grid gap-3 sm:grid-cols-3">
                   <label className="grid gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-white/45">
@@ -1428,6 +2056,13 @@ export default function LeadsPage() {
                 </label>
 
                 <div className="mt-3 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => copyPipelineLeadBrief(lead)}
+                    className="rounded-full border border-white/10 bg-white/[0.03] px-4 py-2 text-sm font-bold text-white/70 transition hover:border-cyan-300/25 hover:text-cyan-50"
+                  >
+                    Copy lead brief
+                  </button>
                   <button
                     type="button"
                     onClick={() => createIntelligencePacket(pipelineLeadToLeadRecord(lead))}

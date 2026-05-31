@@ -149,13 +149,62 @@ export type PipelineLeadPriority = {
   signals: string[];
 };
 
+export type PipelineLeadQuickAction = {
+  label: string;
+  stage: LeadPipelineStage;
+  nextAction: string;
+  followUpInDays?: number;
+};
+
+export type PipelineOwnerSummary = {
+  owner: string;
+  totalLeads: number;
+  openLeads: number;
+  hotLeads: number;
+  staleLeads: number;
+  prepReadyLeads: number;
+  dueSoonLeads: number;
+};
+
 export type PipelineLeadFilters = {
   owner?: string;
   stage?: LeadPipelineStage | "all";
+  sortBy?: "company" | "priority";
   noWebsiteOnly?: boolean;
   hasPhoneOnly?: boolean;
   hotScoreOnly?: boolean;
 };
+
+export type PipelineBulkAction = "worked_today" | "closed_lost" | "reassign";
+
+export function buildPipelineBulkActionPatch(
+  action: PipelineBulkAction,
+  options: { owner?: string; now?: Date; nextFollowUpInDays?: number } = {}
+): PipelineLeadMutation {
+  const now = options.now || new Date();
+  const touchedAt = now.toISOString();
+
+  if (action === "reassign") {
+    return options.owner?.trim() ? { owner: options.owner.trim(), lastTouchedAt: touchedAt } : {};
+  }
+
+  if (action === "closed_lost") {
+    return {
+      stage: "closed_lost",
+      nextAction: "Closed lost from bulk admin review",
+      lastTouchedAt: touchedAt,
+    };
+  }
+
+  const nextFollowUp = new Date(now);
+  nextFollowUp.setDate(nextFollowUp.getDate() + (options.nextFollowUpInDays ?? 3));
+
+  return {
+    nextAction: "Worked today — follow up on response",
+    lastTouchedAt: touchedAt,
+    nextFollowUpAt: nextFollowUp.toISOString(),
+  };
+}
 
 export const emptyLeadPipelineState: LeadPipelineState = { leads: [] };
 
@@ -227,15 +276,191 @@ export function selectStaleLeadNudges(leads: PipelineLead[], now = new Date(), l
     .slice(0, limit);
 }
 
+export function getLeadQuickActions(lead: PipelineLead): PipelineLeadQuickAction[] {
+  switch (lead.stage) {
+    case "new_lead":
+      return [
+        { label: "Mark contacted", stage: "contacted", nextAction: "Wait for first response", followUpInDays: 2 },
+        { label: "Interested", stage: "interested", nextAction: "Prep discovery questions", followUpInDays: 1 },
+        { label: "No fit", stage: "closed_lost", nextAction: "Moved to no-fit/nurture" },
+      ];
+    case "contacted":
+      return [
+        { label: "Interested", stage: "interested", nextAction: "Prep discovery questions", followUpInDays: 1 },
+        { label: "Discovery booked", stage: "meeting_requested", nextAction: "Prep discovery call agenda", followUpInDays: 1 },
+        { label: "Followed up", stage: "contacted", nextAction: "Follow up sent — wait for response", followUpInDays: 4 },
+      ];
+    case "interested":
+      return [
+        { label: "Send pricing", stage: "pricing_requested", nextAction: "Send scoped package/options", followUpInDays: 2 },
+        { label: "Discovery booked", stage: "meeting_requested", nextAction: "Prep discovery call agenda", followUpInDays: 1 },
+        { label: "No fit", stage: "closed_lost", nextAction: "Moved to no-fit/nurture" },
+      ];
+    case "pricing_requested":
+      return [
+        { label: "Pricing sent", stage: "pricing_requested", nextAction: "Follow up on proposal/pricing", followUpInDays: 3 },
+        { label: "Closed won", stage: "closed_won", nextAction: "Create client workspace" },
+        { label: "Closed lost", stage: "closed_lost", nextAction: "Archive loss reason in notes" },
+      ];
+    case "meeting_requested":
+      return [
+        { label: "Meeting done", stage: "pricing_requested", nextAction: "Send scoped package/options", followUpInDays: 1 },
+        { label: "Closed won", stage: "closed_won", nextAction: "Create client workspace" },
+        { label: "Closed lost", stage: "closed_lost", nextAction: "Archive loss reason in notes" },
+      ];
+    default:
+      return [];
+  }
+}
+
+export function formatPipelineLeadBriefForCopy(lead: PipelineLead, now = new Date()) {
+  const priority = deriveLeadPriority(lead, now);
+  const contact = [lead.phone || lead.localPhone, lead.website].filter(Boolean).join(" · ") || "No contact fields saved yet";
+  const evidence = lead.evidence.length > 0 ? lead.evidence.slice(0, 3).map((item) => `- ${item}`).join("\n") : "- No evidence saved yet";
+  const followUp = lead.nextFollowUpAt ? lead.nextFollowUpAt.slice(0, 10) : "Not scheduled";
+  const signals = priority.signals.length > 0 ? priority.signals.join(", ") : "watch list";
+
+  return [
+    `Lead brief: ${lead.company}`,
+    `Owner: ${lead.owner}`,
+    `Stage: ${lead.stage.replaceAll("_", " ")}`,
+    `Priority: ${priority.tier.toUpperCase()} (${priority.score}) — ${signals}`,
+    `Location: ${lead.location}`,
+    `Niche: ${lead.niche}`,
+    `Contact: ${contact}`,
+    `Next action: ${lead.nextAction || "Qualify and contact decision maker"}`,
+    `Next follow-up: ${followUp}`,
+    lead.notes ? `Notes: ${lead.notes}` : "Notes: none yet",
+    "Evidence:",
+    evidence,
+  ].join("\n");
+}
+
+export function formatPipelineDailyBriefForCopy(leads: PipelineLead[], now = new Date(), limit = 5) {
+  const openLeads = leads.filter((lead) => isOpenPipelineStage(lead.stage));
+  const focusLeads = selectTodayFocusLeads(leads, now, limit);
+  const staleLeads = selectStaleLeadNudges(leads, now, limit);
+  const stageCounts = leads.reduce<Record<string, number>>((counts, lead) => {
+    const label = lead.stage.replaceAll("_", " ");
+    counts[label] = (counts[label] || 0) + 1;
+    return counts;
+  }, {});
+  const stageSummary = Object.entries(stageCounts)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([stage, count]) => `- ${stage}: ${count}`)
+    .join("\n") || "- No pipeline leads yet";
+  const focusSummary = focusLeads.map((lead, index) => {
+    const priority = deriveLeadPriority(lead, now);
+    const followUp = lead.nextFollowUpAt ? lead.nextFollowUpAt.slice(0, 10) : "not scheduled";
+    return `${index + 1}. ${lead.company} — ${priority.tier.toUpperCase()} ${priority.score} — ${lead.nextAction} — follow-up ${followUp}`;
+  }).join("\n") || "No open focus leads under the current pipeline.";
+  const staleSummary = staleLeads.map((lead) => `- ${lead.company}: ${lead.nextAction}`).join("\n") || "- No stale leads due right now";
+
+  return [
+    `Liminull pipeline daily brief — ${now.toISOString().slice(0, 10)}`,
+    `Open leads: ${openLeads.length}`,
+    `Total leads: ${leads.length}`,
+    "",
+    "Stage mix:",
+    stageSummary,
+    "",
+    "Today's focus:",
+    focusSummary,
+    "",
+    "Stale follow-ups:",
+    staleSummary,
+  ].join("\n");
+}
+
 export function filterPipelineLeads(leads: PipelineLead[], filters: PipelineLeadFilters) {
   const owner = filters.owner?.trim().toLowerCase();
 
-  return leads.filter((lead) => {
-    if (owner && lead.owner.trim().toLowerCase() !== owner) return false;
-    if (filters.stage && filters.stage !== "all" && lead.stage !== filters.stage) return false;
-    if (filters.noWebsiteOnly && lead.website) return false;
-    if (filters.hasPhoneOnly && !lead.phone && !lead.localPhone) return false;
-    if (filters.hotScoreOnly && deriveLeadPriority(lead).tier !== "hot") return false;
-    return true;
-  });
+  return leads
+    .filter((lead) => {
+      if (owner && lead.owner.trim().toLowerCase() !== owner) return false;
+      if (filters.stage && filters.stage !== "all" && lead.stage !== filters.stage) return false;
+      if (filters.noWebsiteOnly && lead.website) return false;
+      if (filters.hasPhoneOnly && !lead.phone && !lead.localPhone) return false;
+      if (filters.hotScoreOnly && deriveLeadPriority(lead).tier !== "hot") return false;
+      return true;
+    })
+    .sort((a, b) => {
+      if (filters.sortBy === "priority") {
+        return deriveLeadPriority(b).score - deriveLeadPriority(a).score || a.company.localeCompare(b.company);
+      }
+
+      return a.company.localeCompare(b.company) || a.owner.localeCompare(b.owner) || Date.parse(b.updatedAt) - Date.parse(a.updatedAt);
+    });
+}
+
+export function summarizePipelineByOwner(leads: PipelineLead[], now = new Date(), dueSoonDays = 3): PipelineOwnerSummary[] {
+  const summaries = new Map<string, PipelineOwnerSummary>();
+  const dueSoonCutoff = now.getTime() + dueSoonDays * 24 * 60 * 60 * 1000;
+
+  for (const lead of leads) {
+    const owner = lead.owner.trim() || "Unassigned";
+    const current = summaries.get(owner) || {
+      owner,
+      totalLeads: 0,
+      openLeads: 0,
+      hotLeads: 0,
+      staleLeads: 0,
+      prepReadyLeads: 0,
+      dueSoonLeads: 0,
+    };
+
+    current.totalLeads += 1;
+
+    if (isOpenPipelineStage(lead.stage)) {
+      current.openLeads += 1;
+
+      if (deriveLeadPriority(lead, now).tier === "hot") {
+        current.hotLeads += 1;
+      }
+
+      if (isLeadStale(lead, now)) {
+        current.staleLeads += 1;
+      }
+
+      if (lead.salesPrepStatus === "ready") {
+        current.prepReadyLeads += 1;
+      }
+
+      const followUpAt = lead.nextFollowUpAt ? Date.parse(lead.nextFollowUpAt) : NaN;
+      if (!Number.isNaN(followUpAt) && followUpAt <= dueSoonCutoff) {
+        current.dueSoonLeads += 1;
+      }
+    }
+
+    summaries.set(owner, current);
+  }
+
+  return Array.from(summaries.values()).sort((a, b) => a.owner.localeCompare(b.owner));
+}
+
+export function formatPipelineOwnerSummaryForCopy(leads: PipelineLead[], now = new Date()) {
+  const summaries = summarizePipelineByOwner(leads, now);
+  const totals = summaries.reduce(
+    (summary, owner) => ({
+      totalLeads: summary.totalLeads + owner.totalLeads,
+      openLeads: summary.openLeads + owner.openLeads,
+      hotLeads: summary.hotLeads + owner.hotLeads,
+      staleLeads: summary.staleLeads + owner.staleLeads,
+      prepReadyLeads: summary.prepReadyLeads + owner.prepReadyLeads,
+      dueSoonLeads: summary.dueSoonLeads + owner.dueSoonLeads,
+    }),
+    { totalLeads: 0, openLeads: 0, hotLeads: 0, staleLeads: 0, prepReadyLeads: 0, dueSoonLeads: 0 }
+  );
+  const ownerLines = summaries.map(
+    (summary) =>
+      `- ${summary.owner}: ${summary.openLeads} open / ${summary.totalLeads} total · ${summary.hotLeads} hot · ${summary.staleLeads} stale · ${summary.prepReadyLeads} prep · ${summary.dueSoonLeads} due soon`
+  );
+
+  return [
+    `Liminull employee pipeline rollup — ${now.toISOString().slice(0, 10)}`,
+    `All employees: ${totals.openLeads} open / ${totals.totalLeads} total · ${totals.hotLeads} hot · ${totals.staleLeads} stale · ${totals.prepReadyLeads} prep · ${totals.dueSoonLeads} due soon`,
+    "",
+    "By employee:",
+    ownerLines.length > 0 ? ownerLines.join("\n") : "- No employee-owned leads loaded yet",
+  ].join("\n");
 }

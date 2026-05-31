@@ -1,6 +1,7 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import {
   emptyLeadPipelineState,
+  filterPipelineLeads,
   importLeadIntoPipeline,
   updatePipelineLead,
   type LeadPipelineState,
@@ -13,6 +14,8 @@ import {
   SupabaseLeadPipelineStore,
 } from "../../../lib/leadPipelineSupabase";
 import type { LeadRecord } from "../../../lib/leadScraper";
+import { verifyDashboardSession, type DashboardSessionUser } from "../../../lib/authSession";
+import { readServerEnv } from "../../../lib/env";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +25,46 @@ type PatchBody = PipelineLeadMutation & {
 };
 
 const memoryStores = new Map<string, LeadPipelineState>();
+
+async function getPipelineSession(request: NextRequest | Request | undefined) {
+  if (!request || !("cookies" in request)) {
+    return null;
+  }
+
+  return verifyDashboardSession(
+    request.cookies.get("hermes_dashboard_auth")?.value,
+    readServerEnv("HERMES_DASHBOARD_SESSION_TOKEN")
+  );
+}
+
+function isAdminSession(session: DashboardSessionUser | null) {
+  return session?.role === "admin";
+}
+
+function visibleLeadsForSession(leads: PipelineLead[], session: DashboardSessionUser | null) {
+  if (!session || isAdminSession(session)) {
+    return leads;
+  }
+
+  const owner = session.name?.trim();
+  return owner ? filterPipelineLeads(leads, { owner }) : [];
+}
+
+function ownerForImport(requestedOwner: string, session: DashboardSessionUser | null) {
+  if (!session || isAdminSession(session)) {
+    return requestedOwner;
+  }
+
+  return session.name?.trim() || requestedOwner;
+}
+
+function canMutateLead(lead: PipelineLead | undefined, session: DashboardSessionUser | null) {
+  if (!lead || !session || isAdminSession(session)) {
+    return Boolean(lead);
+  }
+
+  return Boolean(session.name?.trim() && lead.owner === session.name.trim());
+}
 
 function storeKey() {
   return process.env.LEAD_PIPELINE_STORE_PATH || "default";
@@ -88,13 +131,15 @@ function createStore(): LeadPipelineStore {
   return new FileLeadPipelineStore();
 }
 
-export async function GET() {
+export async function GET(request?: NextRequest) {
+  const session = await getPipelineSession(request);
   const leads = await createStore().listLeads();
-  return NextResponse.json({ ok: true, leads });
+  return NextResponse.json({ ok: true, leads: visibleLeadsForSession(leads, session) });
 }
 
 export async function POST(request: Request) {
   try {
+    const session = await getPipelineSession(request);
     const body = (await request.json()) as { lead?: LeadRecord; owner?: string };
 
     if (!body.lead || !body.owner?.trim()) {
@@ -104,7 +149,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const result = await createStore().importLead(body.lead, body.owner);
+    const result = await createStore().importLead(body.lead, ownerForImport(body.owner.trim(), session));
 
     if (!result.imported) {
       return NextResponse.json(
@@ -126,13 +171,22 @@ export async function POST(request: Request) {
 
 export async function PATCH(request: Request) {
   try {
+    const session = await getPipelineSession(request);
     const body = (await request.json()) as PatchBody;
 
     if (!body.id) {
       return NextResponse.json({ ok: false, error: "id is required" }, { status: 400 });
     }
 
-    const updated = await createStore().updateLead(body.id, body);
+    const store = createStore();
+    const currentLead = (await store.listLeads()).find((lead) => lead.id === body.id);
+
+    if (!canMutateLead(currentLead, session)) {
+      return NextResponse.json({ ok: false, error: currentLead ? "Not authorized to update this lead" : "Lead not found" }, { status: currentLead ? 403 : 404 });
+    }
+
+    const patch = session && !isAdminSession(session) ? { ...body, owner: currentLead?.owner } : body;
+    const updated = await store.updateLead(body.id, patch);
 
     if (!updated) {
       return NextResponse.json({ ok: false, error: "Lead not found" }, { status: 404 });

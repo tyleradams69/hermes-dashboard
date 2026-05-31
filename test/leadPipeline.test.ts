@@ -1,14 +1,20 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  buildPipelineBulkActionPatch,
   createPipelineLead,
   deriveLeadPriority,
   filterPipelineLeads,
+  formatPipelineDailyBriefForCopy,
+  formatPipelineLeadBriefForCopy,
+  formatPipelineOwnerSummaryForCopy,
+  getLeadQuickActions,
   importLeadIntoPipeline,
   isLeadStale,
   normalizeLeadDedupeKey,
   selectStaleLeadNudges,
   selectTodayFocusLeads,
+  summarizePipelineByOwner,
   updatePipelineLead,
   type LeadPipelineState,
 } from "../src/lib/leadPipeline";
@@ -140,6 +146,68 @@ describe("lead pipeline helpers", () => {
     expect(focus.map((lead) => lead.id)).toEqual([hot.id, warm.id]);
   });
 
+  it("returns stage-aware quick actions for moving leads through the pipeline", () => {
+    const newLead = createPipelineLead(scrapedLead, "Tyler");
+    const contactedLead = updatePipelineLead(newLead, { stage: "contacted" });
+    const wonLead = updatePipelineLead(newLead, { stage: "closed_won" });
+
+    expect(getLeadQuickActions(newLead).map((action) => action.label)).toEqual([
+      "Mark contacted",
+      "Interested",
+      "No fit",
+    ]);
+    expect(getLeadQuickActions(contactedLead)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ label: "Discovery booked", stage: "meeting_requested", followUpInDays: 1 }),
+        expect.objectContaining({ label: "Followed up", stage: "contacted", followUpInDays: 4 }),
+      ])
+    );
+    expect(getLeadQuickActions(wonLead)).toEqual([]);
+  });
+
+  it("formats copy-ready lead briefs for quick operator handoff", () => {
+    const lead = {
+      ...createPipelineLead(scrapedLead, "Tyler"),
+      nextFollowUpAt: "2026-05-08T12:00:00.000Z",
+      notes: "Owner asked for intake examples",
+    };
+
+    const brief = formatPipelineLeadBriefForCopy(lead, new Date("2026-05-06T12:00:00.000Z"));
+
+    expect(brief).toContain("Lead brief: Austin Automation Clinic");
+    expect(brief).toContain("Owner: Tyler");
+    expect(brief).toContain("Priority: HOT");
+    expect(brief).toContain("Next follow-up: 2026-05-08");
+    expect(brief).toContain("Notes: Owner asked for intake examples");
+    expect(brief).toContain("- 4.9 stars from 145 Google reviews");
+  });
+
+  it("formats a daily pipeline brief from the active lead queue", () => {
+    const now = new Date("2026-05-10T12:00:00.000Z");
+    const staleLead = {
+      ...createPipelineLead({ ...scrapedLead, id: "google:stale", website: undefined, score: 95 }, "Tyler"),
+      lastTouchedAt: "2026-05-01T12:00:00.000Z",
+    };
+    const contactedLead = updatePipelineLead(
+      createPipelineLead({ ...scrapedLead, id: "google:contacted", company: "River City Dental" }, "Jack"),
+      { stage: "contacted", nextAction: "Send follow-up recap" }
+    );
+    const closedLead = updatePipelineLead(
+      createPipelineLead({ ...scrapedLead, id: "google:closed", company: "Closed Clinic" }, "Tyler"),
+      { stage: "closed_won" }
+    );
+
+    const brief = formatPipelineDailyBriefForCopy([contactedLead, closedLead, staleLead], now, 3);
+
+    expect(brief).toContain("Liminull pipeline daily brief — 2026-05-10");
+    expect(brief).toContain("Open leads: 2");
+    expect(brief).toContain("- closed won: 1");
+    expect(brief).toContain("- contacted: 1");
+    expect(brief).toContain("1. Austin Automation Clinic");
+    expect(brief).toContain("Stale follow-ups:");
+    expect(brief).toContain("Austin Automation Clinic: Qualify and contact decision maker");
+  });
+
   it("filters pipeline leads by owner, stage, no website, phone presence, and hot score", () => {
     const tylerHotNoWebsite = createPipelineLead({ ...scrapedLead, id: "google:tyler-hot", score: 91, website: undefined }, "Tyler");
     const jackHotWithWebsite = createPipelineLead({ ...scrapedLead, id: "google:jack-hot", score: 92 }, "Jack");
@@ -157,5 +225,96 @@ describe("lead pipeline helpers", () => {
         hotScoreOnly: true,
       }).map((lead) => lead.id)
     ).toEqual([tylerHotNoWebsite.id]);
+  });
+
+  it("lets admin view every employee's pipeline sorted by company name", () => {
+    const zetaTyler = createPipelineLead({ ...scrapedLead, id: "google:zeta", company: "Zeta Dental" }, "Tyler");
+    const alphaJack = createPipelineLead({ ...scrapedLead, id: "google:alpha", company: "Alpha Med Spa" }, "Jack");
+    const alphaTyler = createPipelineLead({ ...scrapedLead, id: "google:alpha-tyler", company: "Alpha Med Spa" }, "Tyler");
+
+    expect(
+      filterPipelineLeads([zetaTyler, alphaTyler, alphaJack], {
+        owner: undefined,
+        stage: "all",
+        sortBy: "company",
+      }).map((lead) => `${lead.company}:${lead.owner}`)
+    ).toEqual(["Alpha Med Spa:Jack", "Alpha Med Spa:Tyler", "Zeta Dental:Tyler"]);
+  });
+
+  it("builds deterministic bulk admin action patches", () => {
+    const now = new Date("2026-05-10T12:00:00.000Z");
+
+    expect(buildPipelineBulkActionPatch("reassign", { owner: " Jack ", now })).toEqual({
+      owner: "Jack",
+      lastTouchedAt: "2026-05-10T12:00:00.000Z",
+    });
+    expect(buildPipelineBulkActionPatch("closed_lost", { now })).toEqual({
+      stage: "closed_lost",
+      nextAction: "Closed lost from bulk admin review",
+      lastTouchedAt: "2026-05-10T12:00:00.000Z",
+    });
+    expect(buildPipelineBulkActionPatch("worked_today", { now, nextFollowUpInDays: 2 })).toEqual({
+      nextAction: "Worked today — follow up on response",
+      lastTouchedAt: "2026-05-10T12:00:00.000Z",
+      nextFollowUpAt: "2026-05-12T12:00:00.000Z",
+    });
+  });
+
+  it("summarizes admin pipeline health by employee name", () => {
+    const now = new Date("2026-05-10T12:00:00.000Z");
+    const tylerHotStale = {
+      ...createPipelineLead({ ...scrapedLead, id: "google:tyler-hot", score: 95, website: undefined }, "Tyler"),
+      lastTouchedAt: "2026-05-01T12:00:00.000Z",
+      salesPrepStatus: "ready" as const,
+    };
+    const jackDueSoon = {
+      ...createPipelineLead({ ...scrapedLead, id: "google:jack-due", score: 72 }, "Jack"),
+      nextFollowUpAt: "2026-05-12T12:00:00.000Z",
+    };
+    const jackClosed = updatePipelineLead(
+      createPipelineLead({ ...scrapedLead, id: "google:jack-closed", score: 96 }, "Jack"),
+      { stage: "closed_lost" }
+    );
+
+    expect(summarizePipelineByOwner([tylerHotStale, jackDueSoon, jackClosed], now)).toEqual([
+      {
+        owner: "Jack",
+        totalLeads: 2,
+        openLeads: 1,
+        hotLeads: 0,
+        staleLeads: 0,
+        prepReadyLeads: 0,
+        dueSoonLeads: 1,
+      },
+      {
+        owner: "Tyler",
+        totalLeads: 1,
+        openLeads: 1,
+        hotLeads: 1,
+        staleLeads: 1,
+        prepReadyLeads: 1,
+        dueSoonLeads: 0,
+      },
+    ]);
+  });
+
+  it("formats copy-ready admin employee rollups sorted by employee name", () => {
+    const now = new Date("2026-05-10T12:00:00.000Z");
+    const tylerHot = {
+      ...createPipelineLead({ ...scrapedLead, id: "google:tyler-hot", score: 95, website: undefined }, "Tyler"),
+      salesPrepStatus: "ready" as const,
+    };
+    const jackDue = {
+      ...createPipelineLead({ ...scrapedLead, id: "google:jack-due", company: "River City Dental", score: 75 }, "Jack"),
+      nextFollowUpAt: "2026-05-11T12:00:00.000Z",
+    };
+
+    const rollup = formatPipelineOwnerSummaryForCopy([tylerHot, jackDue], now);
+
+    expect(rollup).toContain("Liminull employee pipeline rollup — 2026-05-10");
+    expect(rollup).toContain("All employees: 2 open / 2 total · 1 hot · 0 stale · 1 prep · 1 due soon");
+    expect(rollup.indexOf("- Jack:")).toBeLessThan(rollup.indexOf("- Tyler:"));
+    expect(rollup).toContain("- Jack: 1 open / 1 total · 0 hot · 0 stale · 0 prep · 1 due soon");
+    expect(rollup).toContain("- Tyler: 1 open / 1 total · 1 hot · 0 stale · 1 prep · 0 due soon");
   });
 });

@@ -1,9 +1,12 @@
+import { NextRequest } from "next/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mkdtemp, rm } from "fs/promises";
 import { tmpdir } from "os";
 import { join } from "path";
 
 import { GET, PATCH, POST } from "../src/app/api/lead-pipeline/route";
+import { createDashboardSession, type DashboardSessionUser } from "../src/lib/authSession";
+import { buildPipelineBulkActionPatch } from "../src/lib/leadPipeline";
 
 const lead = {
   id: "google:place-1",
@@ -29,6 +32,18 @@ function jsonRequest(method: string, body?: unknown) {
   });
 }
 
+async function authedRequest(method: string, user: DashboardSessionUser, body?: unknown) {
+  const token = await createDashboardSession(user, "test-session-secret", 60 * 60);
+  return new NextRequest("https://dashboard.example.com/api/lead-pipeline", {
+    method,
+    headers: {
+      "content-type": "application/json",
+      cookie: `hermes_dashboard_auth=${token}`,
+    },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+}
+
 describe("lead pipeline API", () => {
   let dir = "";
 
@@ -36,6 +51,7 @@ describe("lead pipeline API", () => {
     delete process.env.SUPABASE_URL;
     delete process.env.NEXT_PUBLIC_SUPABASE_URL;
     delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+    process.env.HERMES_DASHBOARD_SESSION_TOKEN = "test-session-secret";
     dir = await mkdtemp(join(tmpdir(), "lead-pipeline-test-"));
     process.env.LEAD_PIPELINE_STORE_PATH = join(dir, "pipeline.json");
   });
@@ -45,6 +61,7 @@ describe("lead pipeline API", () => {
     delete process.env.SUPABASE_URL;
     delete process.env.NEXT_PUBLIC_SUPABASE_URL;
     delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+    delete process.env.HERMES_DASHBOARD_SESSION_TOKEN;
     vi.unstubAllGlobals();
     if (dir) {
       await rm(dir, { recursive: true, force: true });
@@ -85,6 +102,76 @@ describe("lead pipeline API", () => {
 
     const listed = await GET();
     expect(await listed.json()).toMatchObject({ ok: true, leads: [{ stage: "contacted", owner: "Tyler" }] });
+  });
+
+  it("lets admins see every employee lead while employees only see their own pipeline", async () => {
+    const admin = { id: "admin-1", email: "admin@example.com", name: "Caitlin", role: "admin" };
+    const employee = { id: "employee-1", email: "tyler@example.com", name: "Tyler", role: "employee" };
+    const jackLead = { ...lead, id: "google:place-2", company: "Barton Springs Detail" };
+
+    await POST(jsonRequest("POST", { lead, owner: "Tyler" }));
+    await POST(jsonRequest("POST", { lead: jackLead, owner: "Jack" }));
+
+    const adminList = await GET(await authedRequest("GET", admin));
+    const employeeList = await GET(await authedRequest("GET", employee));
+
+    expect(await adminList.json()).toMatchObject({
+      ok: true,
+      leads: expect.arrayContaining([expect.objectContaining({ owner: "Tyler" }), expect.objectContaining({ owner: "Jack" })]),
+    });
+    expect(await employeeList.json()).toMatchObject({ ok: true, leads: [expect.objectContaining({ owner: "Tyler" })] });
+  });
+
+  it("forces employee imports and updates to stay inside their own owner pipeline", async () => {
+    const tyler = { id: "employee-1", email: "tyler@example.com", name: "Tyler", role: "employee" };
+    const jack = { id: "employee-2", email: "jack@example.com", name: "Jack", role: "employee" };
+
+    const imported = await POST(await authedRequest("POST", tyler, { lead, owner: "Jack" }));
+    const importedJson = await imported.json();
+    expect(importedJson).toMatchObject({ ok: true, lead: { owner: "Tyler" } });
+
+    const forbidden = await PATCH(
+      await authedRequest("PATCH", jack, {
+        id: importedJson.lead.id,
+        stage: "contacted",
+      })
+    );
+
+    expect(forbidden.status).toBe(403);
+    expect(await forbidden.json()).toMatchObject({ ok: false, error: "Not authorized to update this lead" });
+  });
+
+  it("keeps repeated admin bulk PATCH actions role-aware", async () => {
+    const admin = { id: "admin-1", email: "admin@example.com", name: "Caitlin", role: "admin" };
+    const tyler = { id: "employee-1", email: "tyler@example.com", name: "Tyler", role: "employee" };
+    const jackLead = { ...lead, id: "google:place-2", company: "Barton Springs Detail" };
+
+    const first = await POST(await authedRequest("POST", admin, { lead, owner: "Tyler" }));
+    const second = await POST(await authedRequest("POST", admin, { lead: jackLead, owner: "Jack" }));
+    const firstJson = await first.json();
+    const secondJson = await second.json();
+
+    const reassignPatch = buildPipelineBulkActionPatch("reassign", { owner: "Maya" });
+    for (const id of [firstJson.lead.id, secondJson.lead.id]) {
+      const patched = await PATCH(await authedRequest("PATCH", admin, { id, ...reassignPatch }));
+      expect(patched.status).toBe(200);
+      expect(await patched.json()).toMatchObject({ ok: true, lead: { owner: "Maya" } });
+    }
+
+    const workedPatch = buildPipelineBulkActionPatch("worked_today", { now: new Date("2026-05-10T12:00:00.000Z"), nextFollowUpInDays: 3 });
+    const worked = await PATCH(await authedRequest("PATCH", admin, { id: firstJson.lead.id, ...workedPatch }));
+    expect(await worked.json()).toMatchObject({
+      ok: true,
+      lead: {
+        owner: "Maya",
+        lastTouchedAt: "2026-05-10T12:00:00.000Z",
+        nextFollowUpAt: "2026-05-13T12:00:00.000Z",
+      },
+    });
+
+    const employeeReassign = await PATCH(await authedRequest("PATCH", tyler, { id: firstJson.lead.id, owner: "Tyler" }));
+    expect(employeeReassign.status).toBe(403);
+    expect(await employeeReassign.json()).toMatchObject({ ok: false, error: "Not authorized to update this lead" });
   });
 
   it("uses Supabase storage instead of the local JSON file when server credentials are configured", async () => {
