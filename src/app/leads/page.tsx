@@ -10,7 +10,13 @@ import {
   type PipelineLead,
   type LeadPipelineStage,
 } from "@/lib/leadPipeline";
-import { formatLeadIntelligencePacketForCopy, type LeadIntelligencePacket } from "@/lib/leadIntelligence";
+import {
+  buildLeadSalesActionBrief,
+  formatLeadIntelligencePacketForCopy,
+  formatLeadSalesActionBriefForCopy,
+  type LeadIntelligencePacket,
+  type LeadSalesActionBrief,
+} from "@/lib/leadIntelligence";
 import type { LeadSearchRun } from "@/lib/leadSearchRunStore";
 import type { LeadRecord, LeadSearchInput, LeadSourceLink } from "@/lib/leadScraper";
 
@@ -234,6 +240,7 @@ export default function LeadsPage() {
   const [recentRuns, setRecentRuns] = useState<LeadSearchForm[]>([]);
   const [outreachDraft, setOutreachDraft] = useState<OutreachDraft | null>(null);
   const [intelligencePacket, setIntelligencePacket] = useState<LeadIntelligencePacket | null>(null);
+  const [salesActionBrief, setSalesActionBrief] = useState<LeadSalesActionBrief | null>(null);
   const [savedIntelligencePackets, setSavedIntelligencePackets] = useState<Record<string, LeadIntelligencePacket>>({});
   const [error, setError] = useState("");
   const [pipelineMessage, setPipelineMessage] = useState("");
@@ -482,6 +489,7 @@ export default function LeadsPage() {
       }
 
       setIntelligencePacket(data.packet);
+      setSalesActionBrief((current) => current?.company === data.packet!.company ? buildLeadSalesActionBrief(data.packet!) : current);
       setSavedIntelligencePackets((current) => ({ ...current, [data.packet!.leadId]: data.packet! }));
       setPipelineMessage(`${data.packet.company} intelligence marked ${status.replaceAll("_", " ")}.`);
     } catch (caught) {
@@ -497,6 +505,28 @@ export default function LeadsPage() {
       setPipelineMessage(`Lead intelligence packet copied for ${packet.company}. Review before using externally.`);
     } catch {
       setPipelineMessage("Clipboard access was blocked. The packet is still visible for manual copy/review.");
+    }
+  }
+
+  function prepareSalesActionBrief(packet: LeadIntelligencePacket) {
+    const brief = buildLeadSalesActionBrief(packet);
+    setSalesActionBrief(brief);
+    setIntelligencePacket(packet);
+    setPipelineMessage(
+      packet.status === "draft"
+        ? `${packet.company} sales prep is drafted. Approve the packet before using client-facing copy.`
+        : `${packet.company} discovery, audit, and proposal prep is ready.`
+    );
+  }
+
+  async function copySalesActionBrief(brief: LeadSalesActionBrief) {
+    const text = formatLeadSalesActionBriefForCopy(brief);
+
+    try {
+      await navigator.clipboard.writeText(text);
+      setPipelineMessage(`Sales action brief copied for ${brief.company}. Verify facts before sending.`);
+    } catch {
+      setPipelineMessage("Clipboard access was blocked. The sales action brief is still visible for manual copy/review.");
     }
   }
 
@@ -907,6 +937,13 @@ export default function LeadsPage() {
                     )}
                     <button
                       type="button"
+                      onClick={() => prepareSalesActionBrief(intelligencePacket)}
+                      className="rounded-full border border-violet-300/20 bg-violet-300/10 px-3 py-1 text-xs font-bold text-violet-50 hover:border-violet-300/40"
+                    >
+                      Prep sales action
+                    </button>
+                    <button
+                      type="button"
                       onClick={() => setIntelligencePacket(null)}
                       className="rounded-full border border-white/10 px-3 py-1 text-xs font-bold text-white/60 hover:text-white"
                     >
@@ -939,6 +976,60 @@ export default function LeadsPage() {
                   <p className="rounded-2xl border border-white/5 bg-black/20 p-3 text-xs text-white/55">
                     {intelligencePacket.approvalNote}
                   </p>
+                </div>
+              </div>
+            )}
+
+            {salesActionBrief && (
+              <div className="mt-5 rounded-2xl border border-violet-300/15 bg-violet-300/10 p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-black uppercase tracking-[0.16em] text-violet-100/70">Sales action brief / internal prep</p>
+                    <h3 className="mt-1 text-sm font-black text-white">{salesActionBrief.company}</h3>
+                    <p className="mt-1 text-xs text-white/45">{salesActionBrief.readinessLabel}</p>
+                  </div>
+                  <div className="flex shrink-0 flex-wrap justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={() => copySalesActionBrief(salesActionBrief)}
+                      className="rounded-full border border-violet-300/20 bg-violet-300/10 px-3 py-1 text-xs font-bold text-violet-50 hover:border-violet-300/40"
+                    >
+                      Copy sales brief
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSalesActionBrief(null)}
+                      className="rounded-full border border-white/10 px-3 py-1 text-xs font-bold text-white/60 hover:text-white"
+                    >
+                      Clear
+                    </button>
+                  </div>
+                </div>
+
+                <div className="mt-4 grid gap-3 md:grid-cols-3">
+                  <div className="rounded-2xl border border-white/5 bg-black/20 p-3">
+                    <p className="text-[10px] font-black uppercase tracking-[0.16em] text-violet-100/60">Discovery agenda</p>
+                    <ol className="mt-2 list-decimal space-y-1 pl-4 text-xs leading-5 text-violet-50/85">
+                      {salesActionBrief.discoveryAgenda.map((item) => <li key={item}>{item}</li>)}
+                    </ol>
+                  </div>
+                  <div className="rounded-2xl border border-white/5 bg-black/20 p-3">
+                    <p className="text-[10px] font-black uppercase tracking-[0.16em] text-violet-100/60">Mini audit outline</p>
+                    <ol className="mt-2 list-decimal space-y-1 pl-4 text-xs leading-5 text-violet-50/85">
+                      {salesActionBrief.miniAuditOutline.map((item) => <li key={item}>{item}</li>)}
+                    </ol>
+                  </div>
+                  <div className="rounded-2xl border border-white/5 bg-black/20 p-3">
+                    <p className="text-[10px] font-black uppercase tracking-[0.16em] text-violet-100/60">Proposal outline</p>
+                    <ol className="mt-2 list-decimal space-y-1 pl-4 text-xs leading-5 text-violet-50/85">
+                      {salesActionBrief.proposalOutline.map((item) => <li key={item}>{item}</li>)}
+                    </ol>
+                  </div>
+                </div>
+
+                <div className="mt-3 grid gap-2 rounded-2xl border border-white/5 bg-black/20 p-3 text-xs leading-5 text-white/60">
+                  <p>{salesActionBrief.nextStep}</p>
+                  <p>{salesActionBrief.reviewNote}</p>
                 </div>
               </div>
             )}
@@ -1172,6 +1263,13 @@ export default function LeadsPage() {
                           Approve packet
                         </button>
                       )}
+                      <button
+                        type="button"
+                        onClick={() => prepareSalesActionBrief(savedPacket)}
+                        className="rounded-full border border-violet-300/20 bg-violet-300/10 px-4 py-2 text-sm font-bold text-violet-50 transition hover:border-violet-300/40"
+                      >
+                        Prep sales action
+                      </button>
                     </>
                   )}
                 </div>

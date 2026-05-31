@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { buildLeadIntelligencePacket, formatLeadIntelligencePacketForCopy } from "../src/lib/leadIntelligence";
+import {
+  buildLeadIntelligencePacket,
+  buildLeadSalesActionBrief,
+  formatLeadIntelligencePacketForCopy,
+  formatLeadSalesActionBriefForCopy,
+} from "../src/lib/leadIntelligence";
 import type { LeadRecord } from "../src/lib/leadScraper";
 
 const noWebsiteLead: LeadRecord = {
@@ -65,5 +70,33 @@ describe("lead intelligence packets", () => {
     expect(copy).toContain("Discovery questions:");
     expect(copy).toContain("1. How are missed calls, form fills, and after-hours inquiries handled today?");
     expect(copy).toContain("Review before using externally");
+  });
+
+  it("turns approved packets into discovery, audit, and proposal prep", () => {
+    const packet = {
+      ...buildLeadIntelligencePacket(noWebsiteLead, new Date("2026-05-31T12:00:00.000Z")),
+      status: "approved" as const,
+    };
+    const brief = buildLeadSalesActionBrief(packet);
+    const copy = formatLeadSalesActionBriefForCopy(brief);
+
+    expect(brief.readinessLabel).toBe("Approved sales prep");
+    expect(brief.discoveryAgenda).toContain("Confirm current lead sources, response times, and missed-call/form-fill handling.");
+    expect(brief.miniAuditOutline.join(" ")).toContain("Google profile is doing too much");
+    expect(brief.proposalOutline).toContain("Recommended offer: AI intake automation sprint");
+    expect(brief.nextStep).toContain("prep the discovery call");
+    expect(copy).toContain("Sales Action Brief: Austin Smile Studio");
+    expect(copy).toContain("Discovery agenda:");
+    expect(copy).toContain("Mini audit outline:");
+    expect(copy).toContain("Proposal outline:");
+    expect(copy).toContain("Internal Liminull prep only");
+  });
+
+  it("keeps draft sales prep blocked from external use", () => {
+    const packet = buildLeadIntelligencePacket(noWebsiteLead, new Date("2026-05-31T12:00:00.000Z"));
+    const brief = buildLeadSalesActionBrief(packet);
+
+    expect(brief.readinessLabel).toBe("Draft prep — approve packet before external use");
+    expect(brief.nextStep).toContain("Approve the intelligence packet before sending");
   });
 });

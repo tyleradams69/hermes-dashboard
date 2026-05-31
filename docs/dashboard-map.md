@@ -19,6 +19,7 @@ Data paths:
 - Pipeline records: `/leads` -> `/api/lead-pipeline` -> `src/lib/leadPipelineSupabase.ts` / `src/lib/leadPipeline.ts`.
 - Lead intelligence packets: `/leads` -> `/api/lead-intelligence` -> `src/lib/leadIntelligence.ts` / `src/lib/leadIntelligencePacketStore.ts`.
   - Deterministic packets are saved server-side, shown on pipeline cards, and can be marked `draft`, `approved`, or `used`.
+  - Approved packets can generate copy-ready internal sales action briefs: discovery agenda, mini audit outline, and lightweight proposal outline.
 - Closed-won conversion: `/leads` -> `/api/client-workspaces` -> `src/lib/clientWorkspaceStore.ts`.
 
 ### `/businesses` — client delivery workspace surface

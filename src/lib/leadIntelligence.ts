@@ -16,6 +16,17 @@ export type LeadIntelligencePacket = {
   approvalNote: string;
 };
 
+export type LeadSalesActionBrief = {
+  company: string;
+  packetStatus: LeadIntelligenceStatus;
+  readinessLabel: string;
+  discoveryAgenda: string[];
+  miniAuditOutline: string[];
+  proposalOutline: string[];
+  nextStep: string;
+  reviewNote: string;
+};
+
 function marketFromLocation(location: string) {
   const cityStateMatch = location.match(/,\s*([^,]+,\s*[A-Z]{2})(?:\s+\d{5})?/);
   return cityStateMatch?.[1] || location;
@@ -121,5 +132,57 @@ export function formatLeadIntelligencePacketForCopy(packet: LeadIntelligencePack
     ...packet.discoveryQuestions.map((question, index) => `${index + 1}. ${question}`),
     "",
     packet.approvalNote,
+  ].join("\n");
+}
+
+export function buildLeadSalesActionBrief(packet: LeadIntelligencePacket): LeadSalesActionBrief {
+  const readyForExternalUse = packet.status === "approved" || packet.status === "used";
+
+  return {
+    company: packet.company,
+    packetStatus: packet.status,
+    readinessLabel: readyForExternalUse ? "Approved sales prep" : "Draft prep — approve packet before external use",
+    discoveryAgenda: [
+      "Confirm current lead sources, response times, and missed-call/form-fill handling.",
+      packet.discoveryQuestions[0] || "Map the current intake and follow-up flow.",
+      packet.discoveryQuestions[1] || "Identify the highest-friction booking or qualification moment.",
+      "Agree on one measurable automation sprint outcome before discussing scope.",
+    ],
+    miniAuditOutline: [
+      `Lead angle: ${packet.outreachHook}`,
+      `Likely pain: ${packet.painHypothesis}`,
+      `Website/intake note: ${packet.websiteNotes}`,
+      "Show 2-3 concrete friction points, then stop before over-explaining.",
+    ],
+    proposalOutline: [
+      `Recommended offer: ${packet.recommendedOffer}`,
+      "Problem: inquiries may be leaking before staff can qualify and follow up.",
+      "Sprint: install a focused intake, booking, or missed-call capture workflow with simple reporting.",
+      "Proof: compare new inquiry capture, response speed, and booked conversations before/after launch.",
+    ],
+    nextStep: readyForExternalUse
+      ? "Use this to prep the discovery call, mini audit, or lightweight proposal. Mark the packet used after the asset is sent or the call is complete."
+      : "Approve the intelligence packet before sending any client-facing audit, discovery agenda, or proposal language.",
+    reviewNote: "Internal Liminull prep only. Verify facts manually before sending anything to the prospect.",
+  };
+}
+
+export function formatLeadSalesActionBriefForCopy(brief: LeadSalesActionBrief) {
+  return [
+    `Sales Action Brief: ${brief.company}`,
+    `Readiness: ${brief.readinessLabel}`,
+    `Packet status: ${brief.packetStatus}`,
+    "",
+    "Discovery agenda:",
+    ...brief.discoveryAgenda.map((item, index) => `${index + 1}. ${item}`),
+    "",
+    "Mini audit outline:",
+    ...brief.miniAuditOutline.map((item, index) => `${index + 1}. ${item}`),
+    "",
+    "Proposal outline:",
+    ...brief.proposalOutline.map((item, index) => `${index + 1}. ${item}`),
+    "",
+    `Next step: ${brief.nextStep}`,
+    brief.reviewNote,
   ].join("\n");
 }
