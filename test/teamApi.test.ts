@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 
-import { GET, PATCH } from "../src/app/api/team/route";
+import { GET, PATCH, POST } from "../src/app/api/team/route";
 import { createDashboardSession } from "../src/lib/authSession";
 
 function request(url: string, init: ConstructorParameters<typeof NextRequest>[1] = {}) {
@@ -74,6 +74,40 @@ describe("team API", () => {
         method: "PUT",
         cache: "no-store",
         body: JSON.stringify({ user_metadata: { full_name: "Jacob", name: "Jacob", role: "admin" }, password: "Liminull-temp-25!" }),
+      })
+    );
+  });
+
+  it("lets admins create a Supabase Auth employee from the dashboard", async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({ id: "employee-2", email: "new@liminull.com", user_metadata: { full_name: "New Employee", role: "employee" } }),
+        { status: 200, headers: { "content-type": "application/json" } }
+      )
+    );
+
+    const response = await POST(
+      request("https://dashboard.example.com/api/team", {
+        method: "POST",
+        headers: { cookie: await authCookie(), "content-type": "application/json" },
+        body: JSON.stringify({ email: "New@Liminull.com", name: "New Employee", role: "employee", password: "Liminull-temp-25!" }),
+      })
+    );
+
+    expect(response.status).toBe(201);
+    expect(await response.json()).toEqual({ ok: true, account: { id: "employee-2", email: "new@liminull.com", name: "New Employee", role: "employee" } });
+    expect(fetch).toHaveBeenCalledWith(
+      "https://project.supabase.co/auth/v1/admin/users",
+      expect.objectContaining({
+        method: "POST",
+        cache: "no-store",
+        body: JSON.stringify({
+          email: "new@liminull.com",
+          password: "Liminull-temp-25!",
+          email_confirm: true,
+          user_metadata: { full_name: "New Employee", name: "New Employee", role: "employee" },
+          app_metadata: { role: "employee" },
+        }),
       })
     );
   });

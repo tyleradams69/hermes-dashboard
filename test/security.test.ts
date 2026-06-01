@@ -102,6 +102,22 @@ describe("dashboard login security", () => {
     expect(setCookie.toLowerCase()).toContain("max-age=28800");
   });
 
+  it("does not mark the session cookie secure for local http production-mode QA", async () => {
+    const response = await loginPost(
+      jsonRequest(
+        "http://127.0.0.1:3010/api/login",
+        { email: "employee@liminull.com", password: "correct-password" },
+        { "x-forwarded-for": "203.0.113.16" }
+      )
+    );
+
+    expect(response.status).toBe(200);
+    const setCookie = response.headers.get("set-cookie") || "";
+    expect(setCookie).toContain("hermes_dashboard_auth=");
+    expect(setCookie.toLowerCase()).toContain("httponly");
+    expect(setCookie.toLowerCase()).not.toContain("secure");
+  });
+
   it("normalizes quoted Supabase env values before calling Supabase Auth", async () => {
     process.env.SUPABASE_URL = '"https://project.supabase.co"';
     process.env.SUPABASE_ANON_KEY = '"public-anon-key"';

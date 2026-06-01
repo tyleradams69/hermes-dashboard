@@ -141,4 +141,15 @@ describe("lead scraper page wiring", () => {
     expect(source).toContain("Open detail");
     expect(source).toContain("Detail drawer worked — follow up on response");
   });
+
+  it("keeps the admin duplicate review wired to filtered pipeline leads", async () => {
+    const source = await readFile("src/app/leads/page.tsx", "utf8");
+
+    expect(source).toContain("selectPipelineDuplicateGroups");
+    expect(source).toContain("Duplicate review");
+    expect(source).toContain("Copy duplicate review");
+    expect(source).toContain("formatPipelineDuplicateReviewForCopy");
+    expect(source).toContain("groups={duplicateGroups}");
+    expect(source).toContain("onOpenDetail={setDetailPipelineLeadId}");
+  });
 });

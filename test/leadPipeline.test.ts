@@ -7,6 +7,7 @@ import {
   filterPipelineLeads,
   formatPipelineAttentionBriefForCopy,
   formatPipelineDailyBriefForCopy,
+  formatPipelineDuplicateReviewForCopy,
   formatPipelineLeadBriefForCopy,
   formatPipelineOwnerSummaryForCopy,
   getLeadQuickActions,
@@ -14,6 +15,7 @@ import {
   isLeadStale,
   normalizeLeadDedupeKey,
   selectPipelineAttentionItems,
+  selectPipelineDuplicateGroups,
   selectStaleLeadNudges,
   selectTodayFocusLeads,
   summarizePipelineByOwner,
@@ -175,6 +177,24 @@ describe("lead pipeline helpers", () => {
     expect(brief).toContain("Liminull pipeline needs-attention queue — 2026-05-10");
     expect(brief).toContain("Overdue Dental — Jack");
     expect(brief).toContain("hot without prep");
+  });
+
+  it("flags likely duplicate pipeline groups by phone, website, and company/location", () => {
+    const first = createPipelineLead({ ...scrapedLead, id: "google:dup-a", company: "Austin Dental Co", phone: "+1 (512) 555-0101", website: "https://www.shared-dental.example.com" }, "Daniel");
+    const samePhone = createPipelineLead({ ...scrapedLead, id: "google:dup-b", company: "Austin Dental Company", phone: "512-555-0101", website: "https://different.example.com" }, "Heaston");
+    const sameWebsite = createPipelineLead({ ...scrapedLead, id: "google:dup-c", company: "Shared Dental Spa", phone: "+1 512-555-0222", website: "https://shared-dental.example.com/contact" }, "Jacob");
+    const clean = createPipelineLead({ ...scrapedLead, id: "google:clean", company: "Clean Clinic", phone: "+1 512-555-0999", website: "https://clean.example.com" }, "Logan");
+
+    const groups = selectPipelineDuplicateGroups([clean, sameWebsite, samePhone, first], 5);
+
+    expect(groups.map((group) => group.reason)).toEqual(expect.arrayContaining(["same_phone", "same_website"]));
+    expect(groups[0].leads.map((lead) => lead.owner)).toEqual(expect.arrayContaining(["Daniel", "Heaston"]));
+
+    const brief = formatPipelineDuplicateReviewForCopy([clean, sameWebsite, samePhone, first]);
+    expect(brief).toContain("Liminull pipeline duplicate review");
+    expect(brief).toContain("same phone");
+    expect(brief).toContain("Austin Dental Co");
+    expect(brief).not.toContain("Clean Clinic (Logan");
   });
 
   it("returns stage-aware quick actions for moving leads through the pipeline", () => {

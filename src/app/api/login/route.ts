@@ -50,6 +50,14 @@ function safeEqual(value: string, expected: string) {
   return crypto.timingSafeEqual(actualBuffer, expectedBuffer);
 }
 
+function shouldUseSecureCookie(req: Request) {
+  try {
+    return new URL(req.url).protocol === "https:";
+  } catch {
+    return process.env.NODE_ENV === "production";
+  }
+}
+
 function authenticateConfiguredEmployeePassword(email: string, password: string): SupabaseAuthUser | null {
   const configuredEmployees = [
     {
@@ -155,7 +163,7 @@ export async function POST(req: Request) {
   response.cookies.set("hermes_dashboard_auth", session, {
     httpOnly: true,
     sameSite: "strict",
-    secure: process.env.NODE_ENV === "production",
+    secure: shouldUseSecureCookie(req),
     path: "/",
     maxAge: SESSION_TTL_SECONDS,
   });

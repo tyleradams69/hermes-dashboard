@@ -27,6 +27,10 @@ type TeamDraft = {
   password: string;
 };
 
+type TeamCreateDraft = TeamDraft & {
+  email: string;
+};
+
 function generateTemporaryPassword() {
   const random = Math.random().toString(36).slice(2, 10);
   return `Liminull-${random}-25!`;
@@ -50,6 +54,13 @@ export default function SettingsPage() {
   const [teamDrafts, setTeamDrafts] = useState<Record<string, TeamDraft>>({});
   const [teamLoading, setTeamLoading] = useState(false);
   const [teamSavingId, setTeamSavingId] = useState<string | null>(null);
+  const [teamCreating, setTeamCreating] = useState(false);
+  const [newTeamDraft, setNewTeamDraft] = useState<TeamCreateDraft>(() => ({
+    email: "",
+    name: "",
+    role: "employee",
+    password: generateTemporaryPassword(),
+  }));
   const [teamMessage, setTeamMessage] = useState("");
   const [teamError, setTeamError] = useState("");
   const isAdmin = account?.role === "admin";
@@ -162,6 +173,41 @@ export default function SettingsPage() {
       ...current,
       [id]: { ...(current[id] || { name: "", role: "employee", password: "" }), ...patch },
     }));
+  }
+
+  function updateNewTeamDraft(patch: Partial<TeamCreateDraft>) {
+    setNewTeamDraft((current) => ({ ...current, ...patch }));
+  }
+
+  async function createTeamAccount(e: React.FormEvent) {
+    e.preventDefault();
+    setTeamCreating(true);
+    setTeamError("");
+    setTeamMessage("");
+    try {
+      const response = await fetch("/api/team", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          email: newTeamDraft.email.trim(),
+          name: newTeamDraft.name.trim(),
+          role: newTeamDraft.role,
+          password: newTeamDraft.password,
+        }),
+      });
+      const data = await response.json();
+      if (!data.ok) {
+        throw new Error(data.error || "Employee creation failed.");
+      }
+
+      setTeamMessage(`${newTeamDraft.name.trim() || newTeamDraft.email.trim()} added to Supabase Auth.`);
+      setNewTeamDraft({ email: "", name: "", role: "employee", password: generateTemporaryPassword() });
+      await loadTeamAccounts();
+    } catch (error) {
+      setTeamError(error instanceof Error ? error.message : "Employee creation failed.");
+    } finally {
+      setTeamCreating(false);
+    }
   }
 
   async function saveTeamAccount(teamAccount: TeamAccount) {
@@ -316,8 +362,44 @@ export default function SettingsPage() {
               </div>
             )}
 
+            <form onSubmit={createTeamAccount} className="mt-5 rounded-3xl border border-white/10 bg-white/[0.04] p-4">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <p className="text-sm font-black text-white">Add employee</p>
+                  <p className="mt-1 text-xs leading-5 text-white/55">Creates a Supabase Auth user with dashboard role metadata and a temporary password.</p>
+                </div>
+                <button type="button" onClick={() => updateNewTeamDraft({ password: generateTemporaryPassword() })} className="w-fit rounded-full border border-white/10 bg-white/[0.05] px-4 py-2 text-xs font-bold text-white/75 transition hover:border-cyan-300/30 hover:text-cyan-50">
+                  Generate password
+                </button>
+              </div>
+              <div className="mt-4 grid gap-3 lg:grid-cols-[1fr_1fr_0.7fr_1fr_auto] lg:items-end">
+                <label className="block">
+                  <span className="text-xs font-bold uppercase tracking-[0.18em] text-white/55">Name</span>
+                  <input value={newTeamDraft.name} onChange={(event) => updateNewTeamDraft({ name: event.target.value })} className="mt-2 w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none transition placeholder:text-white/35 focus:border-cyan-300/40 focus:ring-4 focus:ring-cyan-300/10" placeholder="Employee name" required />
+                </label>
+                <label className="block">
+                  <span className="text-xs font-bold uppercase tracking-[0.18em] text-white/55">Email</span>
+                  <input type="email" value={newTeamDraft.email} onChange={(event) => updateNewTeamDraft({ email: event.target.value })} className="mt-2 w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none transition placeholder:text-white/35 focus:border-cyan-300/40 focus:ring-4 focus:ring-cyan-300/10" placeholder="name@company.com" required />
+                </label>
+                <label className="block">
+                  <span className="text-xs font-bold uppercase tracking-[0.18em] text-white/55">Role</span>
+                  <select value={newTeamDraft.role} onChange={(event) => updateNewTeamDraft({ role: event.target.value === "admin" ? "admin" : "employee" })} className="mt-2 w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none transition focus:border-cyan-300/40 focus:ring-4 focus:ring-cyan-300/10">
+                    <option value="employee">Employee</option>
+                    <option value="admin">Admin</option>
+                  </select>
+                </label>
+                <label className="block">
+                  <span className="text-xs font-bold uppercase tracking-[0.18em] text-white/55">Temp password</span>
+                  <input value={newTeamDraft.password} onChange={(event) => updateNewTeamDraft({ password: event.target.value })} className="mt-2 w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none transition placeholder:text-white/35 focus:border-cyan-300/40 focus:ring-4 focus:ring-cyan-300/10" placeholder="Temporary password" required minLength={8} />
+                </label>
+                <button className="liminull-button px-5 py-3 text-sm disabled:cursor-not-allowed disabled:opacity-60" disabled={teamCreating}>
+                  {teamCreating ? "Adding..." : "Add user"}
+                </button>
+              </div>
+            </form>
+
             <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
-              <p className="text-xs uppercase tracking-[0.18em] text-white/45">
+              <p className="text-xs uppercase tracking-[0.18em] text-white/55">
                 {teamLoading ? "Loading team accounts..." : `${teamAccounts.length} authenticated accounts`}
               </p>
               <button type="button" onClick={() => void loadTeamAccounts()} className="rounded-full border border-white/10 bg-white/[0.03] px-4 py-2 text-xs font-bold text-white/70 transition hover:border-cyan-300/30 hover:text-cyan-50">
@@ -336,8 +418,8 @@ export default function SettingsPage() {
                         <p className="text-sm font-black text-white">{teamAccount.name || "Unnamed user"}</p>
                         <p className="mt-1 text-xs text-white/45">{teamAccount.email}</p>
                         <div className="mt-2 flex flex-wrap gap-2">
-                          <span className={teamAccount.role === "admin" ? "rounded-full bg-violet-300/10 px-2 py-1 text-[10px] font-black uppercase text-violet-100" : "rounded-full bg-cyan-300/10 px-2 py-1 text-[10px] font-black uppercase text-cyan-100"}>{teamAccount.role === "admin" ? "admin" : "employee"}</span>
-                          <span className={teamAccount.emailConfirmed ? "rounded-full bg-emerald-300/10 px-2 py-1 text-[10px] font-black uppercase text-emerald-100" : "rounded-full bg-amber-300/10 px-2 py-1 text-[10px] font-black uppercase text-amber-100"}>{teamAccount.emailConfirmed ? "confirmed" : "needs confirmation"}</span>
+                          <span className={teamAccount.role === "admin" ? "rounded-full border border-violet-300/35 bg-violet-100 px-2.5 py-1 text-[10px] font-black uppercase text-violet-800 shadow-sm" : "rounded-full border border-blue-300/35 bg-blue-100 px-2.5 py-1 text-[10px] font-black uppercase text-blue-700 shadow-sm"}>{teamAccount.role === "admin" ? "admin" : "employee"}</span>
+                          <span className={teamAccount.emailConfirmed ? "rounded-full border border-emerald-300/40 bg-emerald-100 px-2.5 py-1 text-[10px] font-black uppercase text-emerald-800 shadow-sm" : "rounded-full border border-amber-300/45 bg-amber-100 px-2.5 py-1 text-[10px] font-black uppercase text-amber-800 shadow-sm"}>{teamAccount.emailConfirmed ? "confirmed" : "needs confirmation"}</span>
                         </div>
                       </div>
 

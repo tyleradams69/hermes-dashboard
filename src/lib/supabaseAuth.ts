@@ -207,6 +207,66 @@ export async function authenticateSupabaseEmployee(email: string, password: stri
   };
 }
 
+export async function createSupabaseEmployee(input: {
+  email: string;
+  name: string;
+  password: string;
+  role: "admin" | "employee";
+}) {
+  const { url, serviceRoleKey } = getSupabaseAdminConfig();
+  const payload = {
+    email: input.email,
+    password: input.password,
+    email_confirm: true,
+    user_metadata: {
+      full_name: input.name,
+      name: input.name,
+      role: input.role,
+    },
+    app_metadata: {
+      role: input.role,
+    },
+  };
+
+  const response = await fetch(`${url}/auth/v1/admin/users`, {
+    method: "POST",
+    cache: "no-store",
+    headers: new Headers({
+      apikey: serviceRoleKey,
+      authorization: `Bearer ${serviceRoleKey}`,
+      "content-type": "application/json",
+    }),
+    body: JSON.stringify(payload),
+  });
+  const data = (await response.json().catch(() => ({}))) as SupabaseTokenResponse["user"] & {
+    error?: string;
+    error_description?: string;
+    msg?: string;
+  };
+
+  if (!response.ok) {
+    return {
+      ok: false as const,
+      error: data.error_description || data.msg || data.error || "Unable to create account",
+      status: response.status,
+    };
+  }
+
+  const user = mapSupabaseUser(data);
+  if (!user) {
+    return {
+      ok: false as const,
+      error: "Supabase create response was missing user details",
+      status: 502,
+    };
+  }
+
+  return {
+    ok: true as const,
+    user,
+  };
+}
+
 export async function updateSupabaseEmployee(
   userId: string,
   updates: { name?: string; password?: string; role?: "admin" | "employee" }

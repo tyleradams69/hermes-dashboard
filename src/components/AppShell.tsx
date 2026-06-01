@@ -32,8 +32,8 @@ export default function AppShell({
   children: React.ReactNode;
 }) {
   const [unreadCount, setUnreadCount] = useState(0);
-  const [currentTime, setCurrentTime] = useState(() => formatHeaderTime());
-  const [currentPath] = useState<string>(() => typeof window === "undefined" ? active : window.location.pathname);
+  const [currentTime, setCurrentTime] = useState("");
+  const [currentPath, setCurrentPath] = useState<string>(active);
 
   const loadNotifications = useCallback(async () => {
     if (typeof document !== "undefined" && document.visibilityState === "hidden") return;
@@ -54,13 +54,16 @@ export default function AppShell({
   }, [businessId]);
 
   useEffect(() => {
-    queueMicrotask(() => void loadNotifications());
+    setCurrentPath(window.location.pathname);
 
     const updateClock = () => {
       setCurrentTime(
         formatHeaderTime()
       );
     };
+
+    updateClock();
+    queueMicrotask(() => void loadNotifications());
 
     const clockTimer = setInterval(updateClock, 30000);
     const notificationTimer = setInterval(() => void loadNotifications(), 30000);

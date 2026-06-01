@@ -2,12 +2,19 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { verifyDashboardSession } from "../../../lib/authSession";
 import { readServerEnv } from "../../../lib/env";
-import { listSupabaseTeamAccounts, updateSupabaseEmployee } from "../../../lib/supabaseAuth";
+import { createSupabaseEmployee, listSupabaseTeamAccounts, updateSupabaseEmployee } from "../../../lib/supabaseAuth";
 
 export const dynamic = "force-dynamic";
 
 type TeamPatchBody = {
   id?: unknown;
+  name?: unknown;
+  role?: unknown;
+  password?: unknown;
+};
+
+type TeamCreateBody = {
+  email?: unknown;
   name?: unknown;
   role?: unknown;
   password?: unknown;
@@ -58,6 +65,53 @@ export async function GET(request: NextRequest) {
   }
 
   return teamJson({ ok: true, accounts: result.accounts });
+}
+
+
+export async function POST(request: NextRequest) {
+  const { response } = await requireAdmin(request);
+  if (response) return response;
+
+  let body: TeamCreateBody = {};
+  try {
+    body = await request.json();
+  } catch {
+    return teamJson({ ok: false, error: "Invalid team create request" }, 400);
+  }
+
+  if (typeof body.email !== "string" || !body.email.trim() || !body.email.includes("@")) {
+    return teamJson({ ok: false, error: "Valid email is required" }, 400);
+  }
+
+  if (typeof body.name !== "string" || !body.name.trim()) {
+    return teamJson({ ok: false, error: "Name is required" }, 400);
+  }
+
+  if (!isDashboardRole(body.role)) {
+    return teamJson({ ok: false, error: "Role must be admin or employee" }, 400);
+  }
+
+  if (typeof body.password !== "string" || body.password.length < 8) {
+    return teamJson({ ok: false, error: "Password must be at least 8 characters" }, 400);
+  }
+
+  let result: Awaited<ReturnType<typeof createSupabaseEmployee>>;
+  try {
+    result = await createSupabaseEmployee({
+      email: body.email.trim().toLowerCase(),
+      name: body.name.trim(),
+      role: body.role,
+      password: body.password,
+    });
+  } catch {
+    return teamJson({ ok: false, error: "Supabase admin auth is not configured" }, 500);
+  }
+
+  if (!result.ok) {
+    return teamJson({ ok: false, error: result.error }, result.status);
+  }
+
+  return teamJson({ ok: true, account: result.user }, 201);
 }
 
 export async function PATCH(request: NextRequest) {

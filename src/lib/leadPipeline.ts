@@ -183,6 +183,16 @@ export type PipelineAttentionItem = {
   nextBestAction: string;
 };
 
+export type PipelineDuplicateReason = "same_phone" | "same_website" | "similar_company_location";
+
+export type PipelineDuplicateGroup = {
+  key: string;
+  reason: PipelineDuplicateReason;
+  label: string;
+  leads: PipelineLead[];
+  score: number;
+};
+
 export type PipelineLeadFilters = {
   owner?: string;
   stage?: LeadPipelineStage | "all";
@@ -235,6 +245,95 @@ function daysSince(value: string, now: Date) {
 
 function isOpenPipelineStage(stage: LeadPipelineStage) {
   return stage !== "closed_won" && stage !== "closed_lost";
+}
+
+function normalizePhoneKey(value: string | undefined) {
+  const digits = (value || "").replace(/\D/g, "");
+  if (digits.length < 7) return "";
+  return digits.length > 10 ? digits.slice(-10) : digits;
+}
+
+function normalizeWebsiteKey(value: string | undefined) {
+  if (!value) return "";
+  try {
+    const url = new URL(value.startsWith("http") ? value : `https://${value}`);
+    return url.hostname.toLowerCase().replace(/^www\./, "");
+  } catch {
+    return value.toLowerCase().replace(/^https?:\/\//, "").replace(/^www\./, "").split("/")[0] || "";
+  }
+}
+
+function normalizeCompanyLocationKey(lead: PipelineLead) {
+  const company = slugify(lead.company).replace(/\b(llc|inc|co|company|the)\b/g, "").replace(/-+/g, "-").replace(/^-+|-+$/g, "");
+  const location = slugify(lead.location.split(",").slice(0, 2).join(" "));
+  return company && location ? `${company}:${location}` : "";
+}
+
+function addDuplicateCandidate(groups: Map<string, PipelineDuplicateGroup>, group: PipelineDuplicateGroup) {
+  const existing = groups.get(group.key);
+  if (!existing || group.score > existing.score || group.leads.length > existing.leads.length) {
+    groups.set(group.key, group);
+  }
+}
+
+export function formatPipelineDuplicateReason(reason: PipelineDuplicateReason) {
+  switch (reason) {
+    case "same_phone":
+      return "same phone";
+    case "same_website":
+      return "same website";
+    case "similar_company_location":
+      return "similar company/location";
+  }
+}
+
+export function selectPipelineDuplicateGroups(leads: PipelineLead[], limit = 6): PipelineDuplicateGroup[] {
+  const buckets = new Map<string, { reason: PipelineDuplicateReason; label: string; score: number; leads: PipelineLead[] }>();
+
+  const pushBucket = (key: string, reason: PipelineDuplicateReason, label: string, score: number, lead: PipelineLead) => {
+    if (!key) return;
+    const bucketKey = `${reason}:${key}`;
+    const bucket = buckets.get(bucketKey) || { reason, label, score, leads: [] };
+    if (!bucket.leads.some((item) => item.id === lead.id)) bucket.leads.push(lead);
+    buckets.set(bucketKey, bucket);
+  };
+
+  leads.forEach((lead) => {
+    pushBucket(normalizePhoneKey(lead.phone || lead.localPhone), "same_phone", lead.phone || lead.localPhone || "shared phone", 95, lead);
+    pushBucket(normalizeWebsiteKey(lead.website), "same_website", normalizeWebsiteKey(lead.website) || "shared website", 80, lead);
+    pushBucket(normalizeCompanyLocationKey(lead), "similar_company_location", `${lead.company} · ${lead.location.split(",").slice(0, 2).join(",")}`, 55, lead);
+  });
+
+  const groups = new Map<string, PipelineDuplicateGroup>();
+  buckets.forEach((bucket, key) => {
+    if (bucket.leads.length < 2) return;
+    addDuplicateCandidate(groups, {
+      key,
+      reason: bucket.reason,
+      label: bucket.label,
+      leads: [...bucket.leads].sort((a, b) => a.company.localeCompare(b.company) || a.owner.localeCompare(b.owner)),
+      score: bucket.score + bucket.leads.length,
+    });
+  });
+
+  return Array.from(groups.values())
+    .sort((a, b) => b.score - a.score || a.label.localeCompare(b.label))
+    .slice(0, limit);
+}
+
+export function formatPipelineDuplicateReviewForCopy(leads: PipelineLead[], limit = 6) {
+  const groups = selectPipelineDuplicateGroups(leads, limit);
+  const lines = groups.map((group, index) => {
+    const leadSummary = group.leads.map((lead) => `${lead.company} (${lead.owner}, ${lead.stage.replaceAll("_", " ")})`).join("; ");
+    return `${index + 1}. ${formatPipelineDuplicateReason(group.reason)} — ${group.label} — ${leadSummary}`;
+  });
+
+  return [
+    "Liminull pipeline duplicate review",
+    `Groups: ${groups.length}`,
+    "",
+    lines.length > 0 ? lines.join("\n") : "No likely duplicate groups found under the current filters.",
+  ].join("\n");
 }
 
 export function isLeadStale(lead: PipelineLead, now = new Date(), staleAfterDays = 3) {

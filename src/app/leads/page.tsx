@@ -10,14 +10,18 @@ import {
   formatPipelineDailyBriefForCopy,
   formatPipelineAttentionBriefForCopy,
   formatPipelineAttentionReason,
+  formatPipelineDuplicateReason,
+  formatPipelineDuplicateReviewForCopy,
   formatPipelineLeadBriefForCopy,
   formatPipelineOwnerSummaryForCopy,
   getLeadQuickActions,
   selectPipelineAttentionItems,
+  selectPipelineDuplicateGroups,
   selectStaleLeadNudges,
   selectTodayFocusLeads,
   summarizePipelineByOwner,
   type PipelineAttentionItem,
+  type PipelineDuplicateGroup,
   type PipelineLead,
   type PipelineOwnerSummary,
   type LeadPipelineStage,
@@ -573,6 +577,66 @@ function NeedsAttentionPanel({ items, onCopyQueue, onSelectLead, onMarkWorked, o
               {item.reasons.includes("hot_without_prep") && (
                 <button type="button" onClick={() => onCreatePrep(item.lead)} className="rounded-full border border-violet-300/20 bg-violet-300/10 px-3 py-1.5 text-xs font-bold text-violet-50">Create prep</button>
               )}
+            </div>
+          </article>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+type DuplicateReviewPanelProps = {
+  groups: PipelineDuplicateGroup[];
+  onCopyReview: () => void;
+  onSelectLead: (id: string) => void;
+  onOpenDetail: (id: string) => void;
+};
+
+function DuplicateReviewPanel({ groups, onCopyReview, onSelectLead, onOpenDetail }: DuplicateReviewPanelProps) {
+  if (groups.length === 0) return null;
+
+  return (
+    <div className="mt-5 rounded-2xl border border-rose-300/10 bg-rose-300/[0.035] p-4">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="text-sm font-black text-white">Duplicate review</p>
+          <p className="mt-1 text-xs liminull-muted">Likely duplicate leads by shared phone, shared website, or close company/location match. Review before employees double-work the same account.</p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <button type="button" onClick={onCopyReview} className="rounded-full border border-rose-300/20 bg-rose-300/10 px-3 py-1.5 text-xs font-black text-rose-50 transition hover:border-rose-300/40">
+            Copy duplicate review
+          </button>
+          <span className="rounded-full bg-rose-300/10 px-3 py-1.5 text-xs font-black text-rose-100">{groups.length} group{groups.length === 1 ? "" : "s"}</span>
+        </div>
+      </div>
+
+      <div className="mt-4 grid gap-3 lg:grid-cols-2">
+        {groups.map((group) => (
+          <article key={group.key} className="rounded-2xl border border-white/5 bg-black/20 p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <h3 className="truncate text-sm font-black text-white">{group.label}</h3>
+                <p className="mt-1 text-xs text-white/45">{formatPipelineDuplicateReason(group.reason)} · confidence {group.score}</p>
+              </div>
+              <span className="rounded-full bg-rose-300/10 px-2.5 py-1 text-[10px] font-black uppercase text-rose-100">
+                review
+              </span>
+            </div>
+            <div className="mt-3 grid gap-2">
+              {group.leads.map((lead) => (
+                <div key={`${group.key}-${lead.id}`} className="rounded-xl border border-white/5 bg-white/[0.025] p-3">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="min-w-0">
+                      <p className="truncate text-xs font-black text-white">{lead.company}</p>
+                      <p className="mt-1 truncate text-[11px] text-white/45">{lead.owner} · {stageLabel(lead.stage)} · {lead.phone || lead.localPhone || lead.website || "no contact saved"}</p>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <button type="button" onClick={() => onOpenDetail(lead.id)} className="rounded-full border border-white/10 bg-white/[0.03] px-2.5 py-1 text-[11px] font-bold text-white/65">Open</button>
+                      <button type="button" onClick={() => onSelectLead(lead.id)} className="rounded-full border border-white/10 bg-white/[0.03] px-2.5 py-1 text-[11px] font-bold text-white/65">Select</button>
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           </article>
         ))}
@@ -1163,6 +1227,17 @@ export default function LeadsPage() {
     }
   }
 
+  async function copyDuplicateReview() {
+    const text = formatPipelineDuplicateReviewForCopy(filteredPipelineLeads);
+
+    try {
+      await navigator.clipboard.writeText(text);
+      setPipelineMessage("Duplicate review copied for admin cleanup.");
+    } catch {
+      setPipelineMessage(text);
+    }
+  }
+
   function applyPipelineSavedView(filters: Partial<PipelineFilters>) {
     setPipelineFilters((current) => ({ ...current, ...filters }));
   }
@@ -1222,6 +1297,7 @@ export default function LeadsPage() {
     .sort((a, b) => deriveLeadPriority(b.lead).score - deriveLeadPriority(a.lead).score || Date.parse(b.packet.generatedAt) - Date.parse(a.packet.generatedAt))
     .slice(0, 6), [pipelineLeads, savedIntelligencePackets]);
   const attentionItems = useMemo(() => selectPipelineAttentionItems(filteredPipelineLeads, pipelineNow, 8), [filteredPipelineLeads, pipelineNow]);
+  const duplicateGroups = useMemo(() => selectPipelineDuplicateGroups(filteredPipelineLeads, 6), [filteredPipelineLeads]);
   const staleLeadNudges = useMemo(() => selectStaleLeadNudges(filteredPipelineLeads, pipelineNow, 6), [filteredPipelineLeads, pipelineNow]);
   const pipelineHealth = useMemo(() => pipelineLeads.reduce(
     (health, lead) => {
@@ -1998,6 +2074,15 @@ export default function LeadsPage() {
             onSelectLead={togglePipelineLeadSelection}
             onMarkWorked={(lead) => markLeadTouched(lead, "Attention queue worked — follow up on response", 3)}
             onCreatePrep={(lead) => createIntelligencePacket(pipelineLeadToLeadRecord(lead))}
+          />
+        )}
+
+        {isAdminAccount && (
+          <DuplicateReviewPanel
+            groups={duplicateGroups}
+            onCopyReview={copyDuplicateReview}
+            onSelectLead={togglePipelineLeadSelection}
+            onOpenDetail={setDetailPipelineLeadId}
           />
         )}
 
