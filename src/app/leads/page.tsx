@@ -203,13 +203,15 @@ const defaultPipelineFilters = {
   noWebsiteOnly: false,
   hasPhoneOnly: false,
   hotScoreOnly: false,
+  staleOnly: false,
+  prepReadyOnly: false,
 };
 
 const pipelineSavedViews = [
-  { label: "Today", filters: { stage: "all" as LeadPipelineStage | "all", sortBy: "priority" as const } },
-  { label: "Hot no-website", filters: { stage: "all" as LeadPipelineStage | "all", sortBy: "priority" as const, hotScoreOnly: true, noWebsiteOnly: true } },
-  { label: "Stale follow-ups", filters: { stage: "all" as LeadPipelineStage | "all", sortBy: "priority" as const } },
-  { label: "Prep-ready", filters: { stage: "all" as LeadPipelineStage | "all", sortBy: "priority" as const } },
+  { label: "Today", filters: { stage: "all" as LeadPipelineStage | "all", sortBy: "priority" as const, staleOnly: false, prepReadyOnly: false } },
+  { label: "Hot no-website", filters: { stage: "all" as LeadPipelineStage | "all", sortBy: "priority" as const, hotScoreOnly: true, noWebsiteOnly: true, staleOnly: false, prepReadyOnly: false } },
+  { label: "Stale follow-ups", filters: { stage: "all" as LeadPipelineStage | "all", sortBy: "priority" as const, staleOnly: true, prepReadyOnly: false } },
+  { label: "Prep-ready", filters: { stage: "all" as LeadPipelineStage | "all", sortBy: "priority" as const, prepReadyOnly: true, staleOnly: false } },
 ] as const;
 
 type PipelineFilters = typeof defaultPipelineFilters;
@@ -681,6 +683,7 @@ export default function LeadsPage() {
   const [error, setError] = useState("");
   const [pipelineMessage, setPipelineMessage] = useState("");
   const [selectedPipelineLeadIds, setSelectedPipelineLeadIds] = useState<string[]>([]);
+  const [detailPipelineLeadId, setDetailPipelineLeadId] = useState<string | null>(null);
   const [bulkOwner, setBulkOwner] = useState("");
   const [bulkActionLoading, setBulkActionLoading] = useState(false);
   const discoveryPanelRef = useRef<HTMLFormElement>(null);
@@ -1171,7 +1174,7 @@ export default function LeadsPage() {
   const effectivePipelineOwner = isAdminAccount
     ? (pipelineFilters.owner === "all" ? undefined : pipelineFilters.owner)
     : signedInEmployeeName || undefined;
-  const { stage: pipelineStageFilter, sortBy: pipelineSortBy, noWebsiteOnly, hasPhoneOnly, hotScoreOnly } = pipelineFilters;
+  const { stage: pipelineStageFilter, sortBy: pipelineSortBy, noWebsiteOnly, hasPhoneOnly, hotScoreOnly, staleOnly, prepReadyOnly } = pipelineFilters;
   const teamEmployeeNames = useMemo(
     () => Array.from(new Set(teamEmployees.map((teamEmployee) => teamEmployee.name?.trim()).filter((name): name is string => Boolean(name)))).sort((a, b) => a.localeCompare(b)),
     [teamEmployees]
@@ -1196,6 +1199,8 @@ export default function LeadsPage() {
     noWebsiteOnly,
     hasPhoneOnly,
     hotScoreOnly,
+    staleOnly,
+    prepReadyOnly,
   });
   const pipelineNow = useMemo(() => new Date(), []);
   const ownerPipelineSummaries = useMemo(() => summarizePipelineByOwner(pipelineLeads), [pipelineLeads]);
@@ -1234,6 +1239,8 @@ export default function LeadsPage() {
   const selectedPipelineLeadSet = useMemo(() => new Set(selectedPipelineLeadIds), [selectedPipelineLeadIds]);
   const selectedPipelineLeads = useMemo(() => filteredPipelineLeads.filter((lead) => selectedPipelineLeadSet.has(lead.id)), [filteredPipelineLeads, selectedPipelineLeadSet]);
   const selectedHotPipelineLeads = useMemo(() => selectedPipelineLeads.filter((lead) => deriveLeadPriority(lead).tier === "hot"), [selectedPipelineLeads]);
+  const detailPipelineLead = useMemo(() => pipelineLeads.find((lead) => lead.id === detailPipelineLeadId) || null, [detailPipelineLeadId, pipelineLeads]);
+  const detailPipelineLeadPacket = detailPipelineLead ? savedIntelligencePackets[detailPipelineLead.id] : undefined;
   const allFilteredPipelineLeadsSelected = filteredPipelineLeads.length > 0 && filteredPipelineLeads.every((lead) => selectedPipelineLeadSet.has(lead.id));
 
   function togglePipelineLeadSelection(id: string) {
@@ -2122,6 +2129,24 @@ export default function LeadsPage() {
             <label className="flex items-center gap-2 rounded-xl border border-white/5 bg-white/[0.02] px-3 py-2 text-xs font-bold text-white/65">
               <input
                 type="checkbox"
+                checked={pipelineFilters.staleOnly}
+                onChange={(event) => setPipelineFilters((current) => ({ ...current, staleOnly: event.target.checked, prepReadyOnly: event.target.checked ? false : current.prepReadyOnly }))}
+                className="h-4 w-4 accent-cyan-300"
+              />
+              Stale only
+            </label>
+            <label className="flex items-center gap-2 rounded-xl border border-white/5 bg-white/[0.02] px-3 py-2 text-xs font-bold text-white/65">
+              <input
+                type="checkbox"
+                checked={pipelineFilters.prepReadyOnly}
+                onChange={(event) => setPipelineFilters((current) => ({ ...current, prepReadyOnly: event.target.checked, staleOnly: event.target.checked ? false : current.staleOnly }))}
+                className="h-4 w-4 accent-cyan-300"
+              />
+              Prep-ready
+            </label>
+            <label className="flex items-center gap-2 rounded-xl border border-white/5 bg-white/[0.02] px-3 py-2 text-xs font-bold text-white/65">
+              <input
+                type="checkbox"
                 checked={pipelineFilters.noWebsiteOnly}
                 onChange={(event) => setPipelineFilters((current) => ({ ...current, noWebsiteOnly: event.target.checked }))}
                 className="h-4 w-4 accent-cyan-300"
@@ -2284,6 +2309,13 @@ export default function LeadsPage() {
                 <div className="mt-3 flex flex-wrap gap-2">
                   <button
                     type="button"
+                    onClick={() => setDetailPipelineLeadId(lead.id)}
+                    className="rounded-full border border-white/10 bg-white/[0.03] px-4 py-2 text-sm font-bold text-white/70 transition hover:border-cyan-300/25 hover:text-cyan-50"
+                  >
+                    Open detail
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => copyPipelineLeadBrief(lead)}
                     className="rounded-full border border-white/10 bg-white/[0.03] px-4 py-2 text-sm font-bold text-white/70 transition hover:border-cyan-300/25 hover:text-cyan-50"
                   >
@@ -2372,6 +2404,64 @@ export default function LeadsPage() {
             {result.complianceNote && (
               <p className="mt-4 text-xs leading-5 liminull-muted">{result.complianceNote}</p>
             )}
+          </div>
+        </div>
+      )}
+      {detailPipelineLead && (
+        <div className="fixed inset-0 z-[70] bg-black/55 p-4 backdrop-blur-sm" role="dialog" aria-modal="true">
+          <div className="ml-auto flex h-full w-full max-w-2xl flex-col overflow-hidden rounded-[28px] border border-white/10 bg-[#0b1120] shadow-2xl">
+            <div className="border-b border-white/10 p-5">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-xs font-black uppercase tracking-[0.18em] text-cyan-100/60">Lead detail drawer</p>
+                  <h2 className="mt-2 text-2xl font-black tracking-[-0.05em] text-white">{detailPipelineLead.company}</h2>
+                  <p className="mt-1 text-sm text-white/45">{detailPipelineLead.owner} · {stageLabel(detailPipelineLead.stage)} · {detailPipelineLead.location}</p>
+                </div>
+                <button type="button" onClick={() => setDetailPipelineLeadId(null)} className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5 text-xs font-bold text-white/65">Close</button>
+              </div>
+            </div>
+
+            <div className="min-h-0 flex-1 overflow-y-auto p-5">
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div className="rounded-2xl border border-white/5 bg-white/[0.03] p-3">
+                  <p className="text-[10px] font-black uppercase tracking-[0.16em] text-white/35">Priority</p>
+                  <p className="mt-2 text-xl font-black text-white">{deriveLeadPriority(detailPipelineLead).tier.toUpperCase()} · {deriveLeadPriority(detailPipelineLead).score}</p>
+                </div>
+                <div className="rounded-2xl border border-white/5 bg-white/[0.03] p-3">
+                  <p className="text-[10px] font-black uppercase tracking-[0.16em] text-white/35">Follow-up</p>
+                  <p className="mt-2 text-sm font-black text-white">{formatPipelineDate(detailPipelineLead.nextFollowUpAt)}</p>
+                </div>
+                <div className="rounded-2xl border border-white/5 bg-white/[0.03] p-3">
+                  <p className="text-[10px] font-black uppercase tracking-[0.16em] text-white/35">Prep</p>
+                  <p className="mt-2 text-sm font-black text-white">{detailPipelineLeadPacket?.status || detailPipelineLead.salesPrepStatus || "none"}</p>
+                </div>
+              </div>
+
+              <div className="mt-4 rounded-2xl border border-white/5 bg-white/[0.03] p-4">
+                <p className="text-sm font-black text-white">Contact + context</p>
+                <div className="mt-3 grid gap-2 text-sm text-white/70">
+                  <p>Phone: {detailPipelineLead.phone || detailPipelineLead.localPhone || "No phone saved"}</p>
+                  <p className="break-all">Website: {detailPipelineLead.website || "No website attached"}</p>
+                  <p>Niche: {detailPipelineLead.niche}</p>
+                  <p>Next action: {detailPipelineLead.nextAction || "No next action set"}</p>
+                  <p>Notes: {detailPipelineLead.notes || "No notes yet"}</p>
+                </div>
+              </div>
+
+              <div className="mt-4 rounded-2xl border border-white/5 bg-white/[0.03] p-4">
+                <p className="text-sm font-black text-white">Evidence</p>
+                <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-white/65">
+                  {detailPipelineLead.evidence.length > 0 ? detailPipelineLead.evidence.map((item) => <li key={item}>{item}</li>) : <li>No evidence saved yet</li>}
+                </ul>
+              </div>
+
+              <div className="mt-4 flex flex-wrap gap-2">
+                <button type="button" onClick={() => copyPipelineLeadBrief(detailPipelineLead)} className="rounded-full border border-white/10 bg-white/[0.03] px-4 py-2 text-sm font-bold text-white/70">Copy brief</button>
+                <button type="button" onClick={() => createOutreachDraft(pipelineLeadToLeadRecord(detailPipelineLead))} className="rounded-full border border-cyan-300/20 bg-cyan-300/10 px-4 py-2 text-sm font-bold text-cyan-50">Copy outreach</button>
+                <button type="button" onClick={() => detailPipelineLeadPacket ? prepareSalesActionBrief(detailPipelineLeadPacket) : createIntelligencePacket(pipelineLeadToLeadRecord(detailPipelineLead))} className="rounded-full border border-violet-300/20 bg-violet-300/10 px-4 py-2 text-sm font-bold text-violet-50">{detailPipelineLeadPacket ? "Open sales prep" : "Create prep"}</button>
+                <button type="button" onClick={() => markLeadTouched(detailPipelineLead, "Detail drawer worked — follow up on response", 3)} className="rounded-full border border-emerald-300/20 bg-emerald-300/10 px-4 py-2 text-sm font-bold text-emerald-50">Worked today</button>
+              </div>
+            </div>
           </div>
         </div>
       )}

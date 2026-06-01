@@ -127,7 +127,18 @@ describe("lead scraper page wiring", () => {
     expect(source).toContain("formatPipelineAttentionBriefForCopy");
     expect(source).toContain("pipelineSavedViews");
     expect(source).toContain("Hot no-website");
+    expect(source).toContain("staleOnly");
+    expect(source).toContain("prepReadyOnly");
     expect(source).toContain("applyPipelineSavedView");
     expect(source).toContain("Attention queue worked — follow up on response");
+  });
+
+  it("keeps the lead detail drawer wired to one focused pipeline record", async () => {
+    const source = await readFile("src/app/leads/page.tsx", "utf8");
+
+    expect(source).toContain("detailPipelineLeadId");
+    expect(source).toContain("Lead detail drawer");
+    expect(source).toContain("Open detail");
+    expect(source).toContain("Detail drawer worked — follow up on response");
   });
 });

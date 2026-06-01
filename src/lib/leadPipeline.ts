@@ -190,6 +190,8 @@ export type PipelineLeadFilters = {
   noWebsiteOnly?: boolean;
   hasPhoneOnly?: boolean;
   hotScoreOnly?: boolean;
+  staleOnly?: boolean;
+  prepReadyOnly?: boolean;
 };
 
 export type PipelineBulkAction = "worked_today" | "closed_lost" | "reassign";
@@ -486,6 +488,8 @@ export function filterPipelineLeads(leads: PipelineLead[], filters: PipelineLead
       if (filters.noWebsiteOnly && lead.website) return false;
       if (filters.hasPhoneOnly && !lead.phone && !lead.localPhone) return false;
       if (filters.hotScoreOnly && deriveLeadPriority(lead).tier !== "hot") return false;
+      if (filters.staleOnly && !isLeadStale(lead)) return false;
+      if (filters.prepReadyOnly && lead.salesPrepStatus !== "ready") return false;
       return true;
     })
     .sort((a, b) => {

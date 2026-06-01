@@ -88,7 +88,7 @@ describe("employee account API", () => {
     const headers = options?.headers as Headers;
     expect(headers.get("apikey")).toBe("service-role-key");
     expect(headers.get("authorization")).toBe("Bearer service-role-key");
-    expect(options?.body).toBe(JSON.stringify({ user_metadata: { full_name: "Updated Name" } }));
+    expect(options?.body).toBe(JSON.stringify({ user_metadata: { full_name: "Updated Name", name: "Updated Name", role: "employee" } }));
 
     const setCookie = response.headers.get("set-cookie") || "";
     expect(setCookie).toContain("hermes_dashboard_auth=");

@@ -239,13 +239,19 @@ describe("lead pipeline helpers", () => {
     expect(brief).toContain("Austin Automation Clinic: Qualify and contact decision maker");
   });
 
-  it("filters pipeline leads by owner, stage, no website, phone presence, and hot score", () => {
+  it("filters pipeline leads by owner, stage, no website, phone presence, hot score, stale state, and prep readiness", () => {
     const tylerHotNoWebsite = createPipelineLead({ ...scrapedLead, id: "google:tyler-hot", score: 91, website: undefined }, "Tyler");
     const jackHotWithWebsite = createPipelineLead({ ...scrapedLead, id: "google:jack-hot", score: 92 }, "Jack");
     const tylerWarmNoPhone = createPipelineLead(
       { ...scrapedLead, id: "google:tyler-warm", score: 70, phone: undefined, website: undefined },
       "Tyler"
     );
+    const staleReady = {
+      ...updatePipelineLead(createPipelineLead({ ...scrapedLead, id: "google:stale-ready", score: 82 }, "Tyler"), {
+        salesPrepStatus: "ready",
+      }),
+      lastTouchedAt: "2026-05-01T12:00:00.000Z",
+    };
 
     expect(
       filterPipelineLeads([tylerWarmNoPhone, jackHotWithWebsite, tylerHotNoWebsite], {
@@ -256,6 +262,9 @@ describe("lead pipeline helpers", () => {
         hotScoreOnly: true,
       }).map((lead) => lead.id)
     ).toEqual([tylerHotNoWebsite.id]);
+
+    expect(filterPipelineLeads([tylerHotNoWebsite, staleReady], { staleOnly: true }).map((lead) => lead.id)).toEqual([staleReady.id]);
+    expect(filterPipelineLeads([tylerHotNoWebsite, staleReady], { prepReadyOnly: true }).map((lead) => lead.id)).toEqual([staleReady.id]);
   });
 
   it("lets admin view every employee's pipeline sorted by company name", () => {

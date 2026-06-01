@@ -74,7 +74,7 @@ export async function PATCH(request: NextRequest) {
 
   let updateResult: Awaited<ReturnType<typeof updateSupabaseEmployee>>;
   try {
-    updateResult = await updateSupabaseEmployee(session.id, updates);
+    updateResult = await updateSupabaseEmployee(session.id, updates.name ? { ...updates, role: session.role === "admin" ? "admin" : "employee" } : updates);
   } catch {
     return accountJson({ ok: false, error: "Supabase admin auth is not configured" }, 500);
   }

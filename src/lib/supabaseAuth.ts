@@ -7,9 +7,11 @@ export type SupabaseAuthUser = {
   role?: string;
 };
 
-export type SupabaseEmployeeAccount = SupabaseAuthUser & {
+export type SupabaseTeamAccount = SupabaseAuthUser & {
   emailConfirmed: boolean;
 };
+
+export type SupabaseEmployeeAccount = SupabaseTeamAccount;
 
 type SupabaseTokenResponse = {
   access_token?: string;
@@ -88,7 +90,7 @@ type SupabaseAdminUser = NonNullable<SupabaseTokenResponse["user"]> & {
   confirmed_at?: string | null;
 };
 
-function mapSupabaseEmployeeAccount(data: SupabaseAdminUser): SupabaseEmployeeAccount | null {
+function mapSupabaseTeamAccount(data: SupabaseAdminUser): SupabaseTeamAccount | null {
   const user = mapSupabaseUser(data);
   if (!user) return null;
 
@@ -98,6 +100,14 @@ function mapSupabaseEmployeeAccount(data: SupabaseAdminUser): SupabaseEmployeeAc
   };
 }
 
+function sortTeamByName(accounts: SupabaseTeamAccount[]) {
+  return [...accounts].sort((a, b) => {
+    const roleCompare = (a.role || "employee").localeCompare(b.role || "employee");
+    const nameCompare = (a.name || a.email).localeCompare(b.name || b.email);
+    return roleCompare || nameCompare || a.email.localeCompare(b.email);
+  });
+}
+
 function sortEmployeesByName(employees: SupabaseEmployeeAccount[]) {
   return [...employees].sort((a, b) => {
     const nameCompare = (a.name || a.email).localeCompare(b.name || b.email);
@@ -105,7 +115,7 @@ function sortEmployeesByName(employees: SupabaseEmployeeAccount[]) {
   });
 }
 
-export async function listSupabaseEmployees() {
+export async function listSupabaseTeamAccounts() {
   const { url, serviceRoleKey } = getSupabaseAdminConfig();
   const response = await fetch(`${url}/auth/v1/admin/users?per_page=1000`, {
     method: "GET",
@@ -126,17 +136,31 @@ export async function listSupabaseEmployees() {
   if (!response.ok) {
     return {
       ok: false as const,
-      error: data.error_description || data.msg || data.error || "Unable to list employees",
+      error: data.error_description || data.msg || data.error || "Unable to list team accounts",
       status: response.status,
     };
   }
 
-  const employees = sortEmployeesByName(
+  const accounts = sortTeamByName(
     (data.users || [])
-      .map(mapSupabaseEmployeeAccount)
-      .filter((employee): employee is SupabaseEmployeeAccount => Boolean(employee))
-      .filter((employee) => employee.role !== "admin")
+      .map(mapSupabaseTeamAccount)
+      .filter((account): account is SupabaseTeamAccount => Boolean(account))
   );
+
+  return {
+    ok: true as const,
+    accounts,
+  };
+}
+
+export async function listSupabaseEmployees() {
+  const result = await listSupabaseTeamAccounts();
+
+  if (!result.ok) {
+    return result;
+  }
+
+  const employees = sortEmployeesByName(result.accounts.filter((employee) => employee.role !== "admin"));
 
   return {
     ok: true as const,
@@ -185,13 +209,20 @@ export async function authenticateSupabaseEmployee(email: string, password: stri
 
 export async function updateSupabaseEmployee(
   userId: string,
-  updates: { name?: string; password?: string }
+  updates: { name?: string; password?: string; role?: "admin" | "employee" }
 ) {
   const { url, serviceRoleKey } = getSupabaseAdminConfig();
-  const payload: { user_metadata?: { full_name: string }; password?: string } = {};
+  const payload: { user_metadata?: { full_name?: string; name?: string; role?: "admin" | "employee" }; password?: string } = {};
 
-  if (updates.name !== undefined) {
-    payload.user_metadata = { full_name: updates.name };
+  if (updates.name !== undefined || updates.role !== undefined) {
+    payload.user_metadata = {};
+    if (updates.name !== undefined) {
+      payload.user_metadata.full_name = updates.name;
+      payload.user_metadata.name = updates.name;
+    }
+    if (updates.role !== undefined) {
+      payload.user_metadata.role = updates.role;
+    }
   }
 
   if (updates.password !== undefined) {
