@@ -7,6 +7,10 @@ export type SupabaseAuthUser = {
   role?: string;
 };
 
+export type SupabaseEmployeeAccount = SupabaseAuthUser & {
+  emailConfirmed: boolean;
+};
+
 type SupabaseTokenResponse = {
   access_token?: string;
   refresh_token?: string;
@@ -76,6 +80,67 @@ function mapSupabaseUser(data: SupabaseTokenResponse["user"]): SupabaseAuthUser 
     email: userEmail,
     name: metadata.full_name || metadata.name,
     role: metadata.role || appMetadata.role || appMetadata.roles?.[0] || "employee",
+  };
+}
+
+type SupabaseAdminUser = NonNullable<SupabaseTokenResponse["user"]> & {
+  email_confirmed_at?: string | null;
+  confirmed_at?: string | null;
+};
+
+function mapSupabaseEmployeeAccount(data: SupabaseAdminUser): SupabaseEmployeeAccount | null {
+  const user = mapSupabaseUser(data);
+  if (!user) return null;
+
+  return {
+    ...user,
+    emailConfirmed: Boolean(data.email_confirmed_at || data.confirmed_at),
+  };
+}
+
+function sortEmployeesByName(employees: SupabaseEmployeeAccount[]) {
+  return [...employees].sort((a, b) => {
+    const nameCompare = (a.name || a.email).localeCompare(b.name || b.email);
+    return nameCompare || a.email.localeCompare(b.email);
+  });
+}
+
+export async function listSupabaseEmployees() {
+  const { url, serviceRoleKey } = getSupabaseAdminConfig();
+  const response = await fetch(`${url}/auth/v1/admin/users?per_page=1000`, {
+    method: "GET",
+    cache: "no-store",
+    headers: new Headers({
+      apikey: serviceRoleKey,
+      authorization: `Bearer ${serviceRoleKey}`,
+      "content-type": "application/json",
+    }),
+  });
+  const data = (await response.json().catch(() => ({}))) as {
+    users?: SupabaseAdminUser[];
+    error?: string;
+    error_description?: string;
+    msg?: string;
+  };
+
+  if (!response.ok) {
+    return {
+      ok: false as const,
+      error: data.error_description || data.msg || data.error || "Unable to list employees",
+      status: response.status,
+    };
+  }
+
+  const employees = sortEmployeesByName(
+    (data.users || [])
+      .map(mapSupabaseEmployeeAccount)
+      .filter((employee): employee is SupabaseEmployeeAccount => Boolean(employee))
+      .filter((employee) => employee.role !== "admin")
+  );
+
+  return {
+    ok: true as const,
+    employees,
   };
 }
 

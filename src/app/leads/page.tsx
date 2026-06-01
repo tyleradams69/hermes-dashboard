@@ -72,9 +72,19 @@ type DashboardAccount = {
   role?: string;
 };
 
+type DashboardEmployeeAccount = DashboardAccount & {
+  emailConfirmed?: boolean;
+};
+
 type AccountResponse = {
   ok: boolean;
   user?: DashboardAccount;
+  error?: string;
+};
+
+type EmployeesResponse = {
+  ok: boolean;
+  employees?: DashboardEmployeeAccount[];
   error?: string;
 };
 
@@ -661,6 +671,7 @@ export default function LeadsPage() {
   const [pipelineLoading, setPipelineLoading] = useState(false);
   const [result, setResult] = useState<LeadScraperResponse | null>(null);
   const [pipelineLeads, setPipelineLeads] = useState<PipelineLead[]>([]);
+  const [teamEmployees, setTeamEmployees] = useState<DashboardEmployeeAccount[]>([]);
   const [pipelineFilters, setPipelineFilters] = useState<PipelineFilters>(defaultPipelineFilters);
   const [recentRuns, setRecentRuns] = useState<LeadSearchForm[]>([]);
   const [outreachDraft, setOutreachDraft] = useState<OutreachDraft | null>(null);
@@ -699,6 +710,14 @@ export default function LeadsPage() {
 
         if (data.user.role !== "admin" && employeeName) {
           setPipelineFilters((current) => ({ ...current, owner: employeeName }));
+        }
+
+        if (data.user.role === "admin") {
+          const employeesResponse = await fetch("/api/employees", { cache: "no-store" });
+          const employeesData = (await employeesResponse.json()) as EmployeesResponse;
+          if (employeesResponse.ok && employeesData.ok && employeesData.employees) {
+            setTeamEmployees(employeesData.employees);
+          }
         }
       } catch {
         // The authenticated API still enforces pipeline access; leave the page usable if account chrome fails.
@@ -1153,13 +1172,22 @@ export default function LeadsPage() {
     ? (pipelineFilters.owner === "all" ? undefined : pipelineFilters.owner)
     : signedInEmployeeName || undefined;
   const { stage: pipelineStageFilter, sortBy: pipelineSortBy, noWebsiteOnly, hasPhoneOnly, hotScoreOnly } = pipelineFilters;
+  const teamEmployeeNames = useMemo(
+    () => Array.from(new Set(teamEmployees.map((teamEmployee) => teamEmployee.name?.trim()).filter((name): name is string => Boolean(name)))).sort((a, b) => a.localeCompare(b)),
+    [teamEmployees]
+  );
   const pipelineOwners = useMemo(
     () => Array.from(new Set(pipelineLeads.map((lead) => lead.owner))).sort((a, b) => a.localeCompare(b)),
     [pipelineLeads]
   );
   const pipelineOwnerOptions = useMemo(
-    () => isAdminAccount ? pipelineOwners : pipelineOwners.filter((owner) => owner !== signedInEmployeeName),
-    [isAdminAccount, pipelineOwners, signedInEmployeeName]
+    () => {
+      const owners = Array.from(new Set(isAdminAccount ? [...teamEmployeeNames, ...pipelineOwners] : pipelineOwners));
+      return owners
+        .filter((owner) => isAdminAccount || owner !== signedInEmployeeName)
+        .sort((a, b) => a.localeCompare(b));
+    },
+    [isAdminAccount, pipelineOwners, signedInEmployeeName, teamEmployeeNames]
   );
   const filteredPipelineLeads = filterPipelineLeads(pipelineLeads, {
     owner: effectivePipelineOwner,
@@ -2049,7 +2077,7 @@ export default function LeadsPage() {
               ))}
             </select>
             {isAdminAccount ? (
-              <span className="normal-case tracking-normal text-white/40">Admins can inspect every employee pipeline or narrow to one owner.</span>
+              <span className="normal-case tracking-normal text-white/40">Admins can inspect every employee pipeline or narrow to one owner. Employees with no leads still appear here.</span>
             ) : (
               <span className="normal-case tracking-normal text-white/40">Employee accounts only see their assigned pipeline.</span>
             )}

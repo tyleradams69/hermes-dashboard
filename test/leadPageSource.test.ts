@@ -106,6 +106,15 @@ describe("lead scraper page wiring", () => {
     expect(cssSource).toContain("background-color: rgba(255,255,255,0.72) !important;");
   });
 
+  it("keeps admin employee filtering wired to the authenticated team directory", async () => {
+    const pageSource = await readFile("src/app/leads/page.tsx", "utf8");
+
+    expect(pageSource).toContain('fetch("/api/employees", { cache: "no-store" })');
+    expect(pageSource).toContain("teamEmployeeNames");
+    expect(pageSource).toContain("[...teamEmployeeNames, ...pipelineOwners]");
+    expect(pageSource).toContain("Employees with no leads still appear here.");
+  });
+
   it("keeps the admin needs-attention queue and saved views wired to pipeline filters", async () => {
     const source = await readFile("src/app/leads/page.tsx", "utf8");
 
