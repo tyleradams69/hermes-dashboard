@@ -18,6 +18,9 @@ describe("settings page source guardrails", () => {
 
     expect(source).toContain("Add employee");
     expect(source).toContain("Creates a Supabase Auth user");
+    expect(source).toContain("Save or copy this password before sharing it");
+    expect(source).toContain("Copy temp password");
+    expect(source).toContain("navigator.clipboard.writeText");
     expect(source).toContain("async function createTeamAccount");
     expect(source).toContain("method: \"POST\"");
     expect(source).toContain("/api/team");

@@ -55,6 +55,7 @@ export default function SettingsPage() {
   const [teamLoading, setTeamLoading] = useState(false);
   const [teamSavingId, setTeamSavingId] = useState<string | null>(null);
   const [teamCreating, setTeamCreating] = useState(false);
+  const [passwordCopied, setPasswordCopied] = useState(false);
   const [newTeamDraft, setNewTeamDraft] = useState<TeamCreateDraft>(() => ({
     email: "",
     name: "",
@@ -177,6 +178,20 @@ export default function SettingsPage() {
 
   function updateNewTeamDraft(patch: Partial<TeamCreateDraft>) {
     setNewTeamDraft((current) => ({ ...current, ...patch }));
+    if (patch.password !== undefined) {
+      setPasswordCopied(false);
+    }
+  }
+
+  async function copyTemporaryPassword() {
+    if (!newTeamDraft.password || typeof navigator === "undefined" || !navigator.clipboard) return;
+    try {
+      await navigator.clipboard.writeText(newTeamDraft.password);
+      setPasswordCopied(true);
+    } catch {
+      setPasswordCopied(false);
+      setTeamError("Copy failed. Select and copy the temporary password manually.");
+    }
   }
 
   async function createTeamAccount(e: React.FormEvent) {
@@ -367,10 +382,16 @@ export default function SettingsPage() {
                 <div>
                   <p className="text-sm font-black text-white">Add employee</p>
                   <p className="mt-1 text-xs leading-5 text-white/55">Creates a Supabase Auth user with dashboard role metadata and a temporary password.</p>
+                  <p className="mt-2 text-xs leading-5 text-amber-100/75">Save or copy this password before sharing it. After the user is created, the dashboard clears it for safety.</p>
                 </div>
-                <button type="button" onClick={() => updateNewTeamDraft({ password: generateTemporaryPassword() })} className="w-fit rounded-full border border-white/10 bg-white/[0.05] px-4 py-2 text-xs font-bold text-white/75 transition hover:border-cyan-300/30 hover:text-cyan-50">
-                  Generate password
-                </button>
+                <div className="flex flex-wrap gap-2">
+                  <button type="button" onClick={() => updateNewTeamDraft({ password: generateTemporaryPassword() })} className="w-fit rounded-full border border-white/10 bg-white/[0.05] px-4 py-2 text-xs font-bold text-white/75 transition hover:border-cyan-300/30 hover:text-cyan-50">
+                    Generate password
+                  </button>
+                  <button type="button" onClick={() => void copyTemporaryPassword()} className="w-fit rounded-full border border-amber-200/20 bg-amber-300/10 px-4 py-2 text-xs font-bold text-amber-50 transition hover:border-amber-200/40 hover:bg-amber-300/15">
+                    {passwordCopied ? "Copied" : "Copy temp password"}
+                  </button>
+                </div>
               </div>
               <div className="mt-4 grid gap-3 lg:grid-cols-[1fr_1fr_0.7fr_1fr_auto] lg:items-end">
                 <label className="block">
