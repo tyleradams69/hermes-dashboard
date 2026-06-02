@@ -34,6 +34,15 @@ describe("lead scraper page wiring", () => {
     expect(source).toContain("Copy lead brief");
   });
 
+  it("uses plain lead prep wording for saved intelligence actions", async () => {
+    const source = await readFile("src/app/leads/page.tsx", "utf8");
+
+    expect(source).toContain("Save lead prep");
+    expect(source).toContain("Regenerate lead prep");
+    expect(source).toContain("Lead prep saved for");
+    expect(source).not.toContain("Save intelligence packet");
+  });
+
   it("keeps the revenue cockpit copy-ready for daily operator briefings", async () => {
     const source = await readFile("src/app/leads/page.tsx", "utf8");
 

@@ -1069,7 +1069,7 @@ export default function LeadsPage() {
 
       setIntelligencePacket(data.packet);
       setSavedIntelligencePackets((current) => ({ ...current, [data.packet!.leadId]: data.packet! }));
-      setPipelineMessage(`Lead intelligence packet saved for ${lead.company}. Review before using externally.`);
+      setPipelineMessage(`Lead prep saved for ${lead.company}. Review before using externally.`);
     } catch (caught) {
       setPipelineMessage(caught instanceof Error ? caught.message : "Lead intelligence failed");
     }
@@ -1109,7 +1109,7 @@ export default function LeadsPage() {
 
     try {
       await navigator.clipboard.writeText(text);
-      setPipelineMessage(`Lead intelligence packet copied for ${packet.company}. Review before using externally.`);
+      setPipelineMessage(`Lead prep copied for ${packet.company}. Review before using externally.`);
     } catch {
       setPipelineMessage("Clipboard access was blocked. The packet is still visible for manual copy/review.");
     }
@@ -1812,7 +1812,7 @@ export default function LeadsPage() {
                       onClick={() => createIntelligencePacket(lead)}
                       className="rounded-full border border-cyan-300/15 bg-cyan-300/10 px-4 py-2 text-sm font-bold text-cyan-50 transition hover:border-cyan-300/30 hover:bg-cyan-300/15"
                     >
-                      Intelligence packet
+                      Save lead prep
                     </button>
                   </div>
                 </article>
@@ -2455,7 +2455,7 @@ export default function LeadsPage() {
                     onClick={() => createIntelligencePacket(pipelineLeadToLeadRecord(lead))}
                     className="rounded-full border border-cyan-300/55 bg-cyan-100/80 px-4 py-2 text-sm font-bold text-cyan-800 transition hover:border-cyan-400/75 hover:bg-cyan-200/70"
                   >
-                    {savedPacket ? "Regenerate intelligence" : "Save intelligence packet"}
+                    {savedPacket ? "Regenerate lead prep" : "Save lead prep"}
                   </button>
                   {savedPacket && (
                     <>
