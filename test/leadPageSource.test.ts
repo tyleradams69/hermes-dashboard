@@ -142,6 +142,16 @@ describe("lead scraper page wiring", () => {
     expect(source).toContain("Detail drawer worked — follow up on response");
   });
 
+  it("memoizes filtered pipeline leads so unrelated renders do not rebuild heavy queues", async () => {
+    const source = await readFile("src/app/leads/page.tsx", "utf8");
+
+    expect(source).toContain("const filteredPipelineLeads = useMemo(");
+    expect(source).toContain("() => filterPipelineLeads(pipelineLeads");
+    expect(source).toContain("[\n      effectivePipelineOwner,");
+    expect(source).toContain("pipelineLeads,");
+    expect(source).toContain("staleOnly,");
+  });
+
   it("keeps the admin duplicate review wired to filtered pipeline leads", async () => {
     const source = await readFile("src/app/leads/page.tsx", "utf8");
 

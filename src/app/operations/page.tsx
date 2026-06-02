@@ -238,14 +238,14 @@ function OperationsContent() {
             </div>
           </div>
 
-          <div className="relative flex flex-wrap items-start justify-between gap-6">
+          <div className="relative flex flex-wrap items-start justify-between gap-4 sm:gap-6">
             <div className="max-w-2xl">
               <div className="flex flex-wrap items-center gap-3">
                 <span className="liminull-fragment-label">memory mesh</span>
                 <span className="liminull-fragment-label">queue pressure</span>
                 <span className="liminull-fragment-label">rollback vectors</span>
               </div>
-              <h2 className="mt-4 text-4xl font-semibold tracking-[-0.045em] text-[#1d1d1f] sm:text-5xl">
+              <h2 className="mt-4 text-[clamp(2rem,9vw,2.75rem)] font-semibold leading-[1.02] tracking-[-0.045em] text-[#1d1d1f] sm:text-5xl sm:leading-none">
                 {businessName} is being actively supervised.
               </h2>
               <p className="mt-4 max-w-xl text-base leading-7 text-[#6e6e73]">
@@ -282,7 +282,7 @@ function OperationsContent() {
             </div>
           </div>
 
-          <div className="relative mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="relative mt-6 grid gap-3 sm:mt-8 sm:grid-cols-2 lg:grid-cols-3">
             {statCards.map((card) => (
               <div
                 key={card.label}

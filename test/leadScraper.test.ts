@@ -6,6 +6,7 @@ import {
   buildPlaceDetailsUrl,
   buildPlacesTextSearchUrl,
   enrichLeadWithPlaceDetails,
+  isNationwideSearchLocation,
   isWeakWebsiteCandidate,
   leadMatchesSearchFilters,
   mapGooglePlaceToLead,
@@ -39,6 +40,16 @@ describe("lead scraper helpers", () => {
       minReviews: 51,
       weakWebsiteCandidate: true,
     });
+  });
+
+  it("defaults no-website searches to nationwide any-niche discovery when fields are blank", () => {
+    expect(normalizeLeadSearchInput({ business: "", location: "", niche: "", onlyWithoutWebsite: true })).toMatchObject({
+      business: "businesses",
+      location: "United States",
+      niche: "",
+      onlyWithoutWebsite: true,
+    });
+    expect(isNationwideSearchLocation("anywhere in America")).toBe(true);
   });
 
   it("builds reusable AI-intent search queries for local business discovery", () => {
@@ -76,6 +87,23 @@ describe("lead scraper helpers", () => {
     expect(JSON.stringify(links)).not.toContain("GOOGLE_PLACES_API_KEY");
   });
 
+  it("keeps no-website discovery links any-niche instead of AI-targeted", () => {
+    const links = buildLeadSourceLinks({
+      business: "businesses",
+      location: "United States",
+      niche: "AI automation",
+      onlyWithoutWebsite: true,
+    });
+
+    expect(JSON.stringify(links)).toContain("business without website");
+    expect(JSON.stringify(links)).not.toContain("AI automation");
+    expect(JSON.stringify(links)).not.toContain("ChatGPT");
+    expect(links[3]).toMatchObject({
+      source: "indeed",
+      label: "No-website business search",
+    });
+  });
+
   it("builds Google Places Text Search URLs from location, distance, and niche inputs", () => {
     const url = buildPlacesTextSearchUrl({
       business: "restaurants",
@@ -89,6 +117,21 @@ describe("lead scraper helpers", () => {
     expect(url).toContain("query=restaurants+phone+ordering+AI+in+Nashville%2C+TN");
     expect(url).toContain("radius=40234");
     expect(url).toContain("key=test-key");
+  });
+
+  it("builds broad nationwide Places queries for no-website searches without niche or radius", () => {
+    const url = buildPlacesTextSearchUrl({
+      business: "businesses",
+      location: "United States",
+      distanceMiles: 25,
+      niche: "AI automation",
+      onlyWithoutWebsite: true,
+      apiKey: "test-key",
+    });
+
+    expect(url).toContain("query=businesses+in+United+States");
+    expect(url).not.toContain("AI+automation");
+    expect(url).not.toContain("radius=");
   });
 
   it("builds Google Place Details URLs for phone and website enrichment", () => {

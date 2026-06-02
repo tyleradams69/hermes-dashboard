@@ -98,8 +98,8 @@ export default function BrainPage() {
 
       {/* LIVE PULSE */}
 
-      <div className="mt-6 rounded-2xl border border-cyan-300/10 bg-gradient-to-br from-cyan-300/[0.08] to-white/[0.02] p-6 shadow-[0_0_80px_rgba(103,232,249,0.06)]">
-        <div className="flex items-center justify-between">
+      <div className="mt-6 rounded-2xl border border-cyan-300/10 bg-gradient-to-br from-cyan-300/[0.08] to-white/[0.02] p-5 shadow-[0_0_80px_rgba(103,232,249,0.06)] sm:p-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="liminull-eyebrow">
               Operational Pulse
@@ -124,8 +124,8 @@ export default function BrainPage() {
       {/* VISUAL GRAPH AREA */}
 
       <div className="mt-6 grid gap-6 xl:grid-cols-[1.4fr_.9fr]">
-        <div className="liminull-card p-6">
-          <div className="flex items-center justify-between">
+        <div className="liminull-card p-5 sm:p-6">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="liminull-eyebrow">
                 Operational Activity
@@ -141,7 +141,7 @@ export default function BrainPage() {
             </p>
           </div>
 
-          <div className="mt-8 h-[260px] rounded-2xl border border-white/5 bg-black/30 p-6">
+          <div className="mt-6 h-[220px] rounded-2xl border border-white/5 bg-black/30 p-4 sm:mt-8 sm:h-[260px] sm:p-6">
             <div className="flex h-full items-end gap-3">
               {Array.from({ length: 10 }).map((_, i) => {
                 const bucketSize =
@@ -212,8 +212,8 @@ export default function BrainPage() {
 
       {/* LIVE TOPOLOGY */}
 
-      <div className="mt-8 rounded-3xl border border-white/5 bg-white/[0.025] p-6">
-        <div className="flex items-center justify-between">
+      <div className="mt-8 rounded-3xl border border-white/5 bg-white/[0.025] p-5 sm:p-6">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="liminull-eyebrow">
               Cognitive Topology
@@ -224,7 +224,7 @@ export default function BrainPage() {
             </h2>
           </div>
 
-          <div className="rounded-full border border-cyan-300/10 bg-cyan-300/10 px-3 py-1 text-xs uppercase tracking-[0.18em] text-cyan-100">
+          <div className="w-fit rounded-full border border-cyan-300/10 bg-cyan-300/10 px-3 py-1.5 text-xs uppercase tracking-[0.18em] text-cyan-100">
             Operationally Synced
           </div>
         </div>

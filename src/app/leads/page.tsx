@@ -132,6 +132,8 @@ type LeadSearchPreset = {
   label: string;
   business: string;
   niche: string;
+  location?: string;
+  onlyWithoutWebsite?: boolean;
 };
 
 type OutreachDraft = {
@@ -140,6 +142,7 @@ type OutreachDraft = {
 };
 
 const leadSearchPresets: LeadSearchPreset[] = [
+  { label: "No-site USA", business: "businesses", location: "United States", niche: "", onlyWithoutWebsite: true },
   { label: "Dentists", business: "dentists", niche: "AI intake automation" },
   { label: "Med spas", business: "med spas", niche: "AI booking and follow-up" },
   { label: "HVAC", business: "HVAC companies", niche: "AI missed-call capture" },
@@ -165,7 +168,7 @@ function leadSearchInputToForm(input: LeadSearchInput): LeadSearchForm {
     business: input.business || "businesses",
     location: input.location || "local",
     distanceMiles: String(input.distanceMiles || 15),
-    niche: input.niche || "AI automation",
+    niche: input.niche || (input.onlyWithoutWebsite ? "" : "AI automation"),
     onlyWithoutWebsite: Boolean(input.onlyWithoutWebsite),
     hasPhoneOnly: Boolean(input.hasPhoneOnly),
     minRating: input.minRating ? String(input.minRating) : "",
@@ -308,14 +311,14 @@ function EmployeePipelineSummary({ summaries, allSummary, selectedOwner, onSelec
           <button
             type="button"
             onClick={onCopySummary}
-            className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5 text-xs font-black text-white/60 transition hover:border-cyan-300/25 hover:text-cyan-50"
+            className="rounded-full border border-white/10 bg-white/[0.03] px-4 py-2.5 text-xs font-black min-h-11 text-white/60 transition hover:border-cyan-300/25 hover:text-cyan-50"
           >
             Copy employee rollup
           </button>
           <button
             type="button"
             onClick={() => onSelectOwner("all")}
-            className={`rounded-full border px-3 py-1.5 text-xs font-black transition ${selectedOwner === "all" ? "border-cyan-300/35 bg-cyan-300/15 text-cyan-50" : "border-white/10 bg-white/[0.03] text-white/60 hover:border-cyan-300/25 hover:text-cyan-50"}`}
+            className={`rounded-full border px-4 py-2.5 text-xs font-black min-h-11 transition ${selectedOwner === "all" ? "border-cyan-300/35 bg-cyan-300/15 text-cyan-50" : "border-white/10 bg-white/[0.03] text-white/60 hover:border-cyan-300/25 hover:text-cyan-50"}`}
           >
             All employees · {allSummary.openLeads} open · {allSummary.hotLeads} hot · {allSummary.staleLeads} stale
           </button>
@@ -394,7 +397,7 @@ function BulkPipelineActions({
             type="button"
             onClick={onToggleVisibleSelection}
             disabled={filteredLeadCount === 0 || loading}
-            className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5 text-xs font-bold text-white/70 transition hover:border-cyan-300/25 hover:text-cyan-50 disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-full border border-white/10 bg-white/[0.03] px-4 py-2.5 text-xs font-bold min-h-11 text-white/70 transition hover:border-cyan-300/25 hover:text-cyan-50 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {allVisibleSelected ? "Clear visible" : "Select visible"}
           </button>
@@ -402,7 +405,7 @@ function BulkPipelineActions({
             type="button"
             onClick={onClearSelection}
             disabled={selectedLeadCount === 0 || loading}
-            className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5 text-xs font-bold text-white/60 transition hover:border-white/20 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-full border border-white/10 bg-white/[0.03] px-4 py-2.5 text-xs font-bold min-h-11 text-white/60 transition hover:border-white/20 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
           >
             Clear selection
           </button>
@@ -428,7 +431,7 @@ function BulkPipelineActions({
             type="button"
             onClick={onReassignSelected}
             disabled={loading || selectedLeadCount === 0}
-            className="rounded-full border border-cyan-300/20 bg-cyan-300/10 px-3 py-1.5 text-xs font-bold text-cyan-50 transition hover:border-cyan-300/40 disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-full border border-cyan-300/20 bg-cyan-300/10 px-4 py-2.5 text-xs font-bold min-h-11 text-cyan-50 transition hover:border-cyan-300/40 disabled:cursor-not-allowed disabled:opacity-50"
           >
             Reassign selected
           </button>
@@ -441,7 +444,7 @@ function BulkPipelineActions({
               type="button"
               onClick={onMarkSelectedWorked}
               disabled={loading || selectedLeadCount === 0}
-              className="rounded-full border border-emerald-300/20 bg-emerald-300/10 px-3 py-1.5 text-xs font-bold text-emerald-50 transition hover:border-emerald-300/40 disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-full border border-emerald-300/20 bg-emerald-300/10 px-4 py-2.5 text-xs font-bold min-h-11 text-emerald-50 transition hover:border-emerald-300/40 disabled:cursor-not-allowed disabled:opacity-50"
             >
               Mark worked today
             </button>
@@ -449,7 +452,7 @@ function BulkPipelineActions({
               type="button"
               onClick={onCloseSelectedLost}
               disabled={loading || selectedLeadCount === 0}
-              className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5 text-xs font-bold text-white/65 transition hover:border-white/20 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-full border border-white/10 bg-white/[0.03] px-4 py-2.5 text-xs font-bold min-h-11 text-white/65 transition hover:border-white/20 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
             >
               Close lost
             </button>
@@ -462,7 +465,7 @@ function BulkPipelineActions({
             type="button"
             onClick={onCreatePrepForSelectedHotLeads}
             disabled={loading || selectedHotLeadCount === 0}
-            className="rounded-full border border-violet-300/20 bg-violet-300/10 px-3 py-1.5 text-xs font-bold text-violet-50 transition hover:border-violet-300/40 disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-full border border-violet-300/20 bg-violet-300/10 min-h-11 px-4 py-2.5 text-xs font-bold text-violet-50 transition hover:border-violet-300/40 disabled:cursor-not-allowed disabled:opacity-50"
           >
             Generate prep for hot leads
           </button>
@@ -541,11 +544,11 @@ function NeedsAttentionPanel({ items, onCopyQueue, onSelectLead, onMarkWorked, o
           <button
             type="button"
             onClick={onCopyQueue}
-            className="rounded-full border border-amber-300/20 bg-amber-300/10 px-3 py-1.5 text-xs font-black text-amber-50 transition hover:border-amber-300/40"
+            className="rounded-full border border-amber-300/20 bg-amber-300/10 min-h-11 px-4 py-2.5 text-xs font-black text-amber-50 transition hover:border-amber-300/40"
           >
             Copy attention queue
           </button>
-          <span className="rounded-full bg-amber-300/10 px-3 py-1.5 text-xs font-black text-amber-100">{items.length} flagged</span>
+          <span className="rounded-full bg-amber-300/10 min-h-11 px-4 py-2.5 text-xs font-black text-amber-100">{items.length} flagged</span>
         </div>
       </div>
 
@@ -572,10 +575,10 @@ function NeedsAttentionPanel({ items, onCopyQueue, onSelectLead, onMarkWorked, o
               ))}
             </div>
             <div className="mt-4 flex flex-wrap gap-2">
-              <button type="button" onClick={() => onSelectLead(item.lead.id)} className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5 text-xs font-bold text-white/70">Select lead</button>
-              <button type="button" onClick={() => onMarkWorked(item.lead)} className="rounded-full border border-emerald-300/20 bg-emerald-300/10 px-3 py-1.5 text-xs font-bold text-emerald-50">Worked today</button>
+              <button type="button" onClick={() => onSelectLead(item.lead.id)} className="rounded-full border border-white/10 bg-white/[0.03] min-h-11 px-4 py-2.5 text-xs font-bold text-white/70">Select lead</button>
+              <button type="button" onClick={() => onMarkWorked(item.lead)} className="rounded-full border border-emerald-300/20 bg-emerald-300/10 min-h-11 px-4 py-2.5 text-xs font-bold text-emerald-50">Worked today</button>
               {item.reasons.includes("hot_without_prep") && (
-                <button type="button" onClick={() => onCreatePrep(item.lead)} className="rounded-full border border-violet-300/20 bg-violet-300/10 px-3 py-1.5 text-xs font-bold text-violet-50">Create prep</button>
+                <button type="button" onClick={() => onCreatePrep(item.lead)} className="rounded-full border border-violet-300/20 bg-violet-300/10 min-h-11 px-4 py-2.5 text-xs font-bold text-violet-50">Create prep</button>
               )}
             </div>
           </article>
@@ -603,10 +606,10 @@ function DuplicateReviewPanel({ groups, onCopyReview, onSelectLead, onOpenDetail
           <p className="mt-1 text-xs liminull-muted">Likely duplicate leads by shared phone, shared website, or close company/location match. Review before employees double-work the same account.</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <button type="button" onClick={onCopyReview} className="rounded-full border border-rose-300/20 bg-rose-300/10 px-3 py-1.5 text-xs font-black text-rose-50 transition hover:border-rose-300/40">
+          <button type="button" onClick={onCopyReview} className="rounded-full border border-rose-300/20 bg-rose-300/10 min-h-11 px-4 py-2.5 text-xs font-black text-rose-50 transition hover:border-rose-300/40">
             Copy duplicate review
           </button>
-          <span className="rounded-full bg-rose-300/10 px-3 py-1.5 text-xs font-black text-rose-100">{groups.length} group{groups.length === 1 ? "" : "s"}</span>
+          <span className="rounded-full bg-rose-300/10 min-h-11 px-4 py-2.5 text-xs font-black text-rose-100">{groups.length} group{groups.length === 1 ? "" : "s"}</span>
         </div>
       </div>
 
@@ -880,7 +883,27 @@ export default function LeadsPage() {
   }
 
   function applyPreset(preset: LeadSearchPreset) {
-    setForm((current) => ({ ...current, business: preset.business, niche: preset.niche }));
+    setForm((current) => ({
+      ...current,
+      business: preset.business,
+      niche: preset.niche,
+      location: preset.location || current.location,
+      onlyWithoutWebsite: preset.onlyWithoutWebsite ?? current.onlyWithoutWebsite,
+    }));
+  }
+
+  function toggleOnlyWithoutWebsite(checked: boolean) {
+    setForm((current) => {
+      const currentLocation = current.location.trim();
+      const shouldUseNationwideDefault = checked && (!currentLocation || currentLocation.toLowerCase() === "local");
+
+      return {
+        ...current,
+        onlyWithoutWebsite: checked,
+        location: shouldUseNationwideDefault ? "United States" : current.location,
+        niche: checked ? "" : current.niche,
+      };
+    });
   }
 
   async function runSearch(event: React.FormEvent) {
@@ -1267,16 +1290,32 @@ export default function LeadsPage() {
     },
     [isAdminAccount, pipelineOwners, signedInEmployeeName, teamEmployeeNames]
   );
-  const filteredPipelineLeads = filterPipelineLeads(pipelineLeads, {
-    owner: effectivePipelineOwner,
-    stage: pipelineStageFilter,
-    sortBy: pipelineSortBy,
-    noWebsiteOnly,
-    hasPhoneOnly,
-    hotScoreOnly,
-    staleOnly,
-    prepReadyOnly,
-  });
+  const pipelineFilterOptions = useMemo(
+    () => ({
+      owner: effectivePipelineOwner,
+      stage: pipelineStageFilter,
+      sortBy: pipelineSortBy,
+      noWebsiteOnly,
+      hasPhoneOnly,
+      hotScoreOnly,
+      staleOnly,
+      prepReadyOnly,
+    }),
+    [
+      effectivePipelineOwner,
+      hasPhoneOnly,
+      hotScoreOnly,
+      noWebsiteOnly,
+      pipelineSortBy,
+      pipelineStageFilter,
+      prepReadyOnly,
+      staleOnly,
+    ]
+  );
+  const filteredPipelineLeads = useMemo(
+    () => filterPipelineLeads(pipelineLeads, pipelineFilterOptions),
+    [pipelineFilterOptions, pipelineLeads]
+  );
   const pipelineNow = useMemo(() => new Date(), []);
   const ownerPipelineSummaries = useMemo(() => summarizePipelineByOwner(pipelineLeads), [pipelineLeads]);
   const allOwnerSummary = useMemo(() => ownerPipelineSummaries.reduce(
@@ -1443,7 +1482,7 @@ export default function LeadsPage() {
           <button
             type="button"
             onClick={copyPipelineDailyBrief}
-            className="mt-3 rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5 text-xs font-bold text-white/70 transition hover:border-cyan-300/25 hover:text-cyan-50"
+            className="mt-3 rounded-full border border-white/10 bg-white/[0.03] min-h-11 px-4 py-2.5 text-xs font-bold text-white/70 transition hover:border-cyan-300/25 hover:text-cyan-50"
           >
             Copy daily brief
           </button>
@@ -1474,7 +1513,7 @@ export default function LeadsPage() {
                 Local company discovery
               </h2>
               <p className="mt-2 text-sm liminull-muted">
-                Enter any business type, market, radius, and niche. Phone numbers come from Google Place Details when available.
+                Enter a business type and market, or use No-site USA to search broadly across America without an AI niche. Phone numbers come from Google Place Details when available.
               </p>
             </div>
             <span className="rounded-full bg-emerald-400/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-emerald-100">
@@ -1491,7 +1530,7 @@ export default function LeadsPage() {
                     key={preset.label}
                     type="button"
                     onClick={() => applyPreset(preset)}
-                    className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5 text-xs font-bold text-white/70 transition hover:border-cyan-300/25 hover:bg-cyan-300/10 hover:text-cyan-50"
+                    className="rounded-full border border-white/10 bg-white/[0.03] min-h-11 px-4 py-2.5 text-xs font-bold text-white/70 transition hover:border-cyan-300/25 hover:bg-cyan-300/10 hover:text-cyan-50"
                   >
                     {preset.label}
                   </button>
@@ -1508,10 +1547,12 @@ export default function LeadsPage() {
                       key={`${run.business}-${run.location}-${run.niche}`}
                       type="button"
                       onClick={() => setForm(run)}
-                      className="rounded-2xl border border-white/5 bg-black/20 px-3 py-2 text-left text-xs text-white/65 transition hover:border-cyan-300/20 hover:bg-cyan-300/10"
+                      className="min-h-11 rounded-2xl border border-white/5 bg-black/20 px-4 py-2.5 text-left text-xs text-white/65 transition hover:border-cyan-300/20 hover:bg-cyan-300/10"
                     >
                       <span className="font-black text-white">{run.business}</span>
-                      <span className="text-white/40"> in {run.location} · {run.niche}</span>
+                      <span className="text-white/40">
+                        {` in ${run.location}${run.niche ? ` · ${run.niche}` : " · any niche"}`}
+                      </span>
                     </button>
                   ))}
                 </div>
@@ -1547,9 +1588,12 @@ export default function LeadsPage() {
               <input
                 value={form.location}
                 onChange={(event) => setForm((current) => ({ ...current, location: event.target.value }))}
-                placeholder="City, state, region"
+                placeholder="City, state, region, or United States"
                 className="rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none placeholder:text-white/25 focus:border-cyan-300/40"
               />
+              {form.onlyWithoutWebsite && (
+                <span className="text-xs font-medium text-white/45">No-website searches default to United States so results are not trapped in one city.</span>
+              )}
             </label>
 
             <div className="grid gap-4 sm:grid-cols-2">
@@ -1570,7 +1614,7 @@ export default function LeadsPage() {
                 <input
                   value={form.niche}
                   onChange={(event) => setForm((current) => ({ ...current, niche: event.target.value }))}
-                  placeholder="AI phones, intake, workflows..."
+                  placeholder={form.onlyWithoutWebsite ? "Optional — leave blank for any niche" : "AI phones, intake, workflows..."}
                   className="rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none placeholder:text-white/25 focus:border-cyan-300/40"
                 />
               </label>
@@ -1580,7 +1624,7 @@ export default function LeadsPage() {
               <span>
                 <span className="block font-black text-white">Only scrape businesses without a website</span>
                 <span className="mt-1 block text-xs leading-5 liminull-muted">
-                  Filters enriched Google profiles so businesses with a website attached are hidden.
+                  Filters enriched Google profiles so businesses with a website attached are hidden. This mode searches the United States by default and leaves niche optional.
                 </span>
               </span>
               <input
@@ -1588,7 +1632,7 @@ export default function LeadsPage() {
                 role="switch"
                 aria-label="Only scrape businesses without a website attached to their Google profile"
                 checked={form.onlyWithoutWebsite}
-                onChange={(event) => setForm((current) => ({ ...current, onlyWithoutWebsite: event.target.checked }))}
+                onChange={(event) => toggleOnlyWithoutWebsite(event.target.checked)}
                 className="peer sr-only"
               />
               <span
@@ -1964,10 +2008,10 @@ export default function LeadsPage() {
                   </div>
                   <p className="mt-3 text-xs leading-5 text-violet-50/80">{brief.nextStep}</p>
                   <div className="mt-3 flex flex-wrap gap-2">
-                    <button type="button" onClick={() => prepareSalesActionBrief(packet)} className="rounded-full border border-violet-300/20 bg-violet-300/10 px-3 py-1.5 text-xs font-bold text-violet-50">Open prep</button>
-                    <button type="button" onClick={() => copySalesActionBrief(brief)} className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5 text-xs font-bold text-white/70">Copy brief</button>
-                    <button type="button" onClick={() => updateIntelligenceStatus(packet, "used")} className="rounded-full border border-amber-300/20 bg-amber-300/10 px-3 py-1.5 text-xs font-bold text-amber-50">Mark used</button>
-                    <button type="button" onClick={() => setIntelligencePacket(packet)} className="rounded-full border border-white/10 px-3 py-1.5 text-xs font-bold text-white/60">Open packet</button>
+                    <button type="button" onClick={() => prepareSalesActionBrief(packet)} className="rounded-full border border-violet-300/20 bg-violet-300/10 min-h-11 px-4 py-2.5 text-xs font-bold text-violet-50">Open prep</button>
+                    <button type="button" onClick={() => copySalesActionBrief(brief)} className="rounded-full border border-white/10 bg-white/[0.03] min-h-11 px-4 py-2.5 text-xs font-bold text-white/70">Copy brief</button>
+                    <button type="button" onClick={() => updateIntelligenceStatus(packet, "used")} className="rounded-full border border-amber-300/20 bg-amber-300/10 min-h-11 px-4 py-2.5 text-xs font-bold text-amber-50">Mark used</button>
+                    <button type="button" onClick={() => setIntelligencePacket(packet)} className="rounded-full border border-white/10 min-h-11 px-4 py-2.5 text-xs font-bold text-white/60">Open packet</button>
                   </div>
                 </article>
               );
@@ -1998,9 +2042,9 @@ export default function LeadsPage() {
                 </div>
                 <p className="mt-2 text-xs leading-5 text-amber-50/80">{lead.nextAction}</p>
                 <div className="mt-3 flex flex-wrap gap-2">
-                  <button type="button" onClick={() => markLeadTouched(lead, "Follow up sent — wait for response", 4)} className="rounded-full border border-amber-300/20 bg-amber-300/10 px-3 py-1.5 text-xs font-bold text-amber-50">Followed up</button>
-                  <button type="button" onClick={() => updatePipelineLead(lead.id, { stage: "meeting_requested", nextAction: "Prep discovery call agenda", lastTouchedAt: new Date().toISOString(), nextFollowUpAt: followUpDate(1) })} className="rounded-full border border-cyan-300/20 bg-cyan-300/10 px-3 py-1.5 text-xs font-bold text-cyan-50">Discovery booked</button>
-                  <button type="button" onClick={() => updatePipelineLead(lead.id, { stage: "closed_lost", nextAction: "Moved to no-fit/nurture", lastTouchedAt: new Date().toISOString() })} className="rounded-full border border-white/10 px-3 py-1.5 text-xs font-bold text-white/60">No fit</button>
+                  <button type="button" onClick={() => markLeadTouched(lead, "Follow up sent — wait for response", 4)} className="rounded-full border border-amber-300/20 bg-amber-300/10 min-h-11 px-4 py-2.5 text-xs font-bold text-amber-50">Followed up</button>
+                  <button type="button" onClick={() => updatePipelineLead(lead.id, { stage: "meeting_requested", nextAction: "Prep discovery call agenda", lastTouchedAt: new Date().toISOString(), nextFollowUpAt: followUpDate(1) })} className="rounded-full border border-cyan-300/20 bg-cyan-300/10 min-h-11 px-4 py-2.5 text-xs font-bold text-cyan-50">Discovery booked</button>
+                  <button type="button" onClick={() => updatePipelineLead(lead.id, { stage: "closed_lost", nextAction: "Moved to no-fit/nurture", lastTouchedAt: new Date().toISOString() })} className="rounded-full border border-white/10 min-h-11 px-4 py-2.5 text-xs font-bold text-white/60">No fit</button>
                 </div>
               </article>
             ))}
@@ -2059,7 +2103,7 @@ export default function LeadsPage() {
             </div>
             <div className="flex flex-wrap gap-2">
               {pipelineSavedViews.map((view) => (
-                <button key={view.label} type="button" onClick={() => applyPipelineSavedView(view.filters)} className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5 text-xs font-bold text-white/65 transition hover:border-cyan-300/25 hover:text-cyan-50">
+                <button key={view.label} type="button" onClick={() => applyPipelineSavedView(view.filters)} className="rounded-full border border-white/10 bg-white/[0.03] min-h-11 px-4 py-2.5 text-xs font-bold text-white/65 transition hover:border-cyan-300/25 hover:text-cyan-50">
                   {view.label}
                 </button>
               ))}
@@ -2127,21 +2171,21 @@ export default function LeadsPage() {
                       <button
                         type="button"
                         onClick={() => savedPacket ? prepareSalesActionBrief(savedPacket) : createIntelligencePacket(pipelineLeadToLeadRecord(lead))}
-                        className="rounded-full border border-cyan-300/20 bg-cyan-300/10 px-3 py-1.5 text-xs font-bold text-cyan-50"
+                        className="rounded-full border border-cyan-300/20 bg-cyan-300/10 min-h-11 px-4 py-2.5 text-xs font-bold text-cyan-50"
                       >
                         {savedPacket ? "Open prep" : "Create packet"}
                       </button>
                       <button
                         type="button"
                         onClick={() => createOutreachDraft(pipelineLeadToLeadRecord(lead))}
-                        className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5 text-xs font-bold text-white/70"
+                        className="rounded-full border border-white/10 bg-white/[0.03] min-h-11 px-4 py-2.5 text-xs font-bold text-white/70"
                       >
                         Copy outreach
                       </button>
                       <button
                         type="button"
                         onClick={() => markLeadTouched(lead, "Focus lead worked — follow up on response", 3)}
-                        className="rounded-full border border-emerald-300/20 bg-emerald-300/10 px-3 py-1.5 text-xs font-bold text-emerald-50"
+                        className="rounded-full border border-emerald-300/20 bg-emerald-300/10 min-h-11 px-4 py-2.5 text-xs font-bold text-emerald-50"
                       >
                         Worked today
                       </button>
@@ -2338,7 +2382,7 @@ export default function LeadsPage() {
                           key={`${lead.id}-${action.label}`}
                           type="button"
                           onClick={() => applyLeadQuickAction(lead, action)}
-                          className="rounded-full border border-white/10 bg-black/20 px-3 py-1.5 text-xs font-bold text-white/70 transition hover:border-cyan-300/25 hover:bg-cyan-300/10 hover:text-cyan-50"
+                          className="rounded-full border border-white/10 bg-black/20 min-h-11 px-4 py-2.5 text-xs font-bold text-white/70 transition hover:border-cyan-300/25 hover:bg-cyan-300/10 hover:text-cyan-50"
                         >
                           {action.label}
                         </button>
@@ -2502,7 +2546,7 @@ export default function LeadsPage() {
                   <h2 className="mt-2 text-2xl font-black tracking-[-0.05em] text-white">{detailPipelineLead.company}</h2>
                   <p className="mt-1 text-sm text-white/45">{detailPipelineLead.owner} · {stageLabel(detailPipelineLead.stage)} · {detailPipelineLead.location}</p>
                 </div>
-                <button type="button" onClick={() => setDetailPipelineLeadId(null)} className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5 text-xs font-bold text-white/65">Close</button>
+                <button type="button" onClick={() => setDetailPipelineLeadId(null)} className="rounded-full border border-white/10 bg-white/[0.03] min-h-11 px-4 py-2.5 text-xs font-bold text-white/65">Close</button>
               </div>
             </div>
 

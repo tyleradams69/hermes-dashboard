@@ -12,6 +12,7 @@
 
 # testing
 /coverage
+.tmp-*
 
 # local runtime data
 /.data/

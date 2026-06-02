@@ -72,59 +72,65 @@ describe("lead scraper API", () => {
     expect(JSON.stringify(data)).not.toContain("server-only-key");
   });
 
-  it("can filter Google Places results to businesses without a website attached", async () => {
+  it("can filter nationwide Google Places results to businesses without a website attached", async () => {
     process.env.GOOGLE_PLACES_API_KEY = "server-only-key";
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async (url: string | URL | Request) => {
-        const href = String(url);
-        if (href.includes("/place/details/")) {
-          const placeId = new URL(href).searchParams.get("place_id");
-          return new Response(
-            JSON.stringify({
-              result: placeId === "place-with-site" ? { website: "https://has-site.example.com" } : {},
-            }),
-            { status: 200, headers: { "content-type": "application/json" } }
-          );
-        }
-
+    const fetchMock = vi.fn(async (url: string | URL | Request) => {
+      const href = String(url);
+      if (href.includes("/place/details/")) {
+        const placeId = new URL(href).searchParams.get("place_id");
         return new Response(
           JSON.stringify({
-            results: [
-              {
-                place_id: "place-with-site",
-                name: "Business With Website",
-                formatted_address: "10 Congress Ave, Austin, TX",
-                rating: 4.9,
-                user_ratings_total: 145,
-              },
-              {
-                place_id: "place-without-site",
-                name: "Business Without Website",
-                formatted_address: "20 Congress Ave, Austin, TX",
-                rating: 4.7,
-                user_ratings_total: 90,
-              },
-            ],
+            result: placeId === "place-with-site" ? { website: "https://has-site.example.com" } : {},
           }),
           { status: 200, headers: { "content-type": "application/json" } }
         );
-      })
-    );
+      }
+
+      return new Response(
+        JSON.stringify({
+          results: [
+            {
+              place_id: "place-with-site",
+              name: "Business With Website",
+              formatted_address: "10 Congress Ave, Austin, TX",
+              rating: 4.9,
+              user_ratings_total: 145,
+            },
+            {
+              place_id: "place-without-site",
+              name: "Business Without Website",
+              formatted_address: "20 Congress Ave, Austin, TX",
+              rating: 4.7,
+              user_ratings_total: 90,
+            },
+          ],
+        }),
+        { status: 200, headers: { "content-type": "application/json" } }
+      );
+    });
+    vi.stubGlobal("fetch", fetchMock);
 
     const response = await leadScraperPost(
       request({
-        business: "clinics",
-        location: "Austin",
+        business: "",
+        location: "",
         distanceMiles: 10,
-        niche: "automation",
+        niche: "",
         onlyWithoutWebsite: true,
       })
     );
     const data = await response.json();
 
     expect(response.status).toBe(200);
-    expect(data.input.onlyWithoutWebsite).toBe(true);
+    expect(data.input).toMatchObject({
+      business: "businesses",
+      location: "United States",
+      niche: "",
+      onlyWithoutWebsite: true,
+    });
+    expect(String(fetchMock.mock.calls[0][0])).toContain("query=businesses+in+United+States");
+    expect(String(fetchMock.mock.calls[0][0])).not.toContain("radius=");
+    expect(data.queries[0]).toBe("businesses United States business without website");
     expect(data.leads).toHaveLength(1);
     expect(data.leads[0]).toMatchObject({ company: "Business Without Website" });
     expect(data.leads[0].website).toBeUndefined();

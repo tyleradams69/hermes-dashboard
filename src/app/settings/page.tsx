@@ -385,10 +385,10 @@ export default function SettingsPage() {
                   <p className="mt-2 text-xs leading-5 text-amber-100/75">Save or copy this password before sharing it. After the user is created, the dashboard clears it for safety.</p>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  <button type="button" onClick={() => updateNewTeamDraft({ password: generateTemporaryPassword() })} className="w-fit rounded-full border border-white/10 bg-white/[0.05] px-4 py-2 text-xs font-bold text-white/75 transition hover:border-cyan-300/30 hover:text-cyan-50">
+                  <button type="button" onClick={() => updateNewTeamDraft({ password: generateTemporaryPassword() })} className="inline-flex min-h-11 w-fit items-center rounded-full border border-white/10 bg-white/[0.05] px-4 py-2.5 text-xs font-bold text-white/75 transition hover:border-cyan-300/30 hover:text-cyan-50">
                     Generate password
                   </button>
-                  <button type="button" onClick={() => void copyTemporaryPassword()} className="w-fit rounded-full border border-amber-200/20 bg-amber-300/10 px-4 py-2 text-xs font-bold text-amber-50 transition hover:border-amber-200/40 hover:bg-amber-300/15">
+                  <button type="button" onClick={() => void copyTemporaryPassword()} className="inline-flex min-h-11 w-fit items-center rounded-full border border-amber-200/20 bg-amber-300/10 px-4 py-2.5 text-xs font-bold text-amber-50 transition hover:border-amber-200/40 hover:bg-amber-300/15">
                     {passwordCopied ? "Copied" : "Copy temp password"}
                   </button>
                 </div>
@@ -423,7 +423,7 @@ export default function SettingsPage() {
               <p className="text-xs uppercase tracking-[0.18em] text-white/55">
                 {teamLoading ? "Loading team accounts..." : `${teamAccounts.length} authenticated accounts`}
               </p>
-              <button type="button" onClick={() => void loadTeamAccounts()} className="rounded-full border border-white/10 bg-white/[0.03] px-4 py-2 text-xs font-bold text-white/70 transition hover:border-cyan-300/30 hover:text-cyan-50">
+              <button type="button" onClick={() => void loadTeamAccounts()} className="inline-flex min-h-11 items-center rounded-full border border-white/10 bg-white/[0.03] px-4 py-2.5 text-xs font-bold text-white/70 transition hover:border-cyan-300/30 hover:text-cyan-50">
                 Refresh team
               </button>
             </div>
@@ -461,7 +461,7 @@ export default function SettingsPage() {
                           <span className="text-xs font-bold uppercase tracking-[0.18em] text-white/45">Temp password</span>
                           <div className="mt-2 flex gap-2">
                             <input value={draft.password} onChange={(event) => updateTeamDraft(teamAccount.id, { password: event.target.value })} className="w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none transition placeholder:text-white/35 focus:border-cyan-300/40 focus:ring-4 focus:ring-cyan-300/10" placeholder="Optional reset" />
-                            <button type="button" onClick={() => updateTeamDraft(teamAccount.id, { password: generateTemporaryPassword() })} className="rounded-2xl border border-white/10 bg-white/[0.03] px-3 text-xs font-bold text-white/65">Generate</button>
+                            <button type="button" onClick={() => updateTeamDraft(teamAccount.id, { password: generateTemporaryPassword() })} className="min-h-11 rounded-2xl border border-white/10 bg-white/[0.03] px-3 text-xs font-bold text-white/65">Generate</button>
                           </div>
                         </label>
                       </div>

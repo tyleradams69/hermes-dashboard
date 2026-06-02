@@ -57,6 +57,34 @@ function cleanPart(value: string | undefined) {
   return (value || "").trim().replace(/\s+/g, " ");
 }
 
+const nationwideSearchLocations = new Set([
+  "america",
+  "anywhere in america",
+  "nationwide",
+  "united states",
+  "united states of america",
+  "usa",
+  "u.s.",
+  "u.s.a.",
+  "us",
+]);
+
+export function isNationwideSearchLocation(location: string | undefined) {
+  return nationwideSearchLocations.has(cleanPart(location).toLowerCase());
+}
+
+function defaultLocationForInput(input: Partial<LeadSearchInput>) {
+  const location = cleanPart(input.location);
+  if (location) return location;
+  return input.onlyWithoutWebsite ? "United States" : "local";
+}
+
+function defaultNicheForInput(input: Partial<LeadSearchInput>) {
+  const niche = cleanPart(input.niche);
+  if (niche) return niche;
+  return input.onlyWithoutWebsite ? "" : "AI automation";
+}
+
 function searchPhrase(input: LeadSearchInput, intent: string) {
   return [input.business, input.location, input.niche, intent]
     .map(cleanPart)
@@ -66,6 +94,17 @@ function searchPhrase(input: LeadSearchInput, intent: string) {
 
 export function buildAiIntentQueries(input: LeadSearchInput) {
   const baseInput = { ...input, niche: "" };
+  if (input.onlyWithoutWebsite) {
+    const noWebsiteInput = { ...baseInput, location: input.location || "United States" };
+    return [
+      searchPhrase(noWebsiteInput, "business without website"),
+      searchPhrase(noWebsiteInput, "Google business profile no website"),
+      searchPhrase(noWebsiteInput, "local business missing website"),
+      searchPhrase(noWebsiteInput, "small business needs website"),
+      searchPhrase(noWebsiteInput, "business listing no website"),
+    ];
+  }
+
   return [
     searchPhrase(input, "AI automation"),
     searchPhrase(baseInput, "hiring AI automation"),
@@ -80,16 +119,18 @@ function googleSearchUrl(query: string) {
 }
 
 export function buildLeadSourceLinks(input: LeadSearchInput): LeadSourceLink[] {
-  const base = [input.business, input.location, input.niche]
+  const base = [input.business, input.location, input.onlyWithoutWebsite ? "" : input.niche]
     .map(cleanPart)
     .filter(Boolean)
     .join(" ");
   const aiTerms = "AI OR automation OR ChatGPT OR \"artificial intelligence\"";
+  const noWebsiteTerms = "business without website OR \"no website\" OR \"missing website\"";
+  const intentTerms = input.onlyWithoutWebsite ? noWebsiteTerms : aiTerms;
 
-  const linkedInQuery = `site:linkedin.com/company ${base} ${aiTerms}`;
-  const facebookQuery = `site:facebook.com ${base} ${aiTerms}`;
-  const redditQuery = `${base} ${aiTerms}`;
-  const indeedQuery = `${base} AI automation jobs`;
+  const linkedInQuery = `site:linkedin.com/company ${base} ${intentTerms}`;
+  const facebookQuery = `site:facebook.com ${base} ${intentTerms}`;
+  const redditQuery = `${base} ${intentTerms}`;
+  const indeedQuery = input.onlyWithoutWebsite ? `${base} business without website` : `${base} AI automation jobs`;
 
   return [
     {
@@ -112,9 +153,11 @@ export function buildLeadSourceLinks(input: LeadSearchInput): LeadSourceLink[] {
     },
     {
       source: "indeed",
-      label: "Indeed AI hiring signal search",
+      label: input.onlyWithoutWebsite ? "No-website business search" : "Indeed AI hiring signal search",
       query: indeedQuery,
-      url: `https://www.indeed.com/jobs?q=${encodeURIComponent(indeedQuery)}&l=${encodeURIComponent(input.location)}`,
+      url: input.onlyWithoutWebsite
+        ? googleSearchUrl(indeedQuery)
+        : `https://www.indeed.com/jobs?q=${encodeURIComponent(indeedQuery)}&l=${encodeURIComponent(input.location)}`,
     },
   ];
 }
@@ -124,15 +167,19 @@ export function buildPlacesTextSearchUrl({
   location,
   distanceMiles = 15,
   niche,
+  onlyWithoutWebsite,
   apiKey,
 }: LeadSearchInput & { apiKey: string }) {
-  const query = [business, niche, "in", location]
+  const effectiveLocation = cleanPart(location) || (onlyWithoutWebsite ? "United States" : "local");
+  const query = [business, onlyWithoutWebsite ? "" : niche, "in", effectiveLocation]
     .map(cleanPart)
     .filter(Boolean)
     .join(" ");
   const url = new URL("https://maps.googleapis.com/maps/api/place/textsearch/json");
   url.searchParams.set("query", query);
-  url.searchParams.set("radius", String(Math.round(distanceMiles * 1609.34)));
+  if (!isNationwideSearchLocation(effectiveLocation)) {
+    url.searchParams.set("radius", String(Math.round(distanceMiles * 1609.34)));
+  }
   url.searchParams.set("key", apiKey);
   return url.toString();
 }
@@ -255,9 +302,9 @@ export function enrichLeadWithPlaceDetails(
 export function normalizeLeadSearchInput(input: Partial<LeadSearchInput>): LeadSearchInput {
   return {
     business: cleanPart(input.business) || "businesses",
-    location: cleanPart(input.location) || "local",
+    location: defaultLocationForInput(input),
     distanceMiles: Math.max(1, Math.min(100, Number(input.distanceMiles) || 15)),
-    niche: cleanPart(input.niche) || "AI automation",
+    niche: defaultNicheForInput(input),
     onlyWithoutWebsite: Boolean(input.onlyWithoutWebsite),
     hasPhoneOnly: Boolean(input.hasPhoneOnly),
     minRating: Math.max(0, Math.min(5, Number(input.minRating) || 0)),
